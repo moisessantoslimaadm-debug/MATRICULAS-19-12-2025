@@ -14,7 +14,6 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-white page-transition">
-      {/* Hero Section - Institutional Luxury */}
       <section className="relative pt-32 pb-48 px-8 lg:px-16 overflow-hidden">
         <div className="absolute top-0 right-0 w-2/5 h-full bg-slate-50/50 -skew-x-12 -z-10 translate-x-32 blur-3xl opacity-60"></div>
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-50/50 rounded-full -z-10 -translate-x-32 translate-y-32 blur-[100px] opacity-40"></div>
@@ -72,7 +71,7 @@ export const Home: React.FC = () => {
               <img 
                 src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&q=80" 
                 className="w-full h-full object-cover transition-transform duration-[4s] group-hover:scale-110"
-                alt="Composição Educacional"
+                alt="Educação"
               />
               <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/40 via-transparent to-transparent opacity-60"></div>
             </div>
@@ -94,7 +93,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Institutional Values */}
       <section className="py-32 bg-slate-50/30 border-y border-slate-100">
         <div className="max-w-7xl mx-auto px-8 lg:px-16">
           <div className="text-center mb-24">
@@ -117,7 +115,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Refined Footer */}
       <footer className="py-20 bg-white px-8 lg:px-16 border-t border-slate-100">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
           <div className="flex items-center gap-6">

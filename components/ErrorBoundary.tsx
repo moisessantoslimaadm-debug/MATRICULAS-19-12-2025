@@ -14,11 +14,10 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Inherit directly from Component to ensure state, setState, and props are recognized by the TypeScript compiler.
-class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
+// Fixed: Explicitly using React.Component to resolve TypeScript errors where 'state' and 'props' were not recognized
+class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState> {
   constructor(props: InnerProps) {
     super(props);
-    // Initialize the component state with default values.
     this.state = {
       hasError: false,
       error: null,
@@ -32,10 +31,8 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    // Fixed: Correctly call setState which is inherited from Component.
     this.setState({ errorInfo });
     
-    // Fixed: Access logError from props which is inherited from Component.
     if (this.props.logError) {
         this.props.logError(
             `Erro Crítico SME: ${error.message}`, 
@@ -49,7 +46,6 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   };
 
   private handleCopyDetails = () => {
-      // Fixed: Access the current error state which is inherited from Component.
       const { error, errorInfo } = this.state;
       const text = `Erro: ${error?.message}\n\nStack Trace:\n${errorInfo?.componentStack || 'Não disponível'}`;
       navigator.clipboard.writeText(text);
@@ -57,7 +53,6 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   };
 
   render() {
-    // Fixed: Access hasError from state which is inherited from Component.
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -92,17 +87,22 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
       );
     }
 
-    // Fixed: Return children from props which is inherited from Component.
     return this.props.children;
   }
 }
 
+// Fixed: Functional component to bridge hooks and class component ErrorBoundary
 export const ErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => {
     let logError: ((message: string, details: string) => void) | undefined;
+    
+    // Hooks must be called unconditionally at the top level
     try {
-        const { addLog } = useLog();
-        logError = (msg: string, details: string) => addLog(msg, 'error', details);
-    } catch (e) {}
+        const logContext = useLog();
+        logError = (msg: string, details: string) => logContext.addLog(msg, 'error', details);
+    } catch (e) {
+        // Fallback if log context is not available during initialization
+        console.warn("LogContext not available in ErrorBoundary wrapper");
+    }
 
     return <ErrorBoundaryInner logError={logError}>{children}</ErrorBoundaryInner>;
 };

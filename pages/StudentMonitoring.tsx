@@ -130,8 +130,6 @@ export const StudentMonitoring: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                    
-                    <div className="absolute -bottom-40 -right-40 h-[400px] w-[400px] bg-blue-50/50 rounded-full -z-10 blur-[150px] opacity-40 group-hover:scale-110 transition-transform duration-1000"></div>
                 </div>
             </div>
 
@@ -155,10 +153,6 @@ export const StudentMonitoring: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="pt-12 border-t border-slate-100 group-hover:translate-x-2 transition-transform duration-500 delay-150">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">Inscrição Social (NIS)</p>
-                            <p className="text-2xl font-bold text-slate-800 font-mono tracking-tight">{student.nis || '--- --- ---'}</p>
-                        </div>
                     </div>
                 </div>
 
@@ -168,7 +162,7 @@ export const StudentMonitoring: React.FC = () => {
                     <h3 className="text-5xl font-black tracking-tighter mb-8 leading-[0.9] uppercase">Validação <br/> Digital.</h3>
                     <p className="text-emerald-50 text-xl font-medium leading-relaxed mb-16">Este prontuário é um documento oficial autenticado por {MUNICIPALITY_NAME}.</p>
                     <div className="flex justify-between items-center pt-10 border-t border-emerald-500/50">
-                        <span className="text-[10px] font-black uppercase tracking-ultra">SME • ITABERABA 2025</span>
+                        <span className="text-[10px] font-black uppercase tracking-ultra">SME • {MUNICIPALITY_NAME} 2025</span>
                         <ChevronLeft className="h-6 w-6 rotate-180" />
                     </div>
                 </div>
