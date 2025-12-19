@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, Copy, ShieldAlert, FileSearch } from 'lucide-react';
 import { useLog } from '../contexts/LogContext';
 
@@ -14,11 +14,11 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-// Fix: Explicitly extending React.Component with correct prop and state types to ensure inheritance of state, props, and setState
-class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState> {
+// Fix: Explicitly use named Component import to ensure TypeScript properly recognizes inheritance of state, props, and setState
+class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   constructor(props: InnerProps) {
     super(props);
-    // Fix: Initializing state within constructor to satisfy TypeScript property checks and correctly map state members
+    // Fix: State must be initialized in constructor or as a class property to satisfy property checks
     this.state = {
       hasError: false,
       error: null,
@@ -30,7 +30,7 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
     return { hasError: true, error, errorInfo: null };
   }
 
-  // Fix: Lifecycle method implementation with proper access to instance-level setState and props
+  // Fix: lifecycle method implementation with proper access to instance-level setState and props
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     this.setState({ errorInfo });
@@ -48,7 +48,7 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
   };
 
   private handleCopyDetails = () => {
-      // Fix: Accessing state properties directly from the class instance to resolve TS error
+      // Fix: Access state properties directly from the class instance to resolve TS visibility errors
       const { error, errorInfo } = this.state;
       const text = `Erro: ${error?.message}\n\nStack Trace:\n${errorInfo?.componentStack || 'Não disponível'}`;
       navigator.clipboard.writeText(text);
@@ -56,7 +56,7 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
   };
 
   render() {
-    // Fix: Accessing state properties directly from the class instance to resolve TS error
+    // Fix: Access state properties from instance to resolve TS property existence checks
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -91,7 +91,7 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
       );
     }
 
-    // Fix: Accessing props.children directly from the class instance to resolve TS error
+    // Fix: Accessing props.children directly from the class instance via inherited props property
     return this.props.children;
   }
 }

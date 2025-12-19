@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { School, RegistryStudent } from '../types';
 import { MOCK_SCHOOLS, MOCK_STUDENT_REGISTRY } from '../constants';
 import { useToast } from './ToastContext';
+import { db } from '../services/db';
 
 interface DataContextType {
   schools: School[];
@@ -10,6 +10,7 @@ interface DataContextType {
   isLoading: boolean;
   isOffline: boolean;
   addStudent: (student: RegistryStudent) => Promise<void>;
+  updateStudent: (student: RegistryStudent) => Promise<void>;
   updateStudents: (updatedStudents: RegistryStudent[]) => Promise<void>;
   refreshData: () => Promise<void>;
   removeStudent: (id: string) => Promise<void>;
@@ -27,51 +28,78 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Simulação de carregamento de DB local/Supabase
-      const savedStudents = localStorage.getItem('sme_students');
-      setSchools(MOCK_SCHOOLS);
-      setStudents(savedStudents ? JSON.parse(savedStudents) : MOCK_STUDENT_REGISTRY);
+      // Sincroniza escolas (estáticas para este exemplo, mas poderiam vir de API)
+      await db.schools.bulkPut(MOCK_SCHOOLS);
+      const allSchools = await db.schools.toArray();
+      setSchools(allSchools);
+
+      // Carrega estudantes do IndexedDB
+      let allStudents = await db.students.toArray();
+      
+      // Se for a primeira vez, popula com os mocks
+      if (allStudents.length === 0) {
+        await db.students.bulkAdd(MOCK_STUDENT_REGISTRY);
+        allStudents = await db.students.toArray();
+      }
+      
+      setStudents(allStudents.sort((a, b) => b.name.localeCompare(a.name)));
       setIsOffline(false);
     } catch (error) {
+      console.error("Erro ao carregar DB:", error);
       setIsOffline(true);
+      addToast("Erro ao conectar com o banco de dados local.", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const addStudent = async (student: RegistryStudent) => {
-    const existingIdx = students.findIndex(s => s.cpf === student.cpf);
-    let newList;
-    if (existingIdx > -1) {
-      newList = [...students];
-      newList[existingIdx] = { ...newList[existingIdx], ...student };
-      addToast("Registro nominal atualizado (Deduplicado).", "info");
-    } else {
-      newList = [student, ...students];
-      addToast("Novo aluno inserido na base.", "success");
+    try {
+      await db.students.add(student);
+      setStudents(prev => [student, ...prev]);
+      addToast("Matrícula registrada com sucesso.", "success");
+    } catch (error) {
+      addToast("Erro ao salvar matrícula.", "error");
     }
-    setStudents(newList);
-    localStorage.setItem('sme_students', JSON.stringify(newList));
+  };
+
+  const updateStudent = async (student: RegistryStudent) => {
+    try {
+      await db.students.put(student);
+      setStudents(prev => prev.map(s => s.id === student.id ? student : s));
+    } catch (error) {
+      addToast("Erro ao atualizar registro.", "error");
+    }
   };
 
   const updateStudents = async (updatedStudents: RegistryStudent[]) => {
-    setStudents(updatedStudents);
-    localStorage.setItem('sme_students', JSON.stringify(updatedStudents));
+    try {
+      await db.students.clear();
+      await db.students.bulkAdd(updatedStudents);
+      setStudents(updatedStudents);
+    } catch (error) {
+      addToast("Erro ao sincronizar base.", "error");
+    }
   };
 
   const removeStudent = async (id: string) => {
-    const newList = students.filter(s => s.id !== id);
-    setStudents(newList);
-    localStorage.setItem('sme_students', JSON.stringify(newList));
-    addToast("Registro removido da base.", "info");
+    try {
+      await db.students.delete(id);
+      setStudents(prev => prev.filter(s => s.id !== id));
+      addToast("Registro removido.", "info");
+    } catch (error) {
+      addToast("Erro ao remover registro.", "error");
+    }
   };
 
   return (
     <DataContext.Provider value={{ 
       schools, students, isLoading, isOffline,
-      addStudent, updateStudents, refreshData: loadData, removeStudent
+      addStudent, updateStudent, updateStudents, refreshData: loadData, removeStudent
     }}>
       {children}
     </DataContext.Provider>
