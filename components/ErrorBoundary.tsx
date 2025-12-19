@@ -1,4 +1,3 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, Copy, ShieldAlert, FileSearch } from 'lucide-react';
 import { useLog } from '../contexts/LogContext';
@@ -14,11 +13,11 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-// Fix: Explicitly use named Component import to ensure TypeScript properly recognizes inheritance of state, props, and setState
+// Fixed: Explicitly extend the Component class imported from 'react' to ensure props/state are inherited correctly
 class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   constructor(props: InnerProps) {
     super(props);
-    // Fix: State must be initialized in constructor or as a class property to satisfy property checks
+    // Initialize state properly within the constructor
     this.state = {
       hasError: false,
       error: null,
@@ -30,7 +29,7 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
     return { hasError: true, error, errorInfo: null };
   }
 
-  // Fix: lifecycle method implementation with proper access to instance-level setState and props
+  // Handle errors from child components and update state
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     this.setState({ errorInfo });
@@ -48,7 +47,7 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   };
 
   private handleCopyDetails = () => {
-      // Fix: Access state properties directly from the class instance to resolve TS visibility errors
+      // Accessing state safely after inheritance fix
       const { error, errorInfo } = this.state;
       const text = `Erro: ${error?.message}\n\nStack Trace:\n${errorInfo?.componentStack || 'Não disponível'}`;
       navigator.clipboard.writeText(text);
@@ -56,7 +55,7 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   };
 
   render() {
-    // Fix: Access state properties from instance to resolve TS property existence checks
+    // Checking state for error boundary display
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -91,12 +90,12 @@ class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
       );
     }
 
-    // Fix: Accessing props.children directly from the class instance via inherited props property
+    // Returning children if no error occurred
     return this.props.children;
   }
 }
 
-// Fix: Wrapper component to bridge hook-based context to the class-based ErrorBoundary component
+// Functional wrapper to inject context hooks into the ErrorBoundaryInner class component
 export const ErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => {
     const logContext = useLog();
     

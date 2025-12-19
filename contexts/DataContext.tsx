@@ -28,15 +28,18 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Sincroniza escolas (estáticas para este exemplo, mas poderiam vir de API)
-      await db.schools.bulkPut(MOCK_SCHOOLS);
+      // Sincroniza escolas do mock para o DB local se necessário
+      const schoolCount = await db.schools.count();
+      if (schoolCount === 0) {
+        await db.schools.bulkAdd(MOCK_SCHOOLS);
+      }
       const allSchools = await db.schools.toArray();
       setSchools(allSchools);
 
       // Carrega estudantes do IndexedDB
       let allStudents = await db.students.toArray();
       
-      // Se for a primeira vez, popula com os mocks
+      // Seed inicial se o banco estiver vazio
       if (allStudents.length === 0) {
         await db.students.bulkAdd(MOCK_STUDENT_REGISTRY);
         allStudents = await db.students.toArray();
@@ -61,9 +64,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     try {
       await db.students.add(student);
       setStudents(prev => [student, ...prev]);
-      addToast("Matrícula registrada com sucesso.", "success");
+      addToast("Matrícula registrada e salva localmente.", "success");
     } catch (error) {
-      addToast("Erro ao salvar matrícula.", "error");
+      addToast("Erro ao salvar matrícula no disco.", "error");
     }
   };
 
@@ -90,7 +93,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     try {
       await db.students.delete(id);
       setStudents(prev => prev.filter(s => s.id !== id));
-      addToast("Registro removido.", "info");
+      addToast("Registro removido com sucesso.", "info");
     } catch (error) {
       addToast("Erro ao remover registro.", "error");
     }

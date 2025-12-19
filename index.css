@@ -20,7 +20,7 @@ body {
 .shadow-luxury { box-shadow: var(--luxury-shadow); }
 
 .card-requinte {
-  @apply bg-white rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 ease-out;
+  @apply bg-white rounded-3xl border border-slate-100 shadow-sm transition-all duration-300 ease-out;
 }
 .card-requinte:hover {
   @apply shadow-luxury border-blue-200 -translate-y-1;
@@ -32,15 +32,15 @@ body {
 }
 
 .input-premium {
-  @apply w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-600 outline-none transition-all font-medium text-slate-800 text-sm shadow-sm;
+  @apply w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-600 outline-none transition-all font-medium text-slate-800 text-sm shadow-sm;
 }
 
 .btn-primary {
-  @apply h-12 px-6 bg-[#0f172a] text-white rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 flex items-center justify-center gap-2.5 shadow-md border border-slate-800;
+  @apply h-12 px-8 bg-[#0f172a] text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 flex items-center justify-center gap-2.5 shadow-md border border-slate-800;
 }
 
 .btn-secondary {
-  @apply h-12 px-6 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center gap-2.5 shadow-sm;
+  @apply h-12 px-8 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center gap-2.5 shadow-sm;
 }
 
 .page-transition {
@@ -61,6 +61,6 @@ body {
 /* Dashboard Grids */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
 }
