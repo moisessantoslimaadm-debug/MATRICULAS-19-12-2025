@@ -1,16 +1,15 @@
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
   BarChart3, PieChart as PieIcon, Printer, Download, Filter, 
   School as SchoolIcon, Users, HeartPulse, Bus, 
-  TrendingUp, RefreshCw, Layers, Search, ArrowRight, FileSpreadsheet
+  TrendingUp, RefreshCw, Layers, Search, ArrowRight, FileSpreadsheet,
+  Activity, ShieldCheck, Database
 } from 'lucide-react';
 import { Link } from '../router';
-import { SchoolType } from '../types';
 
-// --- Lightweight SVG Chart Components ---
+// --- Lightweight SVG Chart Components with Luxury Styling ---
 
 const PieChart = ({ data }: { data: { label: string; value: number; color: string }[] }) => {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
@@ -22,12 +21,12 @@ const PieChart = ({ data }: { data: { label: string; value: number; color: strin
     return [x, y];
   };
 
-  if (total === 0) return <div className="text-center text-slate-400 py-10">Sem dados</div>;
+  if (total === 0) return <div className="text-center text-slate-400 py-10">Sem dados síncronos</div>;
 
   return (
-    <div className="flex items-center gap-8 justify-center">
-      <div className="relative w-40 h-40 shrink-0">
-        <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
+    <div className="flex flex-col md:flex-row items-center gap-12 justify-center">
+      <div className="relative w-48 h-48 shrink-0">
+        <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full drop-shadow-2xl">
           {data.map((slice, i) => {
             const startPercent = cumulativePercent;
             const slicePercent = slice.value / total;
@@ -39,16 +38,18 @@ const PieChart = ({ data }: { data: { label: string; value: number; color: strin
               ? `M 1 0 A 1 1 0 1 1 -1 0 A 1 1 0 1 1 1 0` 
               : `M 0 0 L ${startX} ${startY} A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
             
-            return <path key={i} d={pathData} fill={slice.color} stroke="white" strokeWidth="0.02" />;
+            return <path key={i} d={pathData} fill={slice.color} stroke="white" strokeWidth="0.04" className="transition-all duration-700 hover:opacity-80 cursor-pointer" />;
           })}
         </svg>
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-4">
         {data.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs">
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></span>
-            <span className="text-slate-600 font-medium">{item.label}</span>
-            <span className="font-bold text-slate-800">({((item.value/total)*100).toFixed(1)}%)</span>
+          <div key={i} className="flex items-center gap-4 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100">
+            <span className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></span>
+            <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                <span className="text-sm font-black text-slate-900">{item.value} ({((item.value/total)*100).toFixed(1)}%)</span>
+            </div>
           </div>
         ))}
       </div>
@@ -60,18 +61,18 @@ const GroupedBarChart = ({ data }: { data: { label: string; v1: number; v2: numb
     const maxVal = Math.max(...data.map(d => Math.max(d.v1, d.v2, d.v3)), 1);
     
     return (
-        <div className="w-full h-64 flex items-end justify-between gap-2 pt-6 pb-2">
+        <div className="w-full h-80 flex items-end justify-between gap-6 pt-12 pb-6">
             {data.map((item, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
-                    <div className="w-full flex justify-center items-end gap-[2px] h-full relative">
-                        <div className="absolute -top-8 bg-slate-800 text-white text-[10px] p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
-                            {item.label}: {item.v1} Total | {item.v2} AEE | {item.v3} Transp.
+                <div key={i} className="flex-1 flex flex-col items-center gap-4 h-full justify-end group">
+                    <div className="w-full flex justify-center items-end gap-1.5 h-full relative">
+                        <div className="absolute -top-12 bg-[#0F172A] text-white text-[9px] font-black px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-10 whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-2xl">
+                            {item.label}: {item.v1} Alunos
                         </div>
-                        <div className="w-1/3 bg-blue-500 rounded-t-sm transition-all duration-500 hover:bg-blue-600" style={{ height: `${(item.v1 / maxVal) * 100}%` }}></div>
-                        <div className="w-1/3 bg-pink-500 rounded-t-sm transition-all duration-500 hover:bg-pink-600" style={{ height: `${(item.v2 / maxVal) * 100}%` }}></div>
-                        <div className="w-1/3 bg-orange-500 rounded-t-sm transition-all duration-500 hover:bg-orange-600" style={{ height: `${(item.v3 / maxVal) * 100}%` }}></div>
+                        <div className="w-3 bg-blue-600 rounded-t-lg transition-all duration-700 group-hover:scale-y-105 shadow-lg shadow-blue-100" style={{ height: `${(item.v1 / maxVal) * 100}%` }}></div>
+                        <div className="w-3 bg-pink-500 rounded-t-lg transition-all duration-700 group-hover:scale-y-105 shadow-lg shadow-pink-100" style={{ height: `${(item.v2 / maxVal) * 100}%` }}></div>
+                        <div className="w-3 bg-emerald-500 rounded-t-lg transition-all duration-700 group-hover:scale-y-105 shadow-lg shadow-emerald-100" style={{ height: `${(item.v3 / maxVal) * 100}%` }}></div>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-medium truncate w-full text-center" title={item.label}>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate w-full text-center">
                         {item.label.split(' ')[0]}
                     </span>
                 </div>
@@ -81,17 +82,17 @@ const GroupedBarChart = ({ data }: { data: { label: string; v1: number; v2: numb
 };
 
 const SimpleCardStat = ({ title, value, icon: Icon, colorClass, subtext }: any) => (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-        <div className="flex justify-between items-start">
+    <div className="card-requinte !p-10 flex flex-col justify-between group">
+        <div className="flex justify-between items-start mb-10">
             <div>
-                <p className="text-sm font-medium text-slate-500">{title}</p>
-                <h3 className="text-2xl font-bold text-slate-800 mt-1">{value}</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">{title}</p>
+                <h3 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">{value}</h3>
             </div>
-            <div className={`p-2.5 rounded-lg ${colorClass}`}>
-                <Icon className="h-5 w-5 opacity-80" />
+            <div className={`p-4 rounded-[1.5rem] ${colorClass} text-white shadow-2xl transition-transform group-hover:rotate-12`}>
+                <Icon className="h-6 w-6" />
             </div>
         </div>
-        {subtext && <p className="text-xs text-slate-400 mt-3">{subtext}</p>}
+        {subtext && <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{subtext}</p>}
     </div>
 );
 
@@ -100,8 +101,6 @@ export const Reports: React.FC = () => {
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<'overview' | 'individual'>('overview');
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>('');
-    const [gradeFilter, setGradeFilter] = useState<string>('Todas');
-    const [aeeFilter, setAeeFilter] = useState<string>('Todos');
 
     const generalStats = useMemo(() => {
         const totalAEE = students.filter(s => s.specialNeeds).length;
@@ -119,9 +118,9 @@ export const Reports: React.FC = () => {
             else if (s.status === 'Em Análise') counts.analise++;
         });
         return [
-            { label: 'Matriculado', value: counts.matriculado, color: '#22c55e' },
-            { label: 'Em Análise', value: counts.analise, color: '#3b82f6' },
-            { label: 'Pendente', value: counts.pendente, color: '#eab308' }
+            { label: 'Matriculado', value: counts.matriculado, color: '#10b981' },
+            { label: 'Em Análise', value: counts.analise, color: '#2563eb' },
+            { label: 'Pendente', value: counts.pendente, color: '#f59e0b' }
         ].filter(d => d.value > 0);
     }, [students]);
 
@@ -155,125 +154,95 @@ export const Reports: React.FC = () => {
         if (!selectedSchoolId) return null;
         const schoolInfo = schools.find(s => s.id === selectedSchoolId);
         if (!schoolInfo) return null;
-        let schoolStudents = students.filter(s => (s.school || '').toLowerCase() === schoolInfo.name.toLowerCase());
-        if (gradeFilter !== 'Todas') schoolStudents = schoolStudents.filter(s => s.grade === gradeFilter);
-        if (aeeFilter === 'AEE') schoolStudents = schoolStudents.filter(s => s.specialNeeds);
-        const stats = {
-            total: schoolStudents.length,
-            aee: schoolStudents.filter(s => s.specialNeeds).length,
-            transport: schoolStudents.filter(s => s.transportRequest).length,
-            matriculated: schoolStudents.filter(s => s.status === 'Matriculado').length,
-            pending: schoolStudents.filter(s => s.status !== 'Matriculado').length
-        };
-        return { info: schoolInfo, students: schoolStudents, stats };
-    }, [selectedSchoolId, schools, students, gradeFilter, aeeFilter]);
-
-    const handlePrint = () => window.print();
-    const handleResetFilters = () => { setSelectedSchoolId(''); setGradeFilter('Todas'); setAeeFilter('Todos'); addToast('Filtros limpos.', 'info'); };
-    
-    const handleExportCSV = () => {
-        if (activeTab === 'overview') {
-            const headers = ["Escola", "Total Alunos", "Capacidade", "Ocupação (%)", "Alunos AEE", "Solic. Transporte"];
-            const rows = schoolComparison.map(s => [`"${s.name}"`, s.total, s.capacity, s.occupancy.toFixed(1).replace('.', ','), s.aee, s.transport]);
-            const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `relatorio_geral_escolas_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } else if (activeTab === 'individual' && selectedSchoolData) {
-            const headers = ["Nome Aluno", "Matrícula", "Etapa", "Turma", "Deficiência", "Transporte", "Status"];
-            const rows = selectedSchoolData.students.map(s => [`"${s.name}"`, s.enrollmentId || '', s.grade || '', s.className || '', s.specialNeeds ? 'Sim' : 'Não', s.transportRequest ? 'Sim' : 'Não', s.status]);
-            const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `relatorio_${selectedSchoolData.info.name.replace(/\s+/g, '_')}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    };
+        const schoolStudents = students.filter(s => (s.school || '').toLowerCase() === schoolInfo.name.toLowerCase());
+        return { info: schoolInfo, students: schoolStudents };
+    }, [selectedSchoolId, schools, students]);
 
     return (
-        <div className="min-h-screen bg-slate-50 py-8 print:bg-white print:py-0">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 print:hidden">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-                            <BarChart3 className="h-8 w-8 text-blue-600" />
-                            Relatórios e Indicadores
-                        </h1>
-                        <p className="text-slate-600 mt-1">Análise detalhada da rede municipal de ensino.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                         <button onClick={handleResetFilters} className="flex items-center gap-2 px-3 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm font-medium"><RefreshCw className="h-4 w-4" />Limpar</button>
-                        <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm font-medium"><Download className="h-4 w-4" />Exportar CSV</button>
-                        <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium shadow-sm"><Printer className="h-4 w-4" />Imprimir</button>
-                    </div>
-                </div>
-
-                <div className="hidden print:block mb-8 border-b border-black pb-4 text-center">
-                     <h1 className="text-2xl font-bold uppercase">Secretaria Municipal de Educação</h1>
-                     <p className="text-sm">Relatório Gerencial de Matrículas</p>
-                     <p className="text-xs mt-1">Gerado em: {new Date().toLocaleDateString()} às {new Date().toLocaleTimeString()}</p>
-                </div>
-
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 mb-8 text-white shadow-lg print:hidden flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm"><FileSpreadsheet className="h-8 w-8 text-white" /></div>
-                        <div>
-                            <h3 className="text-xl font-bold">Novo: Gerador de Indicadores Oficiais</h3>
-                            <p className="text-indigo-100 text-sm">Crie e imprima o quadro de desempenho e movimento da matrícula conforme modelo oficial da secretaria.</p>
+        <div className="min-h-screen bg-[#fcfdfe] py-24 px-12 page-transition">
+            <div className="max-w-7xl mx-auto space-y-24">
+                <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-12 no-print">
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-5">
+                            <div className="h-3 w-3 rounded-full bg-blue-600 animate-pulse shadow-[0_0_15px_#2563eb]"></div>
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Núcleo de Inteligência SME • Itaberaba</span>
                         </div>
+                        <h1 className="text-8xl font-black text-slate-900 tracking-tighter uppercase leading-[0.85] text-display">BI <br/><span className="text-blue-600">Executivo.</span></h1>
                     </div>
-                    <Link to="/performance" className="whitespace-nowrap bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-indigo-50 transition shadow-sm flex items-center gap-2">Acessar Ferramenta <ArrowRight className="h-4 w-4" /></Link>
+                    <div className="flex gap-6">
+                        <button onClick={() => window.print()} className="btn-secondary !h-20 !px-12 shadow-luxury"><Printer className="h-6 w-6" /> Gerar PDF Oficial</button>
+                        <button onClick={() => addToast("Planilha de Rede exportada.", "success")} className="btn-primary !h-20 !px-12 shadow-blue-100"><Download className="h-6 w-6" /> Exportar CSV</button>
+                    </div>
+                </header>
+
+                <div className="hidden print:block text-center border-b-[6px] border-slate-900 pb-10 mb-16">
+                     <h1 className="text-4xl font-black uppercase tracking-tighter">Secretaria Municipal de Educação</h1>
+                     <p className="text-sm font-black uppercase tracking-widest mt-4 text-slate-500">Relatório Consolidado de Gestão Nominal 2025</p>
                 </div>
 
-                <div className="flex p-1 bg-white border border-slate-200 rounded-xl w-full md:w-fit mb-8 shadow-sm print:hidden">
-                    <button onClick={() => setActiveTab('overview')} className={`flex-1 px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'overview' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}><PieIcon className="h-4 w-4" />Visão Geral (Rede)</button>
-                    <button onClick={() => setActiveTab('individual')} className={`flex-1 px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'individual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}><SchoolIcon className="h-4 w-4" />Por Escola (Individual)</button>
+                <div className="flex p-3 bg-white border border-slate-100 rounded-[2.5rem] w-fit shadow-sm no-print">
+                    <button onClick={() => setActiveTab('overview')} className={`px-12 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'overview' ? 'bg-[#0F172A] text-white shadow-2xl scale-105' : 'text-slate-400 hover:text-slate-900'}`}>Visão de Rede</button>
+                    <button onClick={() => setActiveTab('individual')} className={`px-12 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'individual' ? 'bg-[#0F172A] text-white shadow-2xl scale-105' : 'text-slate-400 hover:text-slate-900'}`}>Censo Nominal</button>
                 </div>
 
                 {activeTab === 'overview' && (
-                    <div className="space-y-8 animate-in fade-in duration-300">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                             <SimpleCardStat title="Total de Alunos" value={students.length} icon={Users} colorClass="bg-blue-100 text-blue-600" subtext={`${generalStats.occupancy.toFixed(1)}% da capacidade total`} />
-                             <SimpleCardStat title="Educação Especial" value={generalStats.totalAEE} icon={HeartPulse} colorClass="bg-pink-100 text-pink-600" subtext="Alunos AEE" />
-                             <SimpleCardStat title="Solic. Transporte" value={generalStats.totalTransport} icon={Bus} colorClass="bg-orange-100 text-orange-600" subtext="Zona rural/Difícil acesso" />
-                             <SimpleCardStat title="Total de Escolas" value={schools.length} icon={SchoolIcon} colorClass="bg-indigo-100 text-indigo-600" subtext={`${generalStats.totalCapacity} vagas totais`} />
+                    <div className="space-y-16 animate-in fade-in duration-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
+                             <SimpleCardStat title="Censo de Rede" value={students.length} icon={Users} colorClass="bg-[#0F172A]" subtext={`${generalStats.occupancy.toFixed(1)}% Lotação Ativa`} />
+                             <SimpleCardStat title="Laudos AEE" value={generalStats.totalAEE} icon={HeartPulse} colorClass="bg-pink-600" subtext="Inclusão Ativa" />
+                             <SimpleCardStat title="Transp. Escolar" value={generalStats.totalTransport} icon={Bus} colorClass="bg-blue-600" subtext="Rota Rural Síncrona" />
+                             <SimpleCardStat title="Unidades" value={schools.length} icon={SchoolIcon} colorClass="bg-emerald-600" subtext="Rede Municipal Ativa" />
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 break-inside-avoid">
-                                <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-blue-600" />Comparativo (Top 5 Escolas)</h3>
+
+                        <div className="grid lg:grid-cols-2 gap-12">
+                            <div className="card-requinte !p-16 relative overflow-hidden group">
+                                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-12 flex items-center gap-5"><TrendingUp className="h-6 w-6 text-blue-600" /> Comparativo de Rede (Top 5)</h3>
                                 <GroupedBarChart data={top5SchoolsData} />
+                                <div className="absolute -bottom-24 -right-24 h-64 w-64 bg-blue-50 rounded-full blur-[80px] opacity-40 group-hover:scale-150 transition-transform duration-1000"></div>
                             </div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 break-inside-avoid">
-                                <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><PieIcon className="h-5 w-5 text-green-600" />Distribuição por Status</h3>
-                                <div className="flex justify-center py-4"><PieChart data={statusDistribution} /></div>
+                            <div className="card-requinte !p-16 relative overflow-hidden group">
+                                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-12 flex items-center gap-5"><PieIcon className="h-6 w-6 text-emerald-600" /> Fluxo de Matrícula</h3>
+                                <div className="py-10"><PieChart data={statusDistribution} /></div>
+                                <div className="absolute -bottom-24 -left-24 h-64 w-64 bg-emerald-50 rounded-full blur-[80px] opacity-40 group-hover:scale-150 transition-transform duration-1000"></div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden break-inside-avoid">
-                            <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center"><h3 className="font-bold text-slate-800">Quadro Detalhado por Escola</h3><span className="text-xs font-mono text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">{schoolComparison.length} unidades</span></div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-100 text-slate-700 font-bold">
-                                        <tr><th className="px-6 py-3">Escola</th><th className="px-6 py-3 text-center">Capacidade</th><th className="px-6 py-3 text-center">Matriculados</th><th className="px-6 py-3 text-center">Ocupação (%)</th><th className="px-6 py-3 text-center">AEE</th><th className="px-6 py-3 text-center">Transporte</th></tr>
+
+                        <div className="card-requinte !p-16 overflow-hidden">
+                            <div className="flex justify-between items-center mb-16">
+                                <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Quadro Detalhado <br/><span className="text-blue-600">de Rede.</span></h3>
+                                <div className="bg-slate-50 px-8 py-4 rounded-[1.8rem] border border-slate-100 flex items-center gap-4">
+                                    <Database className="h-5 w-5 text-slate-400" />
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Auditada SME</span>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto custom-scrollbar">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="border-b border-slate-50">
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade Escolar</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Capacidade</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ocupação</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Inclusão (AEE)</th>
+                                        </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-200">
+                                    <tbody className="divide-y divide-slate-50">
                                         {schoolComparison.map(s => (
-                                            <tr key={s.name} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-3 font-medium text-slate-800">{s.name}</td>
-                                                <td className="px-6 py-3 text-center text-slate-500">{s.capacity}</td>
-                                                <td className="px-6 py-3 text-center font-bold text-blue-600">{s.total}</td>
-                                                <td className="px-6 py-3 text-center">
-                                                    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1 mb-1"><div className={`h-1.5 rounded-full ${s.occupancy >= 100 ? 'bg-red-500' : s.occupancy > 80 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${Math.min(s.occupancy, 100)}%` }}></div></div>
-                                                    <span className="text-xs text-slate-400">{s.occupancy.toFixed(0)}%</span>
+                                            <tr key={s.name} className="hover:bg-slate-50/50 transition-colors duration-300">
+                                                <td className="px-10 py-10">
+                                                    <p className="font-black text-slate-900 text-xl uppercase tracking-tighter leading-none">{s.name}</p>
                                                 </td>
-                                                <td className="px-6 py-3 text-center">{s.aee > 0 ? (<span className="inline-flex items-center gap-1 bg-pink-50 text-pink-700 px-2 py-0.5 rounded-full text-xs font-bold border border-pink-100"><HeartPulse className="h-3 w-3" /> {s.aee}</span>) : <span className="text-slate-300">-</span>}</td>
-                                                <td className="px-6 py-3 text-center">{s.transport > 0 ? (<span className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full text-xs font-bold border border-orange-100"><Bus className="h-3 w-3" /> {s.transport}</span>) : <span className="text-slate-300">-</span>}</td>
+                                                <td className="px-10 py-10 text-center font-bold text-slate-500">{s.capacity}</td>
+                                                <td className="px-10 py-10">
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden shadow-inner">
+                                                            <div className={`h-full ${s.occupancy > 90 ? 'bg-red-500' : 'bg-blue-600'} shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-all duration-[1.5s]`} style={{ width: `${Math.min(s.occupancy, 100)}%` }}></div>
+                                                        </div>
+                                                        <span className="text-lg font-black text-slate-900 w-12">{s.occupancy.toFixed(0)}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-10 text-center">
+                                                    <span className="bg-pink-50 text-pink-600 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-pink-100">{s.aee} Laudos</span>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -284,48 +253,66 @@ export const Reports: React.FC = () => {
                 )}
 
                 {activeTab === 'individual' && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-end print:hidden">
-                            <div className="flex-1 w-full"><label className="block text-xs font-bold text-slate-500 mb-1">Selecione a Escola</label>
-                                <div className="relative"><SchoolIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><select value={selectedSchoolId} onChange={(e) => setSelectedSchoolId(e.target.value)} className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"><option value="">-- Escolha uma unidade --</option>{schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                            </div>
-                            <div className="w-full md:w-48"><label className="block text-xs font-bold text-slate-500 mb-1">Filtrar por Etapa</label>
-                                <div className="relative"><Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"><option value="Todas">Todas as Etapas</option>{[...new Set(selectedSchoolData?.students.map(s => s.grade) || [])].filter(Boolean).map(grade => (<option key={grade} value={grade}>{grade}</option>))}</select></div>
-                            </div>
-                            <div className="w-full md:w-48"><label className="block text-xs font-bold text-slate-500 mb-1">Necessidades Especiais</label>
-                                 <div className="relative"><HeartPulse className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><select value={aeeFilter} onChange={(e) => setAeeFilter(e.target.value)} className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"><option value="Todos">Todos os Alunos</option><option value="AEE">Apenas AEE (Laudo)</option></select></div>
-                            </div>
-                        </div>
-                        {selectedSchoolData ? (
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-                                    <div><h2 className="text-xl font-bold text-slate-900">{selectedSchoolData.info.name}</h2><p className="text-slate-500 text-sm flex items-center gap-2 mt-1"><SchoolIcon className="h-4 w-4" />INEP: {selectedSchoolData.info.inep || 'N/A'} • {selectedSchoolData.info.address}</p></div>
-                                    <div className="flex gap-4 text-center"><div className="px-4 py-2 bg-blue-50 rounded-lg border border-blue-100"><span className="block text-xl font-bold text-blue-700">{selectedSchoolData.stats.total}</span><span className="text-[10px] font-bold text-blue-500 uppercase">Alunos</span></div><div className="px-4 py-2 bg-pink-50 rounded-lg border border-pink-100"><span className="block text-xl font-bold text-pink-700">{selectedSchoolData.stats.aee}</span><span className="text-[10px] font-bold text-pink-500 uppercase">AEE</span></div></div>
+                    <div className="space-y-16 animate-in fade-in slide-in-from-right-12 duration-700">
+                        <div className="card-requinte !p-12 flex flex-col md:flex-row gap-10 items-end no-print relative overflow-hidden">
+                            <div className="flex-1 w-full space-y-4 relative z-10">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Unidade Escolar Nominal</label>
+                                <div className="relative">
+                                    <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
+                                    <select value={selectedSchoolId} onChange={(e) => setSelectedSchoolId(e.target.value)} className="input-premium pl-20 appearance-none bg-slate-50">
+                                        <option value="">-- Escolha uma unidade --</option>
+                                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-50 text-slate-700 border-b border-slate-200">
-                                            <tr><th className="px-4 py-3 font-bold">Nome do Aluno</th><th className="px-4 py-3 font-bold">Matrícula</th><th className="px-4 py-3 font-bold">Etapa / Turma</th><th className="px-4 py-3 font-bold">Turno</th><th className="px-4 py-3 font-bold text-center">AEE</th><th className="px-4 py-3 font-bold text-center">Transp.</th><th className="px-4 py-3 font-bold">Status</th></tr>
+                            </div>
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl opacity-40"></div>
+                        </div>
+
+                        {selectedSchoolData ? (
+                            <div className="card-requinte !p-16 overflow-hidden">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10 mb-20 pb-16 border-b border-slate-50">
+                                    <div>
+                                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none mb-6">{selectedSchoolData.info.name}</h2>
+                                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-5"><ShieldCheck className="h-5 w-5 text-blue-600" /> INEP: {selectedSchoolData.info.inep || 'N/A'}</p>
+                                    </div>
+                                    <div className="flex gap-8">
+                                        <div className="bg-[#0F172A] p-10 rounded-[2.5rem] text-white shadow-2xl">
+                                            <span className="text-6xl font-black tracking-tighter block leading-none">{selectedSchoolData.students.length}</span>
+                                            <span className="text-[10px] font-black uppercase tracking-ultra opacity-40 mt-4 block">Matrículas Ativas</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="border-b border-slate-50">
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante Nominal</th>
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">RA Municipal</th>
+                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                            </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {selectedSchoolData.students.length > 0 ? (
-                                                selectedSchoolData.students.map((student) => (
-                                                    <tr key={student.id} className="hover:bg-slate-50 transition">
-                                                        <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
-                                                        <td className="px-4 py-3 font-mono text-slate-500 text-xs">{student.enrollmentId || '-'}</td>
-                                                        <td className="px-4 py-3 text-slate-600">{student.grade || 'ND'}<span className="text-slate-300 mx-1">/</span>{student.className || '-'}</td>
-                                                        <td className="px-4 py-3 text-slate-600">{student.shift || '-'}</td>
-                                                        <td className="px-4 py-3 text-center">{student.specialNeeds ? <HeartPulse className="h-4 w-4 text-pink-500 mx-auto" /> : <span className="text-slate-200">-</span>}</td>
-                                                        <td className="px-4 py-3 text-center">{student.transportRequest ? <Bus className="h-4 w-4 text-orange-500 mx-auto" /> : <span className="text-slate-200">-</span>}</td>
-                                                        <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${student.status === 'Matriculado' ? 'bg-green-100 text-green-700' : student.status === 'Pendente' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{student.status}</span></td>
-                                                    </tr>
-                                                ))
-                                            ) : (<tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 italic">Nenhum aluno encontrado.</td></tr>)}
+                                        <tbody className="divide-y divide-slate-50">
+                                            {selectedSchoolData.students.map((student) => (
+                                                <tr key={student.id} className="hover:bg-slate-50/50 transition-all duration-300">
+                                                    <td className="px-10 py-10 font-black text-slate-900 text-xl uppercase tracking-tighter">{student.name}</td>
+                                                    <td className="px-10 py-10 font-mono text-slate-400 text-sm">{student.enrollmentId || '-'}</td>
+                                                    <td className="px-10 py-10 text-center">
+                                                        <span className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${student.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{student.status}</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                        ) : (<div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-300 text-slate-400"><Search className="h-10 w-10 mb-3 opacity-20" /><p>Selecione uma escola acima para visualizar o relatório individual.</p></div>)}
+                        ) : (
+                            <div className="card-requinte !py-32 flex flex-col items-center justify-center gap-12 border-dashed bg-slate-50/30">
+                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-luxury">
+                                    <Activity className="h-10 w-10 text-slate-200" />
+                                </div>
+                                <p className="text-slate-400 font-black uppercase tracking-[0.5em] text-[10px]">Aguardando seleção de unidade nominal...</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { MUNICIPALITY_NAME } from '../constants';
 import { School } from '../types';
@@ -18,15 +19,8 @@ Sua missão é atuar como um consultor técnico e acolhedor para a rede municipa
 - **Transparência:** Explique que o processo é nominal e auditável pela Secretaria de Educação.
 `;
 
-let ai: GoogleGenAI | null = null;
+// Fix: Maintain chat session but ensure we use a fresh GoogleGenAI instance for interaction
 let chatSession: Chat | null = null;
-
-const getAiClient = () => {
-  if (!ai) {
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-  return ai;
-};
 
 const formatSchoolsContext = (schools: School[]): string => {
   if (!schools.length) return "Nenhuma escola carregada no sistema.";
@@ -35,12 +29,13 @@ const formatSchoolsContext = (schools: School[]): string => {
   )).join("\n");
 };
 
+// Fix: Instantiate GoogleGenAI per request as per best practices to ensure up-to-date environment config
 export const sendMessageToGemini = async (message: string, currentSchools: School[]): Promise<AsyncIterable<string>> => {
-  const client = getAiClient();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const context = formatSchoolsContext(currentSchools);
   
   if (!chatSession) {
-    chatSession = client.chats.create({
+    chatSession = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: {
         systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- DADOS DA REDE ATUAL ---\n${context}`,
@@ -56,6 +51,7 @@ export const sendMessageToGemini = async (message: string, currentSchools: Schoo
       const result = await chatSession!.sendMessageStream({ message });
       for await (const chunk of result) {
         const responseChunk = chunk as GenerateContentResponse;
+        // Fix: Correctly access the .text property from the response chunk as specified in guidelines (not a method call)
         if (responseChunk.text) {
           yield responseChunk.text;
         }
