@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
@@ -57,7 +55,7 @@ export const TeacherJournal: React.FC = () => {
                   <ClipboardCheck className="h-7 w-7 text-emerald-600" />
                   <span className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.3em]">Modulo Docente • v2.0</span>
                 </div>
-                <h1 className="text-7xl font-black text-slate-900 tracking-tighter uppercase leading-none">Diário de <br/><span className="text-emerald-600">Classe.</span></h1>
+                <h1 className="text-7xl font-black text-slate-900 tracking-tighter uppercase leading-none text-display">Diário de <br/><span className="text-emerald-600">Classe.</span></h1>
                 <p className="text-slate-500 font-medium text-xl mt-6">Escola: <span className="text-slate-900 font-black">{userData.schoolName || 'Rede Municipal'}</span> • Prof. {userData.name}</p>
             </div>
           </div>
@@ -76,7 +74,7 @@ export const TeacherJournal: React.FC = () => {
                 placeholder="Localizar aluno na turma..." 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="input-premium pl-20 !bg-white"
+                className="input-premium pl-20 !bg-white shadow-sm"
               />
             </div>
             <div className="flex items-center gap-10">
@@ -102,7 +100,7 @@ export const TeacherJournal: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(s => (
-                  <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={s.id} className="hover:bg-slate-50/50 transition-colors duration-300">
                     <td className="px-12 py-10">
                       <div className="flex items-center gap-6">
                         <div className="w-16 h-16 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-emerald-600 font-black text-2xl">
@@ -149,21 +147,21 @@ export const TeacherJournal: React.FC = () => {
         </div>
         
         <div className="mt-16 grid md:grid-cols-3 gap-10">
-            <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex items-center gap-6">
+            <div className="card-requinte !p-10 flex items-center gap-6">
                 <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-lg"><Target className="h-6 w-6" /></div>
                 <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total da Turma</p>
                     <p className="text-3xl font-black text-slate-900 tracking-tighter">{filtered.length}</p>
                 </div>
             </div>
-            <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex items-center gap-6">
+            <div className="card-requinte !p-10 flex items-center gap-6">
                 <div className="bg-emerald-500 p-4 rounded-2xl text-white shadow-lg"><Activity className="h-6 w-6" /></div>
                 <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Média de Presença</p>
                     <p className="text-3xl font-black text-slate-900 tracking-tighter">94%</p>
                 </div>
             </div>
-            <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl flex items-center gap-6">
+            <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl flex items-center gap-6 border border-slate-800">
                 <div className="bg-blue-400 p-4 rounded-2xl text-slate-900 shadow-lg"><Award className="h-6 w-6" /></div>
                 <div>
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Status Sincronismo</p>

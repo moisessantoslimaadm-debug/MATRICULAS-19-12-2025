@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
@@ -42,16 +41,13 @@ export const AdminData: React.FC = () => {
       let newCount = 0;
       let updatedCount = 0;
 
-      // Mock de dados vindos da planilha com todos os campos solicitados
+      // Mock de dados vindos da planilha
       const importedRows = Array.from({ length: 8 }).map((_, i) => {
         const neighborhoods = Object.keys(NEIGHBORHOOD_COORD);
         const neighborhood = neighborhoods[i % neighborhoods.length];
         const baseGeo = NEIGHBORHOOD_COORD[neighborhood];
-        
-        // Jitter nominal para não sobrepor exatamente no mapa (simulando número da porta)
         const lat = baseGeo.lat + (Math.random() - 0.5) * 0.004;
         const lng = baseGeo.lng + (Math.random() - 0.5) * 0.004;
-
         const cpf = `123.456.789-${(10 + i).toString().padStart(2, '0')}`;
 
         return {
@@ -81,15 +77,12 @@ export const AdminData: React.FC = () => {
         };
       });
 
-      // Lógica de Deduplicação Proativa
       importedRows.forEach(imp => {
         const existingIdx = currentList.findIndex(s => s.cpf === imp.cpf);
         if (existingIdx > -1) {
-          // Atualiza registro existente (contabiliza como atualização, não novo)
           currentList[existingIdx] = { ...currentList[existingIdx], ...imp };
           updatedCount++;
         } else {
-          // Adiciona novo se estiver faltando
           currentList.push(imp);
           newCount++;
         }
@@ -97,7 +90,7 @@ export const AdminData: React.FC = () => {
 
       updateStudents(currentList);
       setIsImporting(false);
-      addToast(`Importação Concluída: ${newCount} novos, ${updatedCount} atualizados. Mapa atualizado.`, "success");
+      addToast(`Importação Concluída: ${newCount} novos, ${updatedCount} atualizados.`, "success");
       if (fileInputRef.current) fileInputRef.current.value = '';
     }, 2000);
   };
@@ -115,121 +108,107 @@ export const AdminData: React.FC = () => {
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-12 page-transition">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-20 gap-10">
-          <div>
+          <div className="animate-in fade-in slide-in-from-left-8 duration-700">
             <div className="flex items-center gap-4 mb-5">
               <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg">
                 <Database className="h-5 w-5" />
               </div>
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Territorial SME</span>
             </div>
-            <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">Censo <span className="text-blue-600">Nominal.</span></h1>
-            <p className="text-slate-500 font-medium text-lg mt-4 max-w-xl">Gestão auditável de registros individuais com geoprocessamento em tempo real.</p>
+            <h1 className="text-7xl font-black text-slate-900 tracking-tighter uppercase leading-none text-display">Censo <br/><span className="text-blue-600">Nominal.</span></h1>
+            <p className="text-slate-500 font-medium text-lg mt-6 max-w-xl">Gestão auditável de registros individuais com geoprocessamento em tempo real.</p>
           </div>
           
-          <div className="flex gap-5">
+          <div className="flex gap-5 animate-in fade-in slide-in-from-right-8 duration-700">
             <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx" onChange={handleFileUpload} />
             <button 
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="btn-secondary !h-16 !px-12"
+              className="btn-secondary !h-20 !px-12"
             >
-              {isImporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+              {isImporting ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
               Importar Planilha
             </button>
-            <button className="btn-primary !h-16 !px-12">
-              <Download className="h-5 w-5" /> Exportar Dados
+            <button className="btn-primary !h-20 !px-12">
+              <Download className="h-6 w-6" /> Exportar Dados
             </button>
           </div>
         </header>
 
-        <div className="grid lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-12">
-            <div className="bg-white rounded-[3.5rem] shadow-luxury border border-slate-100 overflow-hidden">
-              <div className="p-10 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-50/20">
-                <div className="relative flex-1 w-full max-w-md">
-                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
-                  <input 
-                    type="text" 
-                    placeholder="Filtrar por nome, CPF ou bairro..." 
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-16 pr-6 py-5 bg-white border-none rounded-2xl outline-none font-bold text-slate-700 text-sm shadow-sm focus:ring-8 focus:ring-blue-50 transition-all"
-                  />
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registros na Rede: <span className="text-slate-900">{filtered.length}</span></span>
-                  <div className="flex gap-2">
-                    <button className="p-3 bg-white rounded-xl border border-slate-200 text-slate-400"><Filter className="h-4 w-4" /></button>
-                  </div>
-                </div>
-              </div>
+        <div className="bg-white rounded-[3.5rem] shadow-luxury border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-700">
+          <div className="p-10 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-50/30">
+            <div className="relative flex-1 w-full max-w-lg">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
+              <input 
+                type="text" 
+                placeholder="Filtrar por nome, CPF ou bairro..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="input-premium pl-16 !bg-white !py-4"
+              />
+            </div>
+            <div className="flex items-center gap-8">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-ultra">Registros na Rede: <span className="text-slate-900">{filtered.length}</span></span>
+              <button className="p-4 bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-blue-600 transition-all shadow-sm"><Filter className="h-5 w-5" /></button>
+            </div>
+          </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante</th>
-                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">CPF / NIS</th>
-                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Logradouro Nominal</th>
-                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status de Rede</th>
-                      <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {paginated.map(s => (
-                      <tr key={s.id} className="group hover:bg-blue-50/30 transition-all duration-300">
-                        <td className="px-10 py-8">
-                          <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-600 font-black text-xl shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
-                              {s.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-black text-slate-900 text-base uppercase tracking-tight leading-none mb-2">{s.name}</p>
-                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{s.school}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-10 py-8">
-                          <p className="text-[10px] font-bold text-slate-600 font-mono mb-1">{s.cpf}</p>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{s.nis || 'NÃO INFORMADO'}</p>
-                        </td>
-                        <td className="px-10 py-8">
-                          <div className="flex items-center gap-3 text-slate-500">
-                            <MapPin className="h-4 w-4 text-blue-400" />
-                            <div>
-                                <p className="text-xs font-bold uppercase text-slate-700">{s.address?.neighborhood}</p>
-                                <p className="text-[9px] font-bold uppercase text-slate-400 tracking-tighter line-clamp-1">{s.address?.street}, {s.address?.number}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-10 py-8">
-                          <div className="flex flex-col gap-2">
-                             <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest w-fit border ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                                {s.status}
-                             </span>
-                             {s.transportRequest && <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Transporte</span>}
-                          </div>
-                        </td>
-                        <td className="px-10 py-8 text-right">
-                          <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 transition-colors shadow-sm"><Edit3 className="h-4 w-4" /></button>
-                            <button onClick={() => removeStudent(s.id)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-red-500 transition-colors shadow-sm"><Trash2 className="h-4 w-4" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mostrando {paginated.length} de {filtered.length} registros</span>
-                <div className="flex items-center gap-4">
-                  <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-3 bg-white rounded-xl border border-slate-200 text-slate-400 disabled:opacity-30"><ChevronLeft className="h-5 w-5" /></button>
-                  <span className="text-xs font-black text-slate-900 uppercase">Pág {currentPage} / {totalPages || 1}</span>
-                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage >= totalPages} className="p-3 bg-white rounded-xl border border-slate-200 text-slate-400 disabled:opacity-30"><ChevronRight className="h-5 w-5" /></button>
-                </div>
-              </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-10 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante</th>
+                  <th className="px-10 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identidade Nom.</th>
+                  <th className="px-10 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">Logradouro SME</th>
+                  <th className="px-10 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {paginated.map(s => (
+                  <tr key={s.id} className="group hover:bg-blue-50/40 transition-all duration-500">
+                    <td className="px-10 py-10">
+                      <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-600 font-black text-2xl shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                          {s.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 text-xl uppercase tracking-tighter leading-none mb-3">{s.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{s.school}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-10 py-10">
+                      <p className="text-[11px] font-bold text-slate-700 font-mono mb-2">{s.cpf}</p>
+                      <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest w-fit border ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className="px-10 py-10">
+                      <div className="flex items-center gap-4 text-slate-500">
+                        <MapPin className="h-5 w-5 text-blue-400" />
+                        <div>
+                            <p className="text-sm font-black uppercase text-slate-800 tracking-tight">{s.address?.neighborhood}</p>
+                            <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest line-clamp-1">{s.address?.street}, {s.address?.number}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-10 py-10 text-right">
+                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+                        <button className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm"><Edit3 className="h-5 w-5" /></button>
+                        <button onClick={() => removeStudent(s.id)} className="p-4 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-red-500 transition-all shadow-sm"><Trash2 className="h-5 w-5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="p-10 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Página {currentPage} de {totalPages || 1} • {filtered.length} registros</span>
+            <div className="flex items-center gap-6">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-4 bg-white rounded-2xl border border-slate-200 text-slate-400 disabled:opacity-30 transition-all hover:bg-slate-50"><ChevronLeft className="h-6 w-6" /></button>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage >= totalPages} className="p-4 bg-white rounded-2xl border border-slate-200 text-slate-400 disabled:opacity-30 transition-all hover:bg-slate-50"><ChevronRight className="h-6 w-6" /></button>
             </div>
           </div>
         </div>

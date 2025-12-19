@@ -1,12 +1,11 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
   --primary: #2563eb;
   --emerald-gov: #10b981;
   --slate-deep: #0f172a;
-  --luxury-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05), 0 4px 12px -6px rgba(0, 0, 0, 0.03);
-  --glass: rgba(255, 255, 255, 0.98);
+  --luxury-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+  --glass: rgba(255, 255, 255, 0.95);
 }
 
 body {
@@ -22,55 +21,72 @@ body {
 
 .glass-premium {
   background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 .card-requinte {
-  @apply bg-white rounded-[3rem] border border-slate-100 shadow-sm transition-all duration-700 ease-out;
+  @apply bg-white rounded-[2.5rem] border border-slate-100 shadow-sm transition-all duration-700 ease-out;
 }
 .card-requinte:hover {
-  @apply shadow-luxury border-blue-200 -translate-y-2;
+  @apply shadow-luxury border-blue-100 -translate-y-2;
 }
 
 .text-display {
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
 }
 
 .input-premium {
-  @apply w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] focus:bg-white focus:ring-[12px] focus:ring-blue-50 focus:border-blue-600 outline-none transition-all font-bold text-slate-700 text-base shadow-inner;
+  @apply w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:bg-white focus:ring-[12px] focus:ring-blue-50 focus:border-blue-600 outline-none transition-all font-bold text-slate-700 text-base shadow-inner;
 }
 
 .btn-primary {
-  @apply px-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-600 transition-all active:scale-95 flex items-center justify-center gap-4 shadow-2xl border border-slate-800;
+  @apply px-10 py-5 bg-slate-900 text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-600 transition-all active:scale-95 flex items-center justify-center gap-4 shadow-2xl border border-slate-800;
 }
 
 .btn-secondary {
-  @apply px-10 py-5 bg-white text-slate-700 border border-slate-100 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center gap-4 shadow-sm;
+  @apply px-10 py-5 bg-white text-slate-700 border border-slate-100 rounded-[1.8rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center gap-4 shadow-sm;
 }
 
 .page-transition {
-  animation: fadeInPremium 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInPremium 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeInPremium {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  from { opacity: 0; transform: translateY(40px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.animate-float-soft {
-  animation: floatSoft 8s ease-in-out infinite;
+.animate-luxury-float {
+  animation: floatLuxury 10s ease-in-out infinite;
 }
 
-@keyframes floatSoft {
+@keyframes floatLuxury {
   0%, 100% { transform: translateY(0) rotate(0); }
-  50% { transform: translateY(-15px) rotate(1deg); }
+  33% { transform: translateY(-20px) rotate(1deg); }
+  66% { transform: translateY(10px) rotate(-1deg); }
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 
-.tracking-ultra { letter-spacing: 0.5em; }
+.tracking-ultra { letter-spacing: 0.6em; }
+
+/* Micro-interactions */
+.hover-reveal {
+    @apply transition-all duration-500 opacity-0 translate-y-4;
+}
+.group:hover .hover-reveal {
+    @apply opacity-100 translate-y-0;
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
