@@ -1,5 +1,4 @@
 
-
 export enum SchoolType {
   INFANTIL = 'Educação Infantil',
   FUNDAMENTAL_1 = 'Fundamental I',
@@ -48,6 +47,9 @@ export interface RegistryStudent {
   grade?: string;
   className?: string;
   specialNeeds?: boolean;
+  disabilityType?: string; // Ex: Autismo, Deficiência Visual
+  participatesAEE?: boolean;
+  municipalProjects?: string[]; // Ex: ["Música na Escola", "Robótica Municipal"]
   photo?: string;
   attendance?: {
     totalSchoolDays: number;
@@ -97,7 +99,6 @@ export interface RegistrationFormState {
   selectedSchoolId: string | null;
 }
 
-// Fixed: Added missing School interface
 export interface School {
   id: string;
   inep?: string;
@@ -112,7 +113,6 @@ export interface School {
   hasAEE: boolean;
 }
 
-// Fixed: Added missing ChatMessage interface
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';

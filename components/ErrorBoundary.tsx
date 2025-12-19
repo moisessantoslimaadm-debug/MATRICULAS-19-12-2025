@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, Copy, ShieldAlert, FileSearch } from 'lucide-react';
 import { useLog } from '../contexts/LogContext';
 
@@ -13,8 +13,8 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Explicitly extend the Component class imported from 'react' to ensure props/state are inherited correctly
-class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
+// Fixed: Using React.Component explicitly ensures that props and state are properly recognized by the TypeScript compiler
+class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState> {
   constructor(props: InnerProps) {
     super(props);
     // Initialize state properly within the constructor

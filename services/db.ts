@@ -1,7 +1,7 @@
-import { Dexie, Table } from 'dexie';
+import Dexie, { Table } from 'dexie';
 import { School, RegistryStudent } from '../types';
 
-// Fixed: Changed from default import to named import of Dexie to ensure class inheritance works correctly in this environment
+// Fixed: Changed to default import of Dexie to ensure class inheritance works correctly and 'version' property is available
 class EducaDatabase extends Dexie {
   schools!: Table<School>;
   students!: Table<RegistryStudent>;

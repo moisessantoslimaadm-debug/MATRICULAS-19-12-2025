@@ -1,3 +1,4 @@
+
 import { School, SchoolType, RegistryStudent, RegistrationFormState } from './types';
 
 export const MUNICIPALITY_NAME = "Itaberaba";
@@ -30,36 +31,39 @@ export const MOCK_SCHOOLS: School[] = [
   }
 ];
 
-// Gerador de dados para o Mapa de Calor (Nominal e por Logradouro)
 const generateMockStudents = (count: number): RegistryStudent[] => {
   const bairros = [
     { name: 'Centro', lat: -12.5253, lng: -40.2917 },
     { name: 'Primavera', lat: -12.5280, lng: -40.3020 },
     { name: 'Barro Vermelho', lat: -12.5320, lng: -40.2850 },
-    { name: 'Jardim das Palmeiras', lat: -12.5180, lng: -40.3100 },
-    { name: 'Caititu', lat: -12.5400, lng: -40.2950 }
+    { name: 'Jardim das Palmeiras', lat: -12.5180, lng: -40.3100 }
   ];
 
-  const nomes = ['Arthur', 'Beatriz', 'Caio', 'Daniela', 'Enzo', 'Fernanda', 'Gabriel', 'Helena', 'Ícaro', 'Julia', 'Kevin', 'Lorena'];
-  const sobrenomes = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Pereira', 'Lima', 'Ferreira', 'Costa', 'Rodrigues', 'Almeida'];
+  const nomes = ['Arthur Silva Pereira', 'Beatriz Santos Oliveira', 'Caio Souza Lima', 'Daniela Ferreira Costa', 'Enzo Almeida Rodrigues'];
+  const projetos = ['Robótica Municipal', 'Música na Escola', 'Atleta do Futuro', 'Horta Comunitária'];
 
   return Array.from({ length: count }).map((_, i) => {
     const bairro = bairros[i % bairros.length];
-    // Jitter para dispersão real no mapa
-    const latOffset = (Math.random() - 0.5) * 0.015;
-    const lngOffset = (Math.random() - 0.5) * 0.015;
-    const nome = `${nomes[Math.floor(Math.random() * nomes.length)]} ${sobrenomes[Math.floor(Math.random() * sobrenomes.length)]}`;
+    const latOffset = (Math.random() - 0.5) * 0.01;
+    const lngOffset = (Math.random() - 0.5) * 0.01;
+    const nomeCompleto = nomes[i % nomes.length];
 
     return {
       id: `std-${i}-${Date.now()}`,
       enrollmentId: `PROT-${100000 + i}`,
-      name: nome.toUpperCase(),
+      name: nomeCompleto.toUpperCase(),
       birthDate: '2015-05-10',
       cpf: `000.000.000-${(i % 99).toString().padStart(2, '0')}`,
-      status: i % 5 === 0 ? 'Pendente' : 'Matriculado',
+      status: i % 8 === 0 ? 'Pendente' : 'Matriculado',
       school: i % 2 === 0 ? 'CRECHE PARAISO DA CRIANCA' : 'ESCOLA MUNICIPAL JOÃO XXIII',
       lat: bairro.lat + latOffset,
       lng: bairro.lng + lngOffset,
+      specialNeeds: i % 5 === 0,
+      disabilityType: i % 5 === 0 ? 'Autismo' : undefined,
+      participatesAEE: i % 5 === 0,
+      transportRequest: i % 4 === 0,
+      municipalProjects: i % 3 === 0 ? [projetos[i % projetos.length]] : [],
+      photo: `https://i.pravatar.cc/150?u=${i}`,
       address: {
         street: `Rua Projetada ${i + 10}`,
         number: `${Math.floor(Math.random() * 900)}`,
@@ -67,21 +71,12 @@ const generateMockStudents = (count: number): RegistryStudent[] => {
         city: 'Itaberaba',
         zipCode: '46880-000',
         zone: 'Urbana'
-      },
-      specialNeeds: i % 10 === 0,
-      grade: '1º Ano',
-      className: 'Sala A',
-      attendance: {
-        totalSchoolDays: 200,
-        presentDays: 180 + Math.floor(Math.random() * 20),
-        justifiedAbsences: 2,
-        unjustifiedAbsences: 3
       }
     };
   });
 };
 
-export const MOCK_STUDENT_REGISTRY: RegistryStudent[] = generateMockStudents(80);
+export const MOCK_STUDENT_REGISTRY: RegistryStudent[] = generateMockStudents(40);
 
 export const INITIAL_REGISTRATION_STATE: RegistrationFormState = {
   step: 1,
