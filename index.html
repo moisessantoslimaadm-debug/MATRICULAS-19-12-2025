@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#10b981" />
+    <title>EducaMunicípio - Itaberaba Digital</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" crossorigin=""></script>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"]
+            }
+          }
+        }
+      };
+    </script>
+
+    <script>
+      window.process = window.process || { env: { NODE_ENV: 'development' } };
+    </script>
+    
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "dexie": "https://esm.sh/dexie@^4.2.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+  </head>
+  <body class="bg-[#fcfdfe] text-slate-900 antialiased overflow-x-hidden">
+    <div id="root">
+        <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #0f172a;">
+            <div style="position: relative; width: 80px; height: 80px;">
+                <div style="position: absolute; width: 100%; height: 100%; border: 4px solid rgba(16, 185, 129, 0.1); border-radius: 30px;"></div>
+                <div style="position: absolute; width: 100%; height: 100%; border: 4px solid #10b981; border-top-color: transparent; border-radius: 30px; animation: spin 1s cubic-bezier(0.16, 1, 0.3, 1) infinite;"></div>
+            </div>
+            <p style="margin-top: 32px; color: #10b981; font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: 0.5em; font-size: 10px; text-transform: uppercase;">Iniciando SME Itaberaba</p>
+        </div>
+    </div>
+    <style>
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
