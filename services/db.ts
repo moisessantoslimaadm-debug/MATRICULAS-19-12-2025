@@ -1,5 +1,5 @@
 
-import Dexie from 'dexie';
+import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
 import { School, RegistryStudent, Professional, Project } from '../types';
 
@@ -13,7 +13,7 @@ export class EducaDatabase extends Dexie {
     super('EducaMunicipioDB');
     
     // Configuração do barramento de dados v12 para auditoria nominal e resiliência síncrona
-    // Fix: Using this.version which is available on Dexie class instances when extending correctly
+    // Property 'version' is inherited from Dexie class
     this.version(12).stores({
       schools: 'id, inep, name, address',
       students: 'id, enrollmentId, inepId, name, cpf, school, status, specialNeeds, transportRequest, classCode',

@@ -131,10 +131,11 @@ export const MapAnalysis: React.FC = () => {
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // Busca nominal por Aluno, CPF ou Unidade
+    // Busca nominal profunda por Aluno, CPF ou Logradouro
     const match = students.find(s => 
         s.name.toLowerCase().includes(term) || 
-        s.cpf.includes(term)
+        s.cpf.includes(term) ||
+        (s.address && s.address.street.toLowerCase().includes(term))
     ) || schools.find(s => s.name.toLowerCase().includes(term));
 
     if (match) {
@@ -142,9 +143,9 @@ export const MapAnalysis: React.FC = () => {
             duration: 1.8,
             easeLinearity: 0.15
         });
-        addToast(`Localizado: ${match.name}`, 'info');
+        addToast(`Visualizando: ${match.name}`, 'info');
     } else {
-        addToast("Critério não localizado no barramento.", "warning");
+        addToast("Critério nominal não localizado no barramento.", "warning");
     }
   };
 
@@ -169,7 +170,7 @@ export const MapAnalysis: React.FC = () => {
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Navigation2 size={16} className="text-blue-500" /> Localização Nominal</h3>
                 <div className="relative group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                    <input type="text" value={searchStreet} onChange={e => setSearchStreet(e.target.value)} placeholder="Aluno, CPF ou Escola..." className="input-premium pl-16 !h-16 !text-sm !bg-slate-50" />
+                    <input type="text" value={searchStreet} onChange={e => setSearchStreet(e.target.value)} placeholder="Aluno, CPF ou Logradouro..." className="input-premium pl-16 !h-16 !text-sm !bg-slate-50" />
                 </div>
             </form>
 
@@ -188,7 +189,7 @@ export const MapAnalysis: React.FC = () => {
             </section>
 
             <section className="space-y-6">
-                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Globe size={16} className="text-blue-500" /> Estilo de Mapa</h3>
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Globe size={16} className="text-blue-500" /> Modo de Exibição</h3>
                 <div className="flex bg-slate-50 p-2 rounded-2xl border border-slate-100 gap-2">
                     {(['voyager', 'satellite', 'dark'] as const).map(style => (
                         <button key={style} onClick={() => { setMapStyle(style); updateMapTiles(style); }} className={`flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${mapStyle === style ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400'}`}>

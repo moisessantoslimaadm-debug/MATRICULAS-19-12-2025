@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, Copy, ShieldAlert, FileSearch } from 'lucide-react';
 import { useLog } from '../contexts/LogContext';
 
@@ -14,11 +14,10 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-// Fix: Using React.Component explicitly to ensure props and state are correctly typed and available on 'this'
-class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState> {
+// Fixed inheritance by using Component directly from react to ensure 'state' and 'props' are recognized
+class ErrorBoundaryInner extends Component<InnerProps, ErrorBoundaryState> {
   constructor(props: InnerProps) {
     super(props);
-    // Fix: Initializing state in the constructor for the class component
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
@@ -28,9 +27,8 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Critical System Failure:", error, errorInfo);
-    // Fix: Using this.setState correctly within the class context
+    // Properly call setState inherited from Component
     this.setState({ errorInfo });
-    // Fix: Accessing this.props correctly
     if (this.props.logError) {
         this.props.logError(`Falha Nominal Crítica: ${error.message}`, errorInfo.componentStack || '');
     }
@@ -39,7 +37,6 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
   private handleReload = () => { window.location.reload(); };
 
   private handleCopyDetails = () => {
-      // Fix: Accessing state through 'this'
       const { error, errorInfo } = this.state;
       const text = `ID FALHA: SME-${Date.now()}\nErro: ${error?.message}\n\nStack:\n${errorInfo?.componentStack || 'Não disponível'}`;
       navigator.clipboard.writeText(text);
@@ -47,7 +44,6 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
   };
 
   render() {
-    // Fix: Accessing this.state in render
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#fcfdfe] flex items-center justify-center p-8 page-transition">
@@ -81,7 +77,6 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
         </div>
       );
     }
-    // Fix: Accessing this.props correctly
     return this.props.children;
   }
 }

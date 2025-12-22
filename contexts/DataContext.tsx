@@ -105,7 +105,6 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
   const updateStudents = async (updatedStudents: RegistryStudent[]) => {
     try {
-      // Fix: Dexie transaction syntax requires an array of tables or table names
       await db.transaction('rw', [db.students], async () => {
         for (const s of updatedStudents) { 
           await db.students.put(s); 
