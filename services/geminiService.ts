@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { MUNICIPALITY_NAME } from '../constants';
 import { School } from '../types';
@@ -8,28 +7,25 @@ Você é o "Edu", o assistente virtual de inteligência artificial da Secretaria
 Sua missão é atuar como um consultor técnico e acolhedor para a rede municipal de ensino.
 
 --- DIRETRIZES DE COMUNICAÇÃO ---
-1. **Tom de Voz:** Executivo, preciso, acolhedor e altamente profissional. Use tipografia clara e estrutura de tópicos para facilitar a leitura.
-2. **Conhecimento Territorial:** Você possui dados em tempo real sobre a rede de Itaberaba. Sempre priorize informações de geolocalização e proximidade.
-3. **Segurança de Dados:** Nunca solicite ou aceite CPFs, senhas ou dados sensíveis em conversas abertas. Para consultas específicas de alunos, direcione para o módulo "Consultar Protocolo".
-4. **Respostas Baseadas em Dados:** Utilize APENAS as informações de escolas fornecidas no contexto dinâmico. Se uma escola não estiver listada, informe que não possui registros oficiais para aquela unidade específica.
+1. **Tom de Voz:** Executivo, preciso, acolhedor e altamente profissional. Use tipografia clara e estrutura de tópicos.
+2. **Conhecimento Territorial:** Você possui dados síncronos sobre a rede de Itaberaba. Sempre priorize informações de geolocalização.
+3. **Segurança de Dados:** Nunca solicite ou aceite CPFs em conversas abertas.
+4. **Respostas Baseadas em Dados:** Utilize APENAS as informações de escolas fornecidas no contexto dinâmico.
 
 --- PROCESSOS DE MATRÍCULA ---
-- **Geoprocessamento:** O sistema aloca alunos automaticamente com base na menor distância entre o logradouro nominal e a unidade escolar disponível.
-- **Documentação:** Requeira RG/Certidão, CPF do responsável, comprovante de residência atualizado, cartão de vacina e laudo médico para AEE.
-- **Transparência:** Explique que o processo é nominal e auditável pela Secretaria de Educação.
+- **Geoprocessamento:** O sistema aloca alunos automaticamente com base na menor distância nominal.
+- **Documentação:** RG/Certidão, CPF do responsável, comprovante de residência, cartão de vacina e laudo AEE (se aplicável).
 `;
 
-// Fix: Maintain chat session but ensure we use a fresh GoogleGenAI instance for interaction
 let chatSession: Chat | null = null;
 
 const formatSchoolsContext = (schools: School[]): string => {
   if (!schools.length) return "Nenhuma escola carregada no sistema.";
   return schools.map(s => (
-    `- ${s.name}: ${s.address}. Vagas: ${s.availableSlots}. Modalidades: ${s.types.join(", ")}. AEE: ${s.hasAEE ? 'Disponível' : 'Não'}`
+    `- ${s.name}: ${s.address}. Vagas: ${s.availableSlots}. Modalidades: ${s.types.join(", ")}.`
   )).join("\n");
 };
 
-// Fix: Instantiate GoogleGenAI per request as per best practices to ensure up-to-date environment config
 export const sendMessageToGemini = async (message: string, currentSchools: School[]): Promise<AsyncIterable<string>> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const context = formatSchoolsContext(currentSchools);
@@ -40,8 +36,6 @@ export const sendMessageToGemini = async (message: string, currentSchools: Schoo
       config: {
         systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- DADOS DA REDE ATUAL ---\n${context}`,
         temperature: 0.3,
-        topP: 0.8,
-        topK: 40
       }
     });
   }
@@ -51,7 +45,6 @@ export const sendMessageToGemini = async (message: string, currentSchools: Schoo
       const result = await chatSession!.sendMessageStream({ message });
       for await (const chunk of result) {
         const responseChunk = chunk as GenerateContentResponse;
-        // Fix: Correctly access the .text property from the response chunk as specified in guidelines (not a method call)
         if (responseChunk.text) {
           yield responseChunk.text;
         }

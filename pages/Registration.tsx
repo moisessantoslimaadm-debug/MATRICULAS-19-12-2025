@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { INITIAL_REGISTRATION_STATE, MUNICIPALITY_NAME } from '../constants';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { RegistrationFormState, RegistryStudent } from '../types';
-import { Check, User, ShieldCheck, ChevronRight, Loader2, MapPin, ChevronLeft, FileText, UserCheck, Smartphone } from 'lucide-react';
+import { Check, User, ShieldCheck, ChevronRight, Loader2, MapPin, ChevronLeft, FileText, UserCheck, Smartphone, Zap } from 'lucide-react';
 import { useNavigate } from '../router';
 
 export const Registration: React.FC = () => {
@@ -62,14 +63,18 @@ export const Registration: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white py-24 px-8 page-transition">
+    <div className="min-h-screen bg-[#fcfdfe] py-24 px-8 page-transition">
       <div className="max-w-4xl mx-auto space-y-16">
         <header className="text-center space-y-6">
-            <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">Matrícula <span className="text-emerald-600">Síncrona.</span></h1>
-            <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-xs">Registro Nominal Municipal • Itaberaba 2025</p>
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-emerald-50 rounded-full border border-emerald-100 mb-4">
+              <Zap className="h-4 w-4 text-emerald-600 animate-pulse" />
+              <span className="text-emerald-800 text-[9px] font-black uppercase tracking-[0.3em]">Rede Nominal Síncrona • Itaberaba</span>
+            </div>
+            <h1 className="text-7xl font-black text-slate-900 tracking-tighter uppercase leading-none">Matrícula <span className="text-emerald-600">Digital.</span></h1>
+            <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-xs">Registro Oficial SME 2025 • Itinerário Nominal</p>
         </header>
 
-        <div className="card-requinte !p-0 overflow-hidden border-2 border-emerald-50">
+        <div className="card-requinte !p-0 overflow-hidden border-2 border-emerald-50 shadow-luxury">
           <div className="p-12 border-b border-emerald-50 bg-slate-50/50 flex justify-center gap-16 md:gap-24">
               <StepCircle step={1} icon={User} />
               <StepCircle step={2} icon={UserCheck} />
@@ -82,8 +87,8 @@ export const Registration: React.FC = () => {
                   <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                       <div className="grid md:grid-cols-2 gap-10">
                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome Completo do Estudante</label>
-                              <input type="text" required value={formState.student.fullName} onChange={e => handleInputChange('student', 'fullName', e.target.value)} className="input-premium" placeholder="Ex: Arthur Silva Pereira" />
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome Completo do Aluno</label>
+                              <input type="text" required value={formState.student.fullName} onChange={e => handleInputChange('student', 'fullName', e.target.value)} className="input-premium" placeholder="Ex: ARTHUR SILVA SANTOS" />
                           </div>
                           <div className="space-y-4">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Data de Nascimento</label>
@@ -92,13 +97,13 @@ export const Registration: React.FC = () => {
                       </div>
                       <div className="grid md:grid-cols-2 gap-10">
                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">CPF (Obrigatório)</label>
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">CPF Nominal (Vínculo MEC)</label>
                               <input type="text" required value={formState.student.cpf} onChange={e => handleInputChange('student', 'cpf', e.target.value)} className="input-premium" placeholder="000.000.000-00" />
                           </div>
                           <div className="flex flex-col justify-center gap-4 pt-4">
-                              <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-2xl border border-emerald-100 cursor-pointer group">
+                              <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-2xl border border-emerald-100 cursor-pointer group hover:shadow-md transition-all">
                                   <input type="checkbox" className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-100 border-emerald-200" checked={formState.student.needsSpecialEducation} onChange={e => handleInputChange('student', 'needsSpecialEducation', e.target.checked)} />
-                                  <span className="text-xs font-black text-emerald-800 uppercase tracking-widest group-hover:text-emerald-600 transition-colors">Educação Especial (AEE)</span>
+                                  <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Atendimento Especial (AEE)</span>
                               </label>
                           </div>
                       </div>
@@ -109,24 +114,14 @@ export const Registration: React.FC = () => {
                   <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                       <div className="grid md:grid-cols-2 gap-10">
                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome do Responsável Legal</label>
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Responsável Legal</label>
                               <input type="text" required value={formState.guardian.fullName} onChange={e => handleInputChange('guardian', 'fullName', e.target.value)} className="input-premium" />
                           </div>
                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Vínculo Parentesco</label>
-                              <select className="input-premium appearance-none" value={formState.guardian.relationship} onChange={e => handleInputChange('guardian', 'relationship', e.target.value)}>
-                                  <option value="Mãe">Mãe</option>
-                                  <option value="Pai">Pai</option>
-                                  <option value="Tutor Legal">Tutor Legal</option>
-                              </select>
-                          </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-10">
-                          <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Contato Telefônico</label>
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Telefone de Contato</label>
                               <div className="relative">
                                   <Smartphone className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
-                                  <input type="tel" required value={formState.guardian.phone} onChange={e => handleInputChange('guardian', 'phone', e.target.value)} className="input-premium pl-16" placeholder="(75) 00000-0000" />
+                                  <input type="tel" required value={formState.guardian.phone} onChange={e => handleInputChange('guardian', 'phone', e.target.value)} className="input-premium pl-16" placeholder="(75) 90000-0000" />
                               </div>
                           </div>
                       </div>
@@ -135,18 +130,19 @@ export const Registration: React.FC = () => {
 
               {formState.step === 3 && (
                   <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                      <div className="bg-[#064e3b] p-8 rounded-[2.5rem] flex items-center gap-6 text-white shadow-2xl">
-                          <div className="bg-emerald-500 p-4 rounded-2xl shadow-lg">
+                      <div className="bg-[#064e3b] p-8 rounded-[2.5rem] flex items-center gap-6 text-white shadow-2xl overflow-hidden relative">
+                          <div className="bg-emerald-500 p-4 rounded-2xl shadow-lg relative z-10">
                             <MapPin className="h-8 w-8 text-white" />
                           </div>
-                          <div>
-                              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 mb-1">Geolocalização Ativa</p>
-                              <p className="text-base font-medium opacity-80">O logradouro nominal define a alocação por menor distância.</p>
+                          <div className="relative z-10">
+                              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 mb-1">Logradouro Nominal</p>
+                              <p className="text-base font-medium opacity-80">A alocação será automática por menor distância absoluta.</p>
                           </div>
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
                       </div>
                       <div className="grid md:grid-cols-2 gap-10">
                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Rua / Logradouro</label>
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Rua / Avenida</label>
                               <input type="text" required value={formState.address.street} onChange={e => handleInputChange('address', 'street', e.target.value)} className="input-premium" />
                           </div>
                           <div className="space-y-4">
@@ -154,15 +150,13 @@ export const Registration: React.FC = () => {
                               <input type="text" required value={formState.address.neighborhood} onChange={e => handleInputChange('address', 'neighborhood', e.target.value)} className="input-premium" />
                           </div>
                       </div>
-                      <div className="flex items-center gap-10">
-                        <label className="flex items-center gap-5 p-6 bg-slate-50 rounded-[2rem] border border-slate-100 cursor-pointer group hover:bg-white transition-all w-full">
-                            <input type="checkbox" className="w-8 h-8 rounded-xl text-emerald-600 focus:ring-emerald-100 border-slate-200" checked={formState.student.needsTransport} onChange={e => handleInputChange('student', 'needsTransport', e.target.checked)} />
-                            <div>
-                                <span className="text-sm font-black text-slate-800 uppercase tracking-widest block">Requer Transporte Escolar</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase mt-1 block">Válido para estudantes de zonas rurais</span>
-                            </div>
-                        </label>
-                      </div>
+                      <label className="flex items-center gap-5 p-6 bg-blue-50 rounded-[2rem] border border-blue-100 cursor-pointer group hover:bg-white transition-all w-full">
+                          <input type="checkbox" className="w-8 h-8 rounded-xl text-blue-600 focus:ring-blue-100 border-blue-200" checked={formState.student.needsTransport} onChange={e => handleInputChange('student', 'needsTransport', e.target.checked)} />
+                          <div>
+                              <span className="text-sm font-black text-blue-800 uppercase tracking-widest block">Requer Transporte Escolar Municipal</span>
+                              <span className="text-[9px] font-bold text-blue-400 uppercase mt-1 block">Prioridade para zonas rurais e periféricas</span>
+                          </div>
+                      </label>
                   </div>
               )}
 
@@ -172,31 +166,31 @@ export const Registration: React.FC = () => {
                         <ShieldCheck className="h-16 w-16 text-emerald-600" />
                       </div>
                       <div>
-                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-4">Dados Consolidados.</h2>
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] max-w-sm mx-auto">Sua solicitação será processada nominalmente no banco municipal.</p>
+                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-4">Dossiê Consolidado.</h2>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] max-w-sm mx-auto leading-relaxed">Sua solicitação será transmitida nominalmente ao barramento municipal SME Itaberaba.</p>
                       </div>
-                      <div className="bg-emerald-50/30 p-10 rounded-[3rem] border border-emerald-100 text-left space-y-6">
-                          <div className="flex justify-between items-center border-b border-emerald-100 pb-5">
-                              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Estudante Nominal</span>
+                      <div className="bg-slate-50/50 p-10 rounded-[3rem] border border-slate-100 text-left space-y-6">
+                          <div className="flex justify-between items-center border-b border-slate-200 pb-5">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aluno Nominal</span>
                               <span className="text-sm font-black text-slate-900 uppercase">{formState.student.fullName}</span>
                           </div>
                           <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Território</span>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona Residencial</span>
                               <span className="text-sm font-black text-slate-900 uppercase">{formState.address.neighborhood}</span>
                           </div>
                       </div>
                   </div>
               )}
 
-              <div className="flex justify-between items-center pt-12 border-t border-emerald-50">
+              <div className="flex justify-between items-center pt-12 border-t border-slate-100">
                   <button type="button" onClick={() => setFormState(p => ({...p, step: p.step - 1}))} disabled={formState.step === 1} className="text-[11px] font-black text-slate-400 hover:text-emerald-700 disabled:opacity-0 flex items-center gap-3 transition-all uppercase tracking-widest group">
                     <ChevronLeft className="h-6 w-6 group-hover:-translate-x-2 transition-transform" /> Voltar
                   </button>
                   {formState.step < 4 ? (
                       <button type="button" onClick={nextStep} className="btn-primary !h-16 !px-12 !text-[12px]">Próximo Passo</button>
                   ) : (
-                      <button type="submit" disabled={isSubmitting} className="btn-primary !h-16 !px-12 !text-[12px] !bg-emerald-600">
-                          {isSubmitting ? <Loader2 className="h-7 w-7 animate-spin" /> : "Transmitir Matrícula"}
+                      <button type="submit" disabled={isSubmitting} className="btn-primary !h-16 !px-12 !text-[12px] !bg-emerald-600 shadow-emerald-900/20">
+                          {isSubmitting ? <Loader2 className="h-7 w-7 animate-spin" /> : "Transmitir Matrícula Síncrona"}
                       </button>
                   )}
               </div>

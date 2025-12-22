@@ -5,20 +5,21 @@ export const MUNICIPALITY_NAME = "Itaberaba";
 
 export const MOCK_SCHOOLS: School[] = [
   {
-    id: '29383935',
-    inep: '29383935',
-    name: 'CRECHE PARAISO DA CRIANCA',
-    address: 'Av. Rio Branco, 450 - Centro, Itaberaba - BA',
+    id: '29463777',
+    inep: '29463777',
+    name: 'CENTRO MUNICIPAL DE ED INF CEMEI LINESIO BASTOS DE SANTANA',
+    address: 'Zona Urbana, Itaberaba - BA',
     types: [SchoolType.INFANTIL],
     image: 'https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&q=80',
     rating: 5.0,
-    availableSlots: 150,
+    availableSlots: 400,
     lat: -12.5253,
     lng: -40.2917,
     hasAEE: true 
   },
   {
     id: '29383940',
+    inep: '29383940',
     name: 'ESCOLA MUNICIPAL JOÃO XXIII',
     address: 'Rua São José, 12 - Primavera, Itaberaba - BA',
     types: [SchoolType.FUNDAMENTAL_1, SchoolType.FUNDAMENTAL_2],
@@ -31,52 +32,76 @@ export const MOCK_SCHOOLS: School[] = [
   }
 ];
 
-const generateMockStudents = (count: number): RegistryStudent[] => {
-  const bairros = [
-    { name: 'Centro', lat: -12.5253, lng: -40.2917 },
-    { name: 'Primavera', lat: -12.5280, lng: -40.3020 },
-    { name: 'Barro Vermelho', lat: -12.5320, lng: -40.2850 },
-    { name: 'Jardim das Palmeiras', lat: -12.5180, lng: -40.3100 }
-  ];
-
-  const nomes = ['Arthur Silva Pereira', 'Beatriz Santos Oliveira', 'Caio Souza Lima', 'Daniela Ferreira Costa', 'Enzo Almeida Rodrigues'];
-  const projetos = ['Robótica Municipal', 'Música na Escola', 'Atleta do Futuro', 'Horta Comunitária'];
-
-  return Array.from({ length: count }).map((_, i) => {
-    const bairro = bairros[i % bairros.length];
-    const latOffset = (Math.random() - 0.5) * 0.01;
-    const lngOffset = (Math.random() - 0.5) * 0.01;
-    const nomeCompleto = nomes[i % nomes.length];
-
-    return {
-      id: `std-${i}-${Date.now()}`,
-      enrollmentId: `PROT-${100000 + i}`,
-      name: nomeCompleto.toUpperCase(),
-      birthDate: '2015-05-10',
-      cpf: `000.000.000-${(i % 99).toString().padStart(2, '0')}`,
-      status: i % 8 === 0 ? 'Pendente' : 'Matriculado',
-      school: i % 2 === 0 ? 'CRECHE PARAISO DA CRIANCA' : 'ESCOLA MUNICIPAL JOÃO XXIII',
-      lat: bairro.lat + latOffset,
-      lng: bairro.lng + lngOffset,
-      specialNeeds: i % 5 === 0,
-      disabilityType: i % 5 === 0 ? 'Autismo' : undefined,
-      participatesAEE: i % 5 === 0,
-      transportRequest: i % 4 === 0,
-      municipalProjects: i % 3 === 0 ? [projetos[i % projetos.length]] : [],
-      photo: `https://i.pravatar.cc/150?u=${i}`,
-      address: {
-        street: `Rua Projetada ${i + 10}`,
-        number: `${Math.floor(Math.random() * 900)}`,
-        neighborhood: bairro.name,
-        city: 'Itaberaba',
-        zipCode: '46880-000',
-        zone: 'Urbana'
-      }
-    };
-  });
-};
-
-export const MOCK_STUDENT_REGISTRY: RegistryStudent[] = generateMockStudents(40);
+export const MOCK_STUDENT_REGISTRY: RegistryStudent[] = [
+  {
+    id: '1',
+    inepId: '192488740534',
+    enrollmentId: '741668410',
+    name: 'LORENA MENEZES FERREIRA',
+    birthDate: '25/09/2020',
+    cpf: '58834789806',
+    race: 'parda',
+    sex: 'feminino',
+    status: 'Matriculado',
+    school: 'CEMEI LINESIO BASTOS DE SANTANA',
+    schoolId: '29463777',
+    className: 'GRUPO 4 F - VESPERTINO',
+    classCode: '35309535',
+    grade: 'Educação infantil - pré-escola (4 e 5 anos)',
+    classSchedule: 'Segunda a Sexta - 13:00 às 17:00',
+    weeklyHours: '20:00:00',
+    residenceZone: 'Urbana',
+    transportRequest: false,
+    specialNeeds: false,
+    lat: -12.5253, lng: -40.2917
+  },
+  {
+    id: '2',
+    inepId: '193137298570',
+    enrollmentId: '750447994',
+    name: 'ANTHONY OLIVEIRA FRANCA',
+    birthDate: '21/07/2020',
+    cpf: '12087350558',
+    race: 'preta',
+    sex: 'masculino',
+    status: 'Matriculado',
+    school: 'CEMEI LINESIO BASTOS DE SANTANA',
+    schoolId: '29463777',
+    className: 'ATENDIMENTO EDUCACIONAL ESPECIALIZADO - AEE - TURMA D',
+    classCode: '35621544',
+    grade: 'AEE - VESPERTINO',
+    classSchedule: 'Terça e Quinta - 13:30 às 16:00',
+    weeklyHours: '05:00:00',
+    specialNeeds: true,
+    disabilityType: 'Transtorno do espectro autista',
+    resourceAEE: 'Auxílio ledor | Tempo adicional',
+    residenceZone: 'Urbana',
+    transportRequest: true,
+    transportVehicle: 'Vans/Kombis | Ônibus',
+    lat: -12.5255, lng: -40.2919
+  },
+  {
+    id: '3',
+    inepId: '193263003584',
+    enrollmentId: '742317200',
+    name: 'KEVIN RYAN GOMES DE SOUZA',
+    birthDate: '08/02/2020',
+    cpf: '58271214870',
+    race: 'parda',
+    sex: 'masculino',
+    status: 'Matriculado',
+    school: 'CEMEI LINESIO BASTOS DE SANTANA',
+    schoolId: '29463777',
+    className: 'GRUPO 5 E - VESPERTINO',
+    classCode: '35331126',
+    grade: 'Educação infantil - pré-escola (4 e 5 anos)',
+    residenceZone: 'Urbana',
+    transportRequest: true,
+    transportVehicle: 'Vans/Kombis | Ônibus',
+    specialNeeds: false,
+    lat: -12.5256, lng: -40.2920
+  }
+];
 
 export const INITIAL_REGISTRATION_STATE: RegistrationFormState = {
   step: 1,

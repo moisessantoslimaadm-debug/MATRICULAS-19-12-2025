@@ -1,15 +1,12 @@
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
-  BarChart3, PieChart as PieIcon, Printer, Download, Filter, 
+  PieChart as PieIcon, Printer, Download, 
   School as SchoolIcon, Users, HeartPulse, Bus, 
-  TrendingUp, RefreshCw, Layers, Search, ArrowRight, FileSpreadsheet,
-  Activity, ShieldCheck, Database
+  TrendingUp, Activity, Database
 } from 'lucide-react';
-import { Link } from '../router';
-
-// --- Lightweight SVG Chart Components with Luxury Styling ---
 
 const PieChart = ({ data }: { data: { label: string; value: number; color: string }[] }) => {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
@@ -44,7 +41,7 @@ const PieChart = ({ data }: { data: { label: string; value: number; color: strin
       </div>
       <div className="grid grid-cols-1 gap-4">
         {data.map((item, i) => (
-          <div key={i} className="flex items-center gap-4 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100">
+          <div key={i} className="flex items-center gap-4 bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-100 shadow-sm">
             <span className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></span>
             <div className="flex flex-col">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
@@ -100,15 +97,6 @@ export const Reports: React.FC = () => {
     const { schools, students } = useData();
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<'overview' | 'individual'>('overview');
-    const [selectedSchoolId, setSelectedSchoolId] = useState<string>('');
-
-    const generalStats = useMemo(() => {
-        const totalAEE = students.filter(s => s.specialNeeds).length;
-        const totalTransport = students.filter(s => s.transportRequest).length;
-        const totalCapacity = schools.reduce((acc, s) => acc + (s.availableSlots || 0), 0);
-        const occupancy = totalCapacity > 0 ? (students.length / totalCapacity) * 100 : 0;
-        return { totalAEE, totalTransport, totalCapacity, occupancy };
-    }, [students, schools]);
 
     const statusDistribution = useMemo(() => {
         const counts = { matriculado: 0, pendente: 0, analise: 0 };
@@ -128,7 +116,7 @@ export const Reports: React.FC = () => {
         const groups: Record<string, { total: number, aee: number, transport: number }> = {};
         schools.forEach(school => { groups[school.name] = { total: 0, aee: 0, transport: 0 }; });
         students.forEach(s => {
-            if(s.school && s.school !== 'Não alocada') {
+            if(s.school) {
                 const key = s.school;
                 if (!groups[key]) groups[key] = { total: 0, aee: 0, transport: 0 };
                 groups[key].total += 1;
@@ -136,27 +124,13 @@ export const Reports: React.FC = () => {
                 if (s.transportRequest) groups[key].transport += 1;
             }
         });
-        return Object.keys(groups)
-            .map(name => {
-                const school = schools.find(s => s.name === name);
-                const capacity = school?.availableSlots || 0;
-                const stats = groups[name];
-                return { name, ...stats, capacity, occupancy: capacity > 0 ? (stats.total / capacity) * 100 : 0 };
-            })
-            .sort((a, b) => b.total - a.total);
+        return Object.keys(groups).map(name => {
+            const school = schools.find(s => s.name === name);
+            const capacity = school?.availableSlots || 400;
+            const stats = groups[name];
+            return { name, ...stats, capacity, occupancy: (stats.total / capacity) * 100 };
+        }).sort((a, b) => b.total - a.total);
     }, [schools, students]);
-
-    const top5SchoolsData = useMemo(() => {
-        return schoolComparison.slice(0, 5).map(s => ({ label: s.name, v1: s.total, v2: s.aee, v3: s.transport }));
-    }, [schoolComparison]);
-
-    const selectedSchoolData = useMemo(() => {
-        if (!selectedSchoolId) return null;
-        const schoolInfo = schools.find(s => s.id === selectedSchoolId);
-        if (!schoolInfo) return null;
-        const schoolStudents = students.filter(s => (s.school || '').toLowerCase() === schoolInfo.name.toLowerCase());
-        return { info: schoolInfo, students: schoolStudents };
-    }, [selectedSchoolId, schools, students]);
 
     return (
         <div className="min-h-screen bg-[#fcfdfe] py-24 px-12 page-transition">
@@ -165,43 +139,38 @@ export const Reports: React.FC = () => {
                     <div className="space-y-8">
                         <div className="flex items-center gap-5">
                             <div className="h-3 w-3 rounded-full bg-blue-600 animate-pulse shadow-[0_0_15px_#2563eb]"></div>
-                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Núcleo de Inteligência SME • Itaberaba</span>
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Núcleo de Inteligência SME • Itaberaba Digital</span>
                         </div>
-                        <h1 className="text-8xl font-black text-slate-900 tracking-tighter uppercase leading-[0.85] text-display">BI <br/><span className="text-blue-600">Executivo.</span></h1>
+                        <h1 className="text-8xl font-black text-slate-900 tracking-tighter uppercase leading-[0.85] text-display">BI de <br/><span className="text-blue-600">Rede.</span></h1>
                     </div>
                     <div className="flex gap-6">
-                        <button onClick={() => window.print()} className="btn-secondary !h-20 !px-12 shadow-luxury"><Printer className="h-6 w-6" /> Gerar PDF Oficial</button>
-                        <button onClick={() => addToast("Planilha de Rede exportada.", "success")} className="btn-primary !h-20 !px-12 shadow-blue-100"><Download className="h-6 w-6" /> Exportar CSV</button>
+                        <button onClick={() => window.print()} className="btn-secondary !h-20 !px-12 shadow-luxury"><Printer className="h-6 w-6" /> Gerar Dossiê PDF</button>
+                        <button onClick={() => addToast("Planilha nominal exportada.", "success")} className="btn-primary !h-20 !px-12 shadow-blue-100"><Download className="h-6 w-6" /> Exportar CSV MEC</button>
                     </div>
                 </header>
 
-                <div className="hidden print:block text-center border-b-[6px] border-slate-900 pb-10 mb-16">
-                     <h1 className="text-4xl font-black uppercase tracking-tighter">Secretaria Municipal de Educação</h1>
-                     <p className="text-sm font-black uppercase tracking-widest mt-4 text-slate-500">Relatório Consolidado de Gestão Nominal 2025</p>
-                </div>
-
                 <div className="flex p-3 bg-white border border-slate-100 rounded-[2.5rem] w-fit shadow-sm no-print">
-                    <button onClick={() => setActiveTab('overview')} className={`px-12 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'overview' ? 'bg-[#0F172A] text-white shadow-2xl scale-105' : 'text-slate-400 hover:text-slate-900'}`}>Visão de Rede</button>
+                    <button onClick={() => setActiveTab('overview')} className={`px-12 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'overview' ? 'bg-[#0F172A] text-white shadow-2xl scale-105' : 'text-slate-400 hover:text-slate-900'}`}>Visão Global</button>
                     <button onClick={() => setActiveTab('individual')} className={`px-12 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'individual' ? 'bg-[#0F172A] text-white shadow-2xl scale-105' : 'text-slate-400 hover:text-slate-900'}`}>Censo Nominal</button>
                 </div>
 
                 {activeTab === 'overview' && (
                     <div className="space-y-16 animate-in fade-in duration-700">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-                             <SimpleCardStat title="Censo de Rede" value={students.length} icon={Users} colorClass="bg-[#0F172A]" subtext={`${generalStats.occupancy.toFixed(1)}% Lotação Ativa`} />
-                             <SimpleCardStat title="Laudos AEE" value={generalStats.totalAEE} icon={HeartPulse} colorClass="bg-pink-600" subtext="Inclusão Ativa" />
-                             <SimpleCardStat title="Transp. Escolar" value={generalStats.totalTransport} icon={Bus} colorClass="bg-blue-600" subtext="Rota Rural Síncrona" />
+                             <SimpleCardStat title="Censo Total" value={students.length} icon={Users} colorClass="bg-[#0F172A]" subtext="Nominal Auditado" />
+                             <SimpleCardStat title="Dossiês AEE" value={students.filter(s => s.specialNeeds).length} icon={HeartPulse} colorClass="bg-pink-600" subtext="Inclusão Ativa" />
+                             <SimpleCardStat title="Frotas Rurais" value={students.filter(s => s.transportRequest).length} icon={Bus} colorClass="bg-blue-600" subtext="Logística Síncrona" />
                              <SimpleCardStat title="Unidades" value={schools.length} icon={SchoolIcon} colorClass="bg-emerald-600" subtext="Rede Municipal Ativa" />
                         </div>
 
                         <div className="grid lg:grid-cols-2 gap-12">
                             <div className="card-requinte !p-16 relative overflow-hidden group">
-                                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-12 flex items-center gap-5"><TrendingUp className="h-6 w-6 text-blue-600" /> Comparativo de Rede (Top 5)</h3>
-                                <GroupedBarChart data={top5SchoolsData} />
+                                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-12 flex items-center gap-5"><TrendingUp className="h-6 w-6 text-blue-600" /> Comparativo de Ocupação</h3>
+                                <GroupedBarChart data={schoolComparison.slice(0, 5).map(s => ({ label: s.name, v1: s.total, v2: s.aee, v3: s.transport }))} />
                                 <div className="absolute -bottom-24 -right-24 h-64 w-64 bg-blue-50 rounded-full blur-[80px] opacity-40 group-hover:scale-150 transition-transform duration-1000"></div>
                             </div>
                             <div className="card-requinte !p-16 relative overflow-hidden group">
-                                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-12 flex items-center gap-5"><PieIcon className="h-6 w-6 text-emerald-600" /> Fluxo de Matrícula</h3>
+                                <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.4em] mb-12 flex items-center gap-5"><PieIcon className="h-6 w-6 text-emerald-600" /> Fluxo de Rede Nominal</h3>
                                 <div className="py-10"><PieChart data={statusDistribution} /></div>
                                 <div className="absolute -bottom-24 -left-24 h-64 w-64 bg-emerald-50 rounded-full blur-[80px] opacity-40 group-hover:scale-150 transition-transform duration-1000"></div>
                             </div>
@@ -209,20 +178,20 @@ export const Reports: React.FC = () => {
 
                         <div className="card-requinte !p-16 overflow-hidden">
                             <div className="flex justify-between items-center mb-16">
-                                <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Quadro Detalhado <br/><span className="text-blue-600">de Rede.</span></h3>
+                                <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Quadro Geral <br/><span className="text-blue-600">de Lotação.</span></h3>
                                 <div className="bg-slate-50 px-8 py-4 rounded-[1.8rem] border border-slate-100 flex items-center gap-4">
                                     <Database className="h-5 w-5 text-slate-400" />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Auditada SME</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base MEC Itaberaba</span>
                                 </div>
                             </div>
-                            <div className="overflow-x-auto custom-scrollbar">
+                            <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-slate-50">
-                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade Escolar</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade Escolar Inep</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Nominal</th>
                                             <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Capacidade</th>
-                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ocupação</th>
-                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Inclusão (AEE)</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Lotação</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -231,17 +200,15 @@ export const Reports: React.FC = () => {
                                                 <td className="px-10 py-10">
                                                     <p className="font-black text-slate-900 text-xl uppercase tracking-tighter leading-none">{s.name}</p>
                                                 </td>
+                                                <td className="px-10 py-10 text-center font-black text-slate-700 text-lg">{s.total}</td>
                                                 <td className="px-10 py-10 text-center font-bold text-slate-500">{s.capacity}</td>
                                                 <td className="px-10 py-10">
                                                     <div className="flex items-center gap-6">
-                                                        <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden shadow-inner">
-                                                            <div className={`h-full ${s.occupancy > 90 ? 'bg-red-500' : 'bg-blue-600'} shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-all duration-[1.5s]`} style={{ width: `${Math.min(s.occupancy, 100)}%` }}></div>
+                                                        <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                                            <div className={`h-full ${s.occupancy > 90 ? 'bg-red-500' : 'bg-blue-600'} transition-all duration-[1.5s]`} style={{ width: `${Math.min(s.occupancy, 100)}%` }}></div>
                                                         </div>
                                                         <span className="text-lg font-black text-slate-900 w-12">{s.occupancy.toFixed(0)}%</span>
                                                     </div>
-                                                </td>
-                                                <td className="px-10 py-10 text-center">
-                                                    <span className="bg-pink-50 text-pink-600 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-pink-100">{s.aee} Laudos</span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -249,70 +216,6 @@ export const Reports: React.FC = () => {
                                 </table>
                             </div>
                         </div>
-                    </div>
-                )}
-
-                {activeTab === 'individual' && (
-                    <div className="space-y-16 animate-in fade-in slide-in-from-right-12 duration-700">
-                        <div className="card-requinte !p-12 flex flex-col md:flex-row gap-10 items-end no-print relative overflow-hidden">
-                            <div className="flex-1 w-full space-y-4 relative z-10">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Unidade Escolar Nominal</label>
-                                <div className="relative">
-                                    <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
-                                    <select value={selectedSchoolId} onChange={(e) => setSelectedSchoolId(e.target.value)} className="input-premium pl-20 appearance-none bg-slate-50">
-                                        <option value="">-- Escolha uma unidade --</option>
-                                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl opacity-40"></div>
-                        </div>
-
-                        {selectedSchoolData ? (
-                            <div className="card-requinte !p-16 overflow-hidden">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10 mb-20 pb-16 border-b border-slate-50">
-                                    <div>
-                                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none mb-6">{selectedSchoolData.info.name}</h2>
-                                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-5"><ShieldCheck className="h-5 w-5 text-blue-600" /> INEP: {selectedSchoolData.info.inep || 'N/A'}</p>
-                                    </div>
-                                    <div className="flex gap-8">
-                                        <div className="bg-[#0F172A] p-10 rounded-[2.5rem] text-white shadow-2xl">
-                                            <span className="text-6xl font-black tracking-tighter block leading-none">{selectedSchoolData.students.length}</span>
-                                            <span className="text-[10px] font-black uppercase tracking-ultra opacity-40 mt-4 block">Matrículas Ativas</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="border-b border-slate-50">
-                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante Nominal</th>
-                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">RA Municipal</th>
-                                                <th className="px-10 py-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {selectedSchoolData.students.map((student) => (
-                                                <tr key={student.id} className="hover:bg-slate-50/50 transition-all duration-300">
-                                                    <td className="px-10 py-10 font-black text-slate-900 text-xl uppercase tracking-tighter">{student.name}</td>
-                                                    <td className="px-10 py-10 font-mono text-slate-400 text-sm">{student.enrollmentId || '-'}</td>
-                                                    <td className="px-10 py-10 text-center">
-                                                        <span className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${student.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{student.status}</span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="card-requinte !py-32 flex flex-col items-center justify-center gap-12 border-dashed bg-slate-50/30">
-                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-luxury">
-                                    <Activity className="h-10 w-10 text-slate-200" />
-                                </div>
-                                <p className="text-slate-400 font-black uppercase tracking-[0.5em] text-[10px]">Aguardando seleção de unidade nominal...</p>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>

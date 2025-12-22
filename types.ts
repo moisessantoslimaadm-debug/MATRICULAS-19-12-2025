@@ -34,30 +34,32 @@ export interface PerformanceRow {
 
 export interface RegistryStudent {
   id: string;
-  enrollmentId?: string;
-  inepId?: string;
+  enrollmentId?: string; // Código da Matrícula (741668410...)
+  inepId?: string; // Identificação única (192488740534...)
   name: string;
   birthDate: string;
   cpf: string;
-  nis?: string;
+  nationality?: string;
+  race?: string; // Cor/Raça
+  sex?: 'masculino' | 'feminino';
   status: 'Matriculado' | 'Pendente' | 'Em Análise' | 'Transferido' | 'Abandono';
   school?: string;
   schoolId?: string;
-  shift?: string;
-  grade?: string;
-  className?: string;
+  grade?: string; // Etapa de ensino
+  classCode?: string; // Código da turma
+  className?: string; // Nome da turma (Ex: GRUPO 4 F)
+  mediationType?: string; // Presencial/EAD
+  classSchedule?: string; // Dias e horário (Segunda a Sexta...)
+  weeklyHours?: string; // Carga horária (20:00:00)
   specialNeeds?: boolean;
-  disabilityType?: string; // Ex: Autismo, Deficiência Visual
-  participatesAEE?: boolean;
-  municipalProjects?: string[]; // Ex: ["Música na Escola", "Robótica Municipal"]
+  disabilityType?: string; // Transtorno do espectro autista, etc.
+  resourceAEE?: string; // Auxílio ledor, tempo adicional...
+  residenceZone?: 'Urbana' | 'Rural';
+  transportRequest?: boolean;
+  transportVehicle?: string; // Vans/Kombis, Ônibus, Micro-ônibus
   photo?: string;
-  attendance?: {
-    totalSchoolDays: number;
-    presentDays: number;
-    justifiedAbsences: number;
-    unjustifiedAbsences: number;
-  };
-  performanceHistory?: PerformanceRow[];
+  lat: number;
+  lng: number;
   address?: {
     street: string;
     number: string;
@@ -66,9 +68,7 @@ export interface RegistryStudent {
     zipCode: string;
     zone: 'Urbana' | 'Rural';
   };
-  transportRequest?: boolean;
-  lat: number;
-  lng: number;
+  performanceHistory?: PerformanceRow[];
 }
 
 export interface RegistrationFormState {

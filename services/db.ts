@@ -1,8 +1,8 @@
-// Fix: Use default import for Dexie to ensure correct type resolution for class methods inherited from Dexie
-import Dexie from 'dexie';
-import type { Table } from 'dexie';
+
+import { Dexie, type Table } from 'dexie';
 import { School, RegistryStudent } from '../types';
 
+// Properly extending Dexie using named import to ensure method visibility for versioning and stores.
 class EducaDatabase extends Dexie {
   schools!: Table<School>;
   students!: Table<RegistryStudent>;
@@ -10,10 +10,10 @@ class EducaDatabase extends Dexie {
   constructor() {
     super('EducaMunicipioDB');
     
-    // Fix: The 'version' method is correctly resolved from the Dexie base class after fixing the import
-    this.version(3).stores({
+    // Fix: Using the correct named import for Dexie ensures 'version' is recognized as a method from the inherited class.
+    this.version(4).stores({
       schools: 'id, inep, name, address',
-      students: 'id, enrollmentId, name, cpf, school, status, specialNeeds, transportRequest' 
+      students: 'id, enrollmentId, inepId, name, cpf, school, status, specialNeeds, transportRequest, classCode' 
     });
   }
 }
