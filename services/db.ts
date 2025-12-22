@@ -1,7 +1,8 @@
-import Dexie, { Table } from 'dexie';
+// Fix: Use default import for Dexie to ensure correct type resolution for class methods inherited from Dexie
+import Dexie from 'dexie';
+import type { Table } from 'dexie';
 import { School, RegistryStudent } from '../types';
 
-// Fixed: Changed to default import of Dexie to ensure class inheritance works correctly and 'version' property is available
 class EducaDatabase extends Dexie {
   schools!: Table<School>;
   students!: Table<RegistryStudent>;
@@ -9,10 +10,10 @@ class EducaDatabase extends Dexie {
   constructor() {
     super('EducaMunicipioDB');
     
-    // Schema definition using the version method provided by the Dexie base class
-    this.version(1).stores({
+    // Fix: The 'version' method is correctly resolved from the Dexie base class after fixing the import
+    this.version(3).stores({
       schools: 'id, inep, name, address',
-      students: 'id, enrollmentId, name, cpf, school, status, className' 
+      students: 'id, enrollmentId, name, cpf, school, status, specialNeeds, transportRequest' 
     });
   }
 }
