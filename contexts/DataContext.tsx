@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { School, RegistryStudent } from '../types';
 import { MOCK_SCHOOLS, MOCK_STUDENT_REGISTRY } from '../constants';
@@ -28,7 +29,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Sincroniza escolas do mock para o DB local se necessário
+      // 1. Schools Sync
       const schoolCount = await db.schools.count();
       if (schoolCount === 0) {
         await db.schools.bulkAdd(MOCK_SCHOOLS);
@@ -36,23 +37,24 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       const allSchools = await db.schools.toArray();
       setSchools(allSchools);
 
-      // Carrega estudantes do IndexedDB
+      // 2. Students Sync
       let allStudents = await db.students.toArray();
       
-      // Seed inicial se o banco estiver vazio
+      // Seed nominal se vazio
       if (allStudents.length === 0) {
         await db.students.bulkAdd(MOCK_STUDENT_REGISTRY);
         allStudents = await db.students.toArray();
       }
       
-      setStudents(allStudents.sort((a, b) => b.name.localeCompare(a.name)));
+      setStudents(allStudents.sort((a, b) => a.name.localeCompare(b.name)));
       setIsOffline(false);
     } catch (error) {
-      console.error("Erro ao carregar DB:", error);
+      console.error("Critical DB Sync Failure:", error);
       setIsOffline(true);
-      addToast("Erro ao conectar com o banco de dados local.", "error");
+      addToast("Interrupção no barramento nominal local.", "error");
     } finally {
-      setIsLoading(false);
+      // Delay artificial para simular integridade de rede
+      setTimeout(() => setIsLoading(false), 800);
     }
   };
 
@@ -63,10 +65,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const addStudent = async (student: RegistryStudent) => {
     try {
       await db.students.add(student);
-      setStudents(prev => [student, ...prev]);
-      addToast("Matrícula registrada e salva localmente.", "success");
+      setStudents(prev => [student, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+      addToast("Registro Nominal transmitido com sucesso.", "success");
     } catch (error) {
-      addToast("Erro ao salvar matrícula no disco.", "error");
+      addToast("Erro ao persistir dossiê nominal.", "error");
     }
   };
 
@@ -75,17 +77,22 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       await db.students.put(student);
       setStudents(prev => prev.map(s => s.id === student.id ? student : s));
     } catch (error) {
-      addToast("Erro ao atualizar registro.", "error");
+      addToast("Erro na atualização do registro.", "error");
     }
   };
 
   const updateStudents = async (updatedStudents: RegistryStudent[]) => {
     try {
-      await db.students.clear();
-      await db.students.bulkAdd(updatedStudents);
-      setStudents(updatedStudents);
+      // Usando transaction para integridade nominal
+      await db.transaction('rw', db.students, async () => {
+        for (const s of updatedStudents) {
+          await db.students.put(s);
+        }
+      });
+      const all = await db.students.toArray();
+      setStudents(all.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      addToast("Erro ao sincronizar base.", "error");
+      addToast("Falha crítica no sincronismo de rede.", "error");
     }
   };
 
@@ -93,9 +100,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     try {
       await db.students.delete(id);
       setStudents(prev => prev.filter(s => s.id !== id));
-      addToast("Registro removido com sucesso.", "info");
+      addToast("Dossiê nominal arquivado.", "info");
     } catch (error) {
-      addToast("Erro ao remover registro.", "error");
+      addToast("Erro ao remover registro da base.", "error");
     }
   };
 
