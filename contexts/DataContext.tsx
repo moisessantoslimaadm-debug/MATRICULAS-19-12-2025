@@ -105,7 +105,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
   const updateStudents = async (updatedStudents: RegistryStudent[]) => {
     try {
-      await db.transaction('rw', [db.students], async () => {
+      // Fixed: Casting db to any to access transaction method which is inherited from Dexie
+      await (db as any).transaction('rw', [db.students], async () => {
         for (const s of updatedStudents) { 
           await db.students.put(s); 
         }

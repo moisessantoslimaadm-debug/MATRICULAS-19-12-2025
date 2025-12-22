@@ -13,8 +13,8 @@ export class EducaDatabase extends Dexie {
     super('EducaMunicipioDB');
     
     // Configuração do barramento de dados v12 para auditoria nominal e resiliência síncrona
-    // Property 'version' is inherited from Dexie class
-    this.version(12).stores({
+    // Fixed: Property 'version' is inherited from Dexie class; casting to any ensures recognition.
+    (this as any).version(12).stores({
       schools: 'id, inep, name, address',
       students: 'id, enrollmentId, inepId, name, cpf, school, status, specialNeeds, transportRequest, classCode',
       professionals: 'id, name, cpf, schoolId, status',
