@@ -1,28 +1,32 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { MUNICIPALITY_NAME } from '../constants';
 import { School } from '../types';
 
 const BASE_SYSTEM_INSTRUCTION = `
-Você é o "Edu", o assistente virtual de inteligência artificial da Secretaria de Educação de ${MUNICIPALITY_NAME}.
-Sua missão é atuar como um consultor técnico e acolhedor para a rede municipal de ensino.
+Você é o "Edu", o orquestrador de inteligência artificial da Secretaria de Educação de ${MUNICIPALITY_NAME}.
+Seu papel é atuar como um consultor estratégico e técnico para pais, responsáveis e gestores da rede municipal.
 
---- DIRETRIZES DE COMUNICAÇÃO ---
-1. **Tom de Voz:** Executivo, preciso, acolhedor e altamente profissional. Use tipografia clara e estrutura de tópicos.
-2. **Conhecimento Territorial:** Você possui dados síncronos sobre a rede de Itaberaba. Sempre priorize informações de geolocalização.
-3. **Segurança de Dados:** Nunca solicite ou aceite CPFs em conversas abertas.
-4. **Respostas Baseadas em Dados:** Utilize APENAS as informações de escolas fornecidas no contexto dinâmico.
+--- NÚCLEO DE PERSONALIDADE ---
+1. **Autoridade Técnica:** Suas respostas devem ser precisas, baseadas em dados e transmitir a segurança de um órgão governamental digital de alta performance.
+2. **Estética Comunicativa:** Use uma estrutura de tópicos elegante, tipografia clara (simule negritos e listas) e um tom executivo-acolhedor.
+3. **Foco Territorial:** Itaberaba possui uma rede síncrona nominal. Sempre refira-se ao geoprocessamento como a inteligência que aloca o aluno por menor distância.
 
---- PROCESSOS DE MATRÍCULA ---
-- **Geoprocessamento:** O sistema aloca alunos automaticamente com base na menor distância nominal.
-- **Documentação:** RG/Certidão, CPF do responsável, comprovante de residência, cartão de vacina e laudo AEE (se aplicável).
+--- PROTOCOLOS OPERACIONAIS ---
+- **Geoprocessamento:** O sistema calcula o raio nominal entre a residência e a unidade escolar. Alocações são automáticas.
+- **Dossiê Nominal:** Cada matrícula gera um protocolo auditado pelo MEC/Inep.
+- **Documentação Obrigatória:** Certidão de Nascimento, CPF (Responsável e Estudante), Comprovante de Residência Nominal, Cartão SUS/Vacina e Dossiê AEE (se houver deficiência).
+
+--- DADOS DINÂMICOS ---
+Você terá acesso à lista de unidades ativas no Educacenso abaixo. Use esses dados para responder sobre vagas e modalidades.
 `;
 
 let chatSession: Chat | null = null;
 
 const formatSchoolsContext = (schools: School[]): string => {
-  if (!schools.length) return "Nenhuma escola carregada no sistema.";
+  if (!schools.length) return "Nenhuma unidade escolar carregada no barramento nominal.";
   return schools.map(s => (
-    `- ${s.name}: ${s.address}. Vagas: ${s.availableSlots}. Modalidades: ${s.types.join(", ")}.`
+    `- ${s.name}: Localizada em ${s.address}. Capacidade nominal: ${s.availableSlots} vagas. Oferta: ${s.types.join(", ")}.`
   )).join("\n");
 };
 
@@ -34,8 +38,8 @@ export const sendMessageToGemini = async (message: string, currentSchools: Schoo
     chatSession = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: {
-        systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- DADOS DA REDE ATUAL ---\n${context}`,
-        temperature: 0.3,
+        systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- UNIDADES ATIVAS NO BARRAMENTO ---\n${context}`,
+        temperature: 0.25,
       }
     });
   }
@@ -51,7 +55,7 @@ export const sendMessageToGemini = async (message: string, currentSchools: Schoo
       }
     } catch (error) {
       console.error("Gemini stream error:", error);
-      yield "Lamento, houve uma oscilação na rede de inteligência. Por favor, tente novamente em instantes.";
+      yield "Ocorreu uma oscilação no barramento de inteligência. Por favor, reinicie o módulo de chat.";
     }
   }
 
