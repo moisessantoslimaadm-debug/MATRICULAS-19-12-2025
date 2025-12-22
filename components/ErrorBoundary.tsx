@@ -14,15 +14,12 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfo | null;
 }
 
-// Fix: Explicitly using React.Component to ensure full inheritance visibility for state, props, and setState.
+// Fix: Using React.Component explicitly to ensure props and state are correctly typed and available on 'this'
 class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState> {
   constructor(props: InnerProps) {
     super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null
-    };
+    // Fix: Initializing state in the constructor for the class component
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -31,21 +28,18 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Critical System Failure:", error, errorInfo);
+    // Fix: Using this.setState correctly within the class context
     this.setState({ errorInfo });
-    
+    // Fix: Accessing this.props correctly
     if (this.props.logError) {
-        this.props.logError(
-            `Falha Nominal Crítica: ${error.message}`, 
-            errorInfo.componentStack || ''
-        );
+        this.props.logError(`Falha Nominal Crítica: ${error.message}`, errorInfo.componentStack || '');
     }
   }
 
-  private handleReload = () => {
-    window.location.reload();
-  };
+  private handleReload = () => { window.location.reload(); };
 
   private handleCopyDetails = () => {
+      // Fix: Accessing state through 'this'
       const { error, errorInfo } = this.state;
       const text = `ID FALHA: SME-${Date.now()}\nErro: ${error?.message}\n\nStack:\n${errorInfo?.componentStack || 'Não disponível'}`;
       navigator.clipboard.writeText(text);
@@ -53,6 +47,7 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
   };
 
   render() {
+    // Fix: Accessing this.state in render
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#fcfdfe] flex items-center justify-center p-8 page-transition">
@@ -65,11 +60,11 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
               Interrupção no barramento síncrono municipal.
             </p>
             
-            <div className="bg-slate-50 p-6 rounded-2xl text-left mb-10 overflow-hidden border border-slate-200 shadow-inner relative z-10">
+            <div className="bg-slate-50 p-6 rounded-2xl text-left mb-10 border border-slate-200 shadow-inner relative z-10">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
-                   <FileSearch className="h-4 w-4" /> Diagnóstico Síncrono SME
+                   <FileSearch className="h-4 w-4" /> Diagnóstico SME
                 </p>
-                <p className="text-[11px] text-red-600 font-mono break-words font-black leading-tight line-clamp-2">
+                <p className="text-[11px] text-red-600 font-mono font-black leading-tight line-clamp-2">
                     {this.state.error?.message || "Erro desconhecido de processamento"}
                 </p>
             </div>
@@ -86,16 +81,13 @@ class ErrorBoundaryInner extends React.Component<InnerProps, ErrorBoundaryState>
         </div>
       );
     }
+    // Fix: Accessing this.props correctly
     return this.props.children;
   }
 }
 
 export const ErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => {
     const logContext = useLog();
-    const logError = (msg: string, details: string) => {
-        if (logContext) {
-            logContext.addLog(msg, 'error', details);
-        }
-    };
+    const logError = (msg: string, details: string) => { if (logContext) logContext.addLog(msg, 'error', details); };
     return <ErrorBoundaryInner logError={logError}>{children}</ErrorBoundaryInner>;
 };

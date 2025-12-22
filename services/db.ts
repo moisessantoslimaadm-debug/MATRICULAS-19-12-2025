@@ -1,19 +1,24 @@
 
-import { Dexie, type Table } from 'dexie';
-import { School, RegistryStudent } from '../types';
+import Dexie from 'dexie';
+import type { Table } from 'dexie';
+import { School, RegistryStudent, Professional, Project } from '../types';
 
-// Properly extending Dexie using named import to ensure method visibility for versioning and stores.
-class EducaDatabase extends Dexie {
+export class EducaDatabase extends Dexie {
   schools!: Table<School>;
   students!: Table<RegistryStudent>;
+  professionals!: Table<Professional>;
+  projects!: Table<Project>;
 
   constructor() {
     super('EducaMunicipioDB');
     
-    // Fix: Using the correct named import for Dexie ensures 'version' is recognized as a method from the inherited class.
-    this.version(4).stores({
+    // Configuração do barramento de dados v12 para auditoria nominal e resiliência síncrona
+    // Fix: Using this.version which is available on Dexie class instances when extending correctly
+    this.version(12).stores({
       schools: 'id, inep, name, address',
-      students: 'id, enrollmentId, inepId, name, cpf, school, status, specialNeeds, transportRequest, classCode' 
+      students: 'id, enrollmentId, inepId, name, cpf, school, status, specialNeeds, transportRequest, classCode',
+      professionals: 'id, name, cpf, schoolId, status',
+      projects: 'id, name, category, status'
     });
   }
 }

@@ -23,9 +23,9 @@ import { StudentMonitoring } from './pages/StudentMonitoring';
 import { ExternalApp } from './pages/ExternalApp';
 import { TeacherJournal } from './pages/TeacherJournal';
 import { MapAnalysis } from './pages/MapAnalysis';
+import { AdminSchoolsManagement } from './pages/AdminSchoolsManagement';
 import { NotFound } from './pages/NotFound';
 
-// Main Application component with route configuration
 const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -40,6 +40,7 @@ const AppContent: React.FC = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin/data" element={<AdminData />} />
           <Route path="/admin/map" element={<MapAnalysis />} />
+          <Route path="/admin/escolas" element={<AdminSchoolsManagement />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/performance" element={<PerformanceIndicators />} />
           <Route path="/student/monitoring" element={<StudentMonitoring />} />
@@ -54,7 +55,6 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Root App component wrapping everything in necessary providers
 const App: React.FC = () => {
   return (
     <LogProvider>
@@ -71,5 +71,4 @@ const App: React.FC = () => {
   );
 };
 
-// Fix: Added default export for App component to be used in index.tsx
 export default App;

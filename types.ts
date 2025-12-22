@@ -32,31 +32,55 @@ export interface PerformanceRow {
   concept?: 'DI' | 'EP' | 'DB' | 'DE';
 }
 
+export interface Professional {
+  id: string;
+  name: string;
+  role: string;
+  schoolId: string;
+  schoolName?: string;
+  cpf: string;
+  email: string;
+  status: 'Ativo' | 'Licença' | 'Desligado';
+  phone?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  image?: string;
+  category: string;
+  status: 'Ativo' | 'Pausado' | 'Encerrado';
+  participantsCount: number;
+  budget?: string;
+}
+
 export interface RegistryStudent {
   id: string;
-  enrollmentId?: string; // Código da Matrícula (741668410...)
-  inepId?: string; // Identificação única (192488740534...)
+  enrollmentId?: string; 
+  inepId?: string; 
+  nire?: string; 
   name: string;
   birthDate: string;
   cpf: string;
   nationality?: string;
-  race?: string; // Cor/Raça
+  race?: string; 
   sex?: 'masculino' | 'feminino';
   status: 'Matriculado' | 'Pendente' | 'Em Análise' | 'Transferido' | 'Abandono';
   school?: string;
   schoolId?: string;
-  grade?: string; // Etapa de ensino
-  classCode?: string; // Código da turma
-  className?: string; // Nome da turma (Ex: GRUPO 4 F)
-  mediationType?: string; // Presencial/EAD
-  classSchedule?: string; // Dias e horário (Segunda a Sexta...)
-  weeklyHours?: string; // Carga horária (20:00:00)
+  grade?: string; 
+  classCode?: string; 
+  className?: string; 
+  mediationType?: string; 
+  classSchedule?: string; 
+  weeklyHours?: string; 
   specialNeeds?: boolean;
-  disabilityType?: string; // Transtorno do espectro autista, etc.
-  resourceAEE?: string; // Auxílio ledor, tempo adicional...
+  disabilityType?: string; 
+  resourceAEE?: string; 
   residenceZone?: 'Urbana' | 'Rural';
   transportRequest?: boolean;
-  transportVehicle?: string; // Vans/Kombis, Ônibus, Micro-ônibus
+  transportVehicle?: string; 
   photo?: string;
   lat: number;
   lng: number;
@@ -69,6 +93,9 @@ export interface RegistryStudent {
     zone: 'Urbana' | 'Rural';
   };
   performanceHistory?: PerformanceRow[];
+  lastSync?: string;
+  geoDistance?: number; 
+  projects?: string[]; // IDs dos projetos vinculados
 }
 
 export interface RegistrationFormState {
@@ -118,4 +145,5 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   isLoading?: boolean;
+  groundingUrls?: {uri: string, title: string}[];
 }

@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { MUNICIPALITY_NAME } from '../constants';
 import { School } from '../types';
 
@@ -8,60 +8,49 @@ Você é o "Edu", o orquestrador de inteligência artificial da Secretaria de Ed
 Seu papel é atuar como um consultor estratégico e técnico para pais, responsáveis e gestores da rede municipal.
 
 --- NÚCLEO DE PERSONALIDADE ---
-1. **Autoridade Técnica:** Suas respostas devem ser precisas, baseadas em dados e transmitir a segurança de um órgão governamental digital de alta performance.
-2. **Estética Comunicativa:** Use uma estrutura de tópicos elegante, tipografia clara (simule negritos e listas) e um tom executivo-acolhedor.
-3. **Foco Territorial:** Itaberaba possui uma rede síncrona nominal. Sempre refira-se ao geoprocessamento como a inteligência que aloca o aluno por menor distância.
+1. **Autoridade Técnica:** Suas respostas devem ser precisas, baseadas em dados e transmitir a segurança de um órgão governamental digital.
+2. **Estética Comunicativa:** Use uma estrutura de tópicos elegante e tom executivo. Evite gírias.
+3. **Foco Territorial:** Itaberaba possui uma rede síncrona nominal. Refira-se ao geoprocessamento como a inteligência que aloca o aluno por menor distância residencial.
 
 --- PROTOCOLOS OPERACIONAIS ---
-- **Geoprocessamento:** O sistema calcula o raio nominal entre a residência e a unidade escolar. Alocações são automáticas.
-- **Dossiê Nominal:** Cada matrícula gera um protocolo auditado pelo MEC/Inep.
-- **Documentação Obrigatória:** Certidão de Nascimento, CPF (Responsável e Estudante), Comprovante de Residência Nominal, Cartão SUS/Vacina e Dossiê AEE (se houver deficiência).
-
---- DADOS DINÂMICOS ---
-Você terá acesso à lista de unidades ativas no Educacenso abaixo. Use esses dados para responder sobre vagas e modalidades.
+- Utilize a ferramenta de busca do Google (googleSearch) para verificar prazos de matrícula nacionais, legislações do MEC (como a BNCC 2025) e informações geográficas de Itaberaba.
+- Se o usuário perguntar sobre escolas específicas, utilize os dados do contexto local fornecido das unidades ativas.
+- SEMPRE extraia as URLs dos "groundingChunks" e as liste no final da mensagem como "Fontes Oficiais Consultadas".
 `;
-
-let chatSession: Chat | null = null;
 
 const formatSchoolsContext = (schools: School[]): string => {
   if (!schools.length) return "Nenhuma unidade escolar carregada no barramento nominal.";
   return schools.map(s => (
-    `- ${s.name}: Localizada em ${s.address}. Capacidade nominal: ${s.availableSlots} vagas. Oferta: ${s.types.join(", ")}.`
+    `- ${s.name} (INEP: ${s.inep}): Localizada em ${s.address}. Vagas: ${s.availableSlots}. Oferta: ${s.types.join(", ")}.`
   )).join("\n");
 };
 
-export const sendMessageToGemini = async (message: string, currentSchools: School[]): Promise<AsyncIterable<string>> => {
+export const sendMessageToGemini = async (message: string, currentSchools: School[]) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const context = formatSchoolsContext(currentSchools);
   
-  if (!chatSession) {
-    chatSession = ai.chats.create({
-      model: 'gemini-3-flash-preview',
-      config: {
-        systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- UNIDADES ATIVAS NO BARRAMENTO ---\n${context}`,
-        temperature: 0.25,
-      }
-    });
-  }
-
-  async function* streamGenerator() {
-    try {
-      const result = await chatSession!.sendMessageStream({ message });
-      for await (const chunk of result) {
-        const responseChunk = chunk as GenerateContentResponse;
-        if (responseChunk.text) {
-          yield responseChunk.text;
-        }
-      }
-    } catch (error) {
-      console.error("Gemini stream error:", error);
-      yield "Ocorreu uma oscilação no barramento de inteligência. Por favor, reinicie o módulo de chat.";
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: message,
+    config: {
+      systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- UNIDADES ATIVAS NO BARRAMENTO SME ---\n${context}`,
+      temperature: 0.2,
+      tools: [{ googleSearch: {} }]
     }
-  }
+  });
 
-  return streamGenerator();
+  const text = response.text || "Lamento, o barramento de IA encontrou uma oscilação no processamento.";
+  
+  // Extração de metadados de grounding para transparência pública
+  const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  const urls = groundingChunks?.map((chunk: any) => ({
+    uri: chunk.web?.uri,
+    title: chunk.web?.title
+  })).filter((u: any) => u.uri && u.title) || [];
+
+  return { text, urls };
 };
 
 export const resetChat = () => {
-  chatSession = null;
+  // Stateless implementation
 };

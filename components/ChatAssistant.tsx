@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, Loader2, HelpCircle, FileText, Calendar, MapPin, GraduationCap } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Loader2, HelpCircle, FileText, Calendar, MapPin, GraduationCap, ExternalLink, Globe } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import { useData } from '../contexts/DataContext';
@@ -8,7 +9,7 @@ export const ChatAssistant: React.FC = () => {
   const { schools } = useData(); 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'welcome', role: 'model', text: 'Olá! Sou o Edu, seu assistente escolar 🤖.\n\nPosso ajudar a encontrar escolas próximas, verificar vagas ou explicar como fazer a matrícula. O que você precisa?' }
+    { id: 'welcome', role: 'model', text: 'Olá! Sou o Edu, seu assistente escolar da SME Itaberaba 🤖.\n\nTenho acesso direto ao barramento nominal e ao Google Search para tirar dúvidas sobre a rede. O que você precisa saber hoje?' }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -39,17 +40,18 @@ export const ChatAssistant: React.FC = () => {
     setMessages(prev => [...prev, { id: modelMsgId, role: 'model', text: '', isLoading: true }]);
 
     try {
-      const stream = await sendMessageToGemini(userMsg.text, schools);
-      let fullText = '';
+      const response = await sendMessageToGemini(userMsg.text, schools);
       
-      for await (const chunk of stream) {
-        fullText += chunk;
-        setMessages(prev => prev.map(msg => 
-          msg.id === modelMsgId 
-            ? { ...msg, text: fullText, isLoading: false } 
-            : msg
-        ));
-      }
+      setMessages(prev => prev.map(msg => 
+        msg.id === modelMsgId 
+          ? { 
+              ...msg, 
+              text: response.text, 
+              groundingUrls: response.urls,
+              isLoading: false 
+            } 
+          : msg
+      ));
     } catch (error) {
       console.error("Error in chat:", error);
       setMessages(prev => prev.map(msg => 
@@ -70,16 +72,16 @@ export const ChatAssistant: React.FC = () => {
   };
 
   const suggestions = [
-    { icon: <MapPin className="h-3 w-3" />, text: "Quais escolas têm vaga?" },
-    { icon: <FileText className="h-3 w-3" />, text: "Documentos necessários" },
-    { icon: <GraduationCap className="h-3 w-3" />, text: "Escolas infantis" },
-    { icon: <Calendar className="h-3 w-3" />, text: "Prazo de matrícula" },
+    { icon: <MapPin className="h-3 w-3" />, text: "Escolas mais próximas" },
+    { icon: <FileText className="h-3 w-3" />, text: "Legislação BNCC 2025" },
+    { icon: <GraduationCap className="h-3 w-3" />, text: "Vagas para AEE" },
+    { icon: <Calendar className="h-3 w-3" />, text: "Calendário letivo" },
   ];
 
   return (
     <div className="fixed bottom-10 right-10 z-[200] flex flex-col items-end no-print">
       {isOpen && (
-        <div className="bg-white rounded-[2.5rem] shadow-luxury w-80 sm:w-96 h-[600px] mb-6 flex flex-col border border-emerald-50 overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-500 ring-1 ring-emerald-100/50">
+        <div className="bg-white rounded-[2.5rem] shadow-luxury w-80 sm:w-96 h-[650px] mb-6 flex flex-col border border-emerald-50 overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-500 ring-1 ring-emerald-100/50">
           {/* Header */}
           <div className="bg-[#022c22] p-6 flex justify-between items-center text-white shadow-xl">
             <div className="flex items-center gap-4">
@@ -90,14 +92,11 @@ export const ChatAssistant: React.FC = () => {
                 <h3 className="font-black text-xs uppercase tracking-widest">Assistente Edu</h3>
                 <span className="text-[9px] text-emerald-400 flex items-center gap-2 font-black uppercase tracking-ultra">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                  Online • Itaberaba
+                  Grounding Ativo • Itaberaba
                 </span>
               </div>
             </div>
-            <button 
-                onClick={() => setIsOpen(false)} 
-                className="hover:bg-white/10 p-2 rounded-full transition-colors"
-            >
+            <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
               <X className="h-6 w-6" />
             </button>
           </div>
@@ -107,7 +106,7 @@ export const ChatAssistant: React.FC = () => {
             <div className="space-y-6">
                {messages.length === 1 && (
                  <div className="grid grid-cols-1 gap-3 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-ultra ml-1">Sugestões de Rede</p>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-ultra ml-1">Inteligência de Rede</p>
                    <div className="grid grid-cols-2 gap-3">
                      {suggestions.map((s, i) => (
                        <button
@@ -124,12 +123,8 @@ export const ChatAssistant: React.FC = () => {
                )}
 
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-[1.8rem] px-6 py-4 text-sm leading-relaxed shadow-sm ${
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-[1.8rem] px-6 py-4 text-sm leading-relaxed shadow-sm ${
                       msg.role === 'user'
                         ? 'bg-emerald-600 text-white rounded-br-none'
                         : 'bg-white text-emerald-950 border border-emerald-50 rounded-bl-none font-medium'
@@ -142,7 +137,24 @@ export const ChatAssistant: React.FC = () => {
                           <span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></span>
                        </div>
                     ) : (
-                      <div className="markdown-body whitespace-pre-wrap">{msg.text}</div>
+                      <>
+                        <div className="markdown-body whitespace-pre-wrap">{msg.text}</div>
+                        {msg.groundingUrls && msg.groundingUrls.length > 0 && (
+                          <div className="mt-4 pt-3 border-t border-emerald-50 flex flex-col gap-2">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                              <Globe className="h-2.5 w-2.5" /> Fontes Consultadas
+                            </p>
+                            {msg.groundingUrls.map((url, idx) => (
+                              <a 
+                                key={idx} href={url.uri} target="_blank" rel="noopener noreferrer"
+                                className="text-[10px] text-emerald-600 hover:underline flex items-center gap-1.5 font-bold"
+                              >
+                                <ExternalLink className="h-2.5 w-2.5" /> {url.title}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -155,8 +167,7 @@ export const ChatAssistant: React.FC = () => {
           <div className="p-4 bg-white border-t border-emerald-50">
             <div className="flex gap-3 items-center">
               <input
-                type="text"
-                value={inputValue}
+                type="text" value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Como posso ajudar?"
@@ -171,11 +182,6 @@ export const ChatAssistant: React.FC = () => {
                 {isTyping ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6" />}
               </button>
             </div>
-            <div className="flex justify-center mt-3">
-               <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
-                  <HelpCircle className="h-3 w-3" /> IA Oficial SME • Itaberaba Digital
-               </p>
-            </div>
           </div>
         </div>
       )}
@@ -188,19 +194,11 @@ export const ChatAssistant: React.FC = () => {
         } transition-all duration-700 absolute bottom-0 right-0 bg-[#022c22] hover:bg-emerald-700 text-white p-5 rounded-[1.8rem] shadow-luxury flex items-center justify-center ring-8 ring-white z-[200]`}
       >
         <MessageCircle className="h-8 w-8" />
-        {!isOpen && messages.length === 1 && (
-            <span className="absolute -top-2 -right-2 flex h-5 w-5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-5 w-5 bg-emerald-600 text-[10px] text-white items-center justify-center font-black">1</span>
-            </span>
-        )}
       </button>
       
        <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`${
-          !isOpen ? '-rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'
-        } transition-all duration-700 absolute bottom-0 right-0 bg-slate-900 text-white p-5 rounded-[1.8rem] shadow-xl flex items-center justify-center ring-8 ring-white z-[200]`}
+        className={`${!isOpen ? '-rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'} transition-all duration-700 absolute bottom-0 right-0 bg-slate-900 text-white p-5 rounded-[1.8rem] shadow-xl flex items-center justify-center ring-8 ring-white z-[200]`}
       >
         <X className="h-8 w-8" />
       </button>

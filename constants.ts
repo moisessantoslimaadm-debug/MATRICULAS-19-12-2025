@@ -1,7 +1,65 @@
 
-import { School, SchoolType, RegistryStudent, RegistrationFormState } from './types';
+import { School, SchoolType, RegistryStudent, RegistrationFormState, Project, Professional } from './types';
 
 export const MUNICIPALITY_NAME = "Itaberaba";
+
+export const MOCK_PROJECTS: Project[] = [
+  {
+    id: 'proj-01',
+    name: 'ROBÓTICA MUNICIPAL',
+    description: 'Oficinas de programação e automação para o Fundamental II utilizando kits Arduino.',
+    category: 'Tecnologia',
+    status: 'Ativo',
+    participantsCount: 156,
+    budget: 'R$ 45.000,00',
+    image: 'https://images.unsplash.com/photo-1561557944-6e7860d1a7eb?auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'proj-02',
+    name: 'CANTEIRO LITERÁRIO',
+    description: 'Projeto de incentivo à leitura e escrita criativa em áreas externas das escolas.',
+    category: 'Cultura',
+    status: 'Ativo',
+    participantsCount: 420,
+    budget: 'R$ 12.000,00',
+    image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80'
+  },
+  {
+    id: 'proj-03',
+    name: 'HORTA NAS ESCOLAS',
+    description: 'Educação ambiental e alimentar através do cultivo de hortaliças orgânicas.',
+    category: 'Meio Ambiente',
+    status: 'Pausado',
+    participantsCount: 89,
+    budget: 'R$ 8.500,00',
+    image: 'https://images.unsplash.com/photo-1592419044706-39796d40f98c?auto=format&fit=crop&q=80'
+  }
+];
+
+export const MOCK_PROFESSIONALS: Professional[] = [
+  {
+    id: 'prof-01',
+    name: 'ANA BEATRIZ SILVEIRA',
+    role: 'Coordenadora Pedagógica',
+    schoolId: '29463777',
+    schoolName: 'CEMEI LINESIO BASTOS',
+    cpf: '123.456.789-00',
+    email: 'ana.silveira@itaberaba.ba.gov.br',
+    status: 'Ativo',
+    phone: '(75) 99887-6655'
+  },
+  {
+    id: 'prof-02',
+    name: 'MARCOS ANTÔNIO SANTOS',
+    role: 'Professor Regente',
+    schoolId: '29383940',
+    schoolName: 'ESCOLA JOÃO XXIII',
+    cpf: '987.654.321-11',
+    email: 'marcos.santos@itaberaba.ba.gov.br',
+    status: 'Ativo',
+    phone: '(75) 99112-2233'
+  }
+];
 
 export const MOCK_SCHOOLS: School[] = [
   {
