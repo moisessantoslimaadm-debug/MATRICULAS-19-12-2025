@@ -19,6 +19,8 @@ export const AdminSchoolsManagement: React.FC = () => {
   
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  
+  // Leitura dos parâmetros da URL
   const tabParam = params.get('tab');
   const schoolIdParam = params.get('schoolId');
   
@@ -35,6 +37,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   // Estado para armazenar a escola selecionada para visualização do Censo
   const [selectedSchoolForCenso, setSelectedSchoolForCenso] = useState<School | null>(null);
 
+  // Sincroniza o estado com a URL
   useEffect(() => {
     if (tabParam && ['units', 'professionals', 'students', 'projects', 'censo'].includes(tabParam)) {
       setActiveTab(tabParam as any);
@@ -100,7 +103,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   const handleOpenSchoolCenso = (school: School) => {
     setSelectedSchoolForCenso(school);
     setActiveTab('censo');
-    // Adiciona o ID da escola na URL para permitir F5/Refresh
+    // Adiciona o ID da escola na URL para permitir F5/Refresh e Deep Linking
     navigate(`/admin/escolas?tab=censo&schoolId=${school.id}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -173,7 +176,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                   <Building2 className="h-20 w-20 text-slate-200 mb-6" />
                   <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-2">Nenhuma Unidade Selecionada</h3>
                   <p className="text-slate-400 font-medium mb-8">Selecione uma escola na aba "Escolas" para visualizar o recibo do Censo.</p>
-                  <button onClick={() => setActiveTab('units')} className="btn-primary !h-14 !px-10 !text-[10px] !rounded-2xl">
+                  <button onClick={() => { setActiveTab('units'); navigate('/admin/escolas?tab=units'); }} className="btn-primary !h-14 !px-10 !text-[10px] !rounded-2xl">
                     Ir para Lista de Escolas
                   </button>
                </div>
