@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
   Save, Search, Loader2, ClipboardCheck, Award, User, 
-  CheckCircle, XCircle, ChevronLeft, Target, Star, Activity
+  CheckCircle, XCircle, ChevronLeft, Target, Star, Activity, Cloud
 } from 'lucide-react';
 import { useNavigate } from '../router';
 
@@ -22,18 +22,62 @@ export const TeacherJournal: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Estado local para manipulação ágil antes do salvamento
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [grades, setGrades] = useState<Record<string, string>>({});
 
   const userData = JSON.parse(sessionStorage.getItem('user_data') || '{}');
   const filtered = students.filter(s => s.status === 'Matriculado' && s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  // Carrega notas existentes do banco (Supabase/Dexie) ao iniciar
+  useEffect(() => {
+    const initialGrades: Record<string, string> = {};
+    students.forEach(s => {
+        // Exemplo: Mapeia a nota de "LÍNGUA PORTUGUESA" da 1ª unidade para visualização rápida no diário
+        // Em um caso real, haveria um seletor de Disciplina/Unidade no topo da tela
+        const grade = s.performanceHistory?.find(h => h.subject === 'LÍNGUA PORTUGUESA')?.g1?.[0];
+        if (grade) initialGrades[s.id] = grade;
+    });
+    setGrades(initialGrades);
+  }, [students]);
+
   const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      addToast("Diário de Classe sincronizado com sucesso no banco municipal.", "success");
-    }, 1500);
+    try {
+        // Prepara o payload para atualização em lote no Supabase
+        const studentsToUpdate = filtered.map(student => {
+            // Se houve alteração na nota, atualiza o histórico do aluno
+            if (grades[student.id]) {
+                const currentHistory = student.performanceHistory || [];
+                // Lógica de Upsert para a disciplina LÍNGUA PORTUGUESA (Exemplo)
+                const subjectIndex = currentHistory.findIndex(h => h.subject === 'LÍNGUA PORTUGUESA');
+                let newHistory = [...currentHistory];
+                
+                if (subjectIndex >= 0) {
+                    const newG1 = [...(newHistory[subjectIndex].g1 || ['', '', ''])];
+                    newG1[0] = grades[student.id]; // Atualiza 1ª nota
+                    newHistory[subjectIndex] = { ...newHistory[subjectIndex], g1: newG1 };
+                } else {
+                    newHistory.push({ 
+                        subject: 'LÍNGUA PORTUGUESA', 
+                        g1: [grades[student.id], '', ''] 
+                    });
+                }
+                return { ...student, performanceHistory: newHistory };
+            }
+            return student;
+        });
+
+        // Envia para o Contexto -> Dexie -> Supabase
+        await updateStudents(studentsToUpdate);
+        addToast("Diário de Classe sincronizado com o Supabase.", "success");
+    } catch (error) {
+        console.error(error);
+        addToast("Erro ao sincronizar dados.", "error");
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const cycleGrade = (studentId: string) => {
@@ -53,15 +97,16 @@ export const TeacherJournal: React.FC = () => {
             <div>
                 <div className="flex items-center gap-4 mb-5">
                   <ClipboardCheck className="h-7 w-7 text-emerald-600" />
-                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.3em]">Modulo Docente • v2.0</span>
+                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.3em]">Modulo Docente • Conectado</span>
                 </div>
                 <h1 className="text-7xl font-black text-slate-900 tracking-tighter uppercase leading-none text-display">Diário de <br/><span className="text-emerald-600">Classe.</span></h1>
                 <p className="text-slate-500 font-medium text-xl mt-6">Escola: <span className="text-slate-900 font-black">{userData.schoolName || 'Rede Municipal'}</span> • Prof. {userData.name}</p>
             </div>
           </div>
-          <button onClick={handleSave} disabled={isSaving} className="btn-primary !h-20 !px-16 shadow-emerald-200">
-            {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
-            Sincronizar Lançamentos
+          <button onClick={handleSave} disabled={isSaving} className="btn-primary !h-20 !px-16 shadow-emerald-200 group relative overflow-hidden">
+            {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6 group-hover:scale-110 transition-transform" />}
+            <span className="relative z-10">Sincronizar Nuvem</span>
+            {isSaving && <div className="absolute inset-0 bg-white/20 animate-pulse"></div>}
           </button>
         </header>
 
@@ -94,8 +139,8 @@ export const TeacherJournal: React.FC = () => {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante</th>
-                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Controle de Frequência</th>
-                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Conceito Pedagógico</th>
+                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Frequência (Hoje)</th>
+                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Língua Portuguesa (Avaliação)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -162,10 +207,10 @@ export const TeacherJournal: React.FC = () => {
                 </div>
             </div>
             <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl flex items-center gap-6 border border-slate-800">
-                <div className="bg-blue-400 p-4 rounded-2xl text-slate-900 shadow-lg"><Award className="h-6 w-6" /></div>
+                <div className="bg-blue-400 p-4 rounded-2xl text-slate-900 shadow-lg"><Cloud className="h-6 w-6" /></div>
                 <div>
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Status Sincronismo</p>
-                    <p className="text-xl font-black tracking-tight uppercase">Base Ativa</p>
+                    <p className="text-xl font-black tracking-tight uppercase text-emerald-400">Supabase Online</p>
                 </div>
             </div>
         </div>

@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from '../router';
 import { useToast } from '../contexts/ToastContext';
+import { supabase } from '../services/supabaseClient';
 import { 
   GraduationCap, Lock, User, Loader2, ShieldCheck, 
-  Globe, LogIn, ChevronRight, Zap, Sparkles
+  ChevronRight, Zap, Sparkles, Mail
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -11,44 +13,48 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      let role: UserRole | null = null;
-      let userData = null;
-      const cleanUser = username.toLowerCase().trim();
+    try {
+      // Autenticação Real via Supabase (Senhas protegidas com Hashing no Servidor)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.includes('@') ? email : `${email}@itaberaba.ba.gov.br`,
+        password: password,
+      });
 
-      if (cleanUser === 'sme' && password === '1234') {
-        role = UserRole.ADMIN_SME;
-        userData = { id: 'adm-01', name: 'Secretaria SME', role: UserRole.ADMIN_SME, email: 'sme@itaberaba.ba.gov.br' };
-      } else if (cleanUser === 'professor' && password === '1234') {
-        role = UserRole.TEACHER;
-        userData = { id: 'prof-01', name: 'Prof. Carlos Alberto', role: UserRole.TEACHER, schoolName: 'JOÃO XXIII' };
-      } else if (cleanUser === 'aluno' && password === '1234') {
-        role = UserRole.STUDENT;
-        userData = { id: 'std-01', name: 'Arthur Silva', role: UserRole.STUDENT, studentId: 'std-0' };
-      }
+      if (error) throw error;
 
-      if (role && userData) {
+      if (data.user) {
+        // Busca perfil estendido se necessário ou usa metadados
+        const role = data.user.user_metadata?.role || UserRole.ADMIN_SME;
+        const userData = { 
+          id: data.user.id, 
+          name: data.user.user_metadata?.full_name || 'Gestor SME', 
+          role: role,
+          email: data.user.email 
+        };
+
         sessionStorage.setItem('admin_auth', 'true');
         sessionStorage.setItem('user_role', role);
         sessionStorage.setItem('user_data', JSON.stringify(userData));
+        
         addToast(`Acesso autorizado: ${userData.name}`, 'success');
         
         if (role === UserRole.TEACHER) navigate('/journal');
-        else if (role === UserRole.STUDENT) navigate(`/student/monitoring?id=${userData.studentId}`);
+        else if (role === UserRole.STUDENT) navigate(`/student/monitoring?id=${data.user.id}`);
         else navigate('/dashboard');
-      } else {
-        addToast('Usuário ou senha inválidos.', 'error');
-        setIsLoading(false);
       }
-    }, 1500);
+    } catch (error: any) {
+      addToast(error.message || 'Erro na autenticação nominal.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -66,20 +72,20 @@ export const Login: React.FC = () => {
                     </div>
                 </div>
                 <h2 className="text-7xl font-black mb-10 tracking-tighter uppercase leading-[0.85] text-display">Portal <br/><span className="text-emerald-400">Síncrono.</span></h2>
-                <p className="text-emerald-100/60 text-lg leading-relaxed mb-16 font-medium max-w-sm">Acesso restrito e auditável para a rede nominal de ensino de Itaberaba.</p>
+                <p className="text-emerald-100/60 text-lg leading-relaxed mb-16 font-medium max-w-sm">Acesso restrito e auditável com proteção de dados via Supabase Auth.</p>
                 
                 <div className="space-y-8">
                     <div className="flex items-center gap-6 group">
                         <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-emerald-500/20 transition-all duration-500">
                             <ShieldCheck className="h-7 w-7 text-emerald-400" />
                         </div>
-                        <span className="text-[10px] font-black text-emerald-100/40 uppercase tracking-[0.2em]">Criptografia Militar Síncrona</span>
+                        <span className="text-[10px] font-black text-emerald-100/40 uppercase tracking-[0.2em]">Criptografia de Ponta (AES-256)</span>
                     </div>
                     <div className="flex items-center gap-6 group">
                         <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-emerald-500/20 transition-all duration-500">
                             <Zap className="h-7 w-7 text-emerald-400" />
                         </div>
-                        <span className="text-[10px] font-black text-emerald-100/40 uppercase tracking-[0.2em]">Integração Direta INEP 2025</span>
+                        <span className="text-[10px] font-black text-emerald-100/40 uppercase tracking-[0.2em]">Integração Direta Supabase 2025</span>
                     </div>
                 </div>
             </div>
@@ -93,24 +99,24 @@ export const Login: React.FC = () => {
         <div className="lg:w-[55%] p-20 bg-white flex flex-col justify-center relative overflow-hidden">
           <div className="mb-16 relative z-10">
             <h3 className="text-5xl font-black text-slate-900 tracking-tighter uppercase mb-4">Acesso.</h3>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.5em]">Credenciais de Rede Nominal</p>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.5em]">Barramento Nominal Seguro</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-10 relative z-10">
             <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Identificação de Usuário</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">E-mail ou Usuário</label>
                 <div className="relative group">
-                    <User className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
+                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
                     <input 
-                        type="text" required value={username} onChange={e => setUsername(e.target.value)}
-                        placeholder="sme, professor ou aluno"
+                        type="text" required value={email} onChange={e => setEmail(e.target.value)}
+                        placeholder="Ex: gestor@itaberaba.ba.gov.br"
                         className="input-premium pl-16 !h-14 !text-sm"
                     />
                 </div>
             </div>
 
             <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Token de Segurança</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Token de Segurança (Senha)</label>
                 <div className="relative group">
                     <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
                     <input 
@@ -125,13 +131,13 @@ export const Login: React.FC = () => {
                 type="submit" disabled={isLoading}
                 className="btn-primary w-full h-20 !text-[12px] shadow-2xl shadow-emerald-900/20 active:scale-95 group"
             >
-                {isLoading ? <Loader2 className="h-7 w-7 animate-spin" /> : <>Autenticar Módulo <ChevronRight className="h-5 w-5 group-hover:translate-x-1.5 transition-transform" /></>}
+                {isLoading ? <Loader2 className="h-7 w-7 animate-spin" /> : <>Autenticar no Barramento <ChevronRight className="h-5 w-5 group-hover:translate-x-1.5 transition-transform" /></>}
             </button>
           </form>
           
           <div className="mt-20 pt-10 border-t border-slate-100 flex justify-between items-center relative z-10">
-              <span className="text-[9px] font-black text-slate-300 uppercase tracking-ultra">v2.5 Itaberaba OS</span>
-              <Link to="/status" className="text-[9px] font-black text-emerald-600 uppercase tracking-ultra hover:underline">Suporte Síncrono</Link>
+              <span className="text-[9px] font-black text-slate-300 uppercase tracking-ultra">Cloud Sync enabled</span>
+              <Link to="/status" className="text-[9px] font-black text-emerald-600 uppercase tracking-ultra hover:underline">Recuperar Acesso</Link>
           </div>
           
           <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-50 rounded-full blur-[120px] opacity-30 -z-0"></div>
