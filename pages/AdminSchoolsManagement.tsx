@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate, useSearchParams } from '../router';
@@ -6,7 +5,7 @@ import {
   Building, Users, Layers, Star, Plus, Search, 
   ChevronRight, Trash2, Edit3, Globe, Briefcase, 
   Zap, X, Save, ShieldCheck, Printer, FileText,
-  MapPin, CheckCircle, Info, Building2
+  MapPin, CheckCircle, Info, Building2, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import { Professional, Project, RegistryStudent, School } from '../types';
 
@@ -21,21 +20,57 @@ export const AdminSchoolsManagement: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const tabParam = params.get('tab');
+  const schoolIdParam = params.get('schoolId');
   
-  const [activeTab, setActiveTab] = useState<'professionals' | 'students' | 'projects' | 'censo'>(
-    (tabParam as any) || 'students'
+  // 'units' é agora uma das abas possíveis
+  const [activeTab, setActiveTab] = useState<'units' | 'professionals' | 'students' | 'projects' | 'censo'>(
+    (tabParam as any) || 'units'
   );
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({ status: 'Ativo' });
+  
+  // Estado para armazenar a escola selecionada para visualização do Censo
+  const [selectedSchoolForCenso, setSelectedSchoolForCenso] = useState<School | null>(null);
 
   useEffect(() => {
-    if (tabParam && ['professionals', 'students', 'projects', 'censo'].includes(tabParam)) {
+    if (tabParam && ['units', 'professionals', 'students', 'projects', 'censo'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
-  }, [tabParam]);
+
+    // Deep Linking: Recupera a escola selecionada via URL se estivermos na aba censo
+    if (tabParam === 'censo' && schoolIdParam && schools.length > 0) {
+        const school = schools.find(s => s.id === schoolIdParam);
+        if (school) {
+            setSelectedSchoolForCenso(school);
+        }
+    }
+  }, [tabParam, schoolIdParam, schools]);
+
+  // Cálculos dinâmicos para o Censo da escola selecionada
+  const censoData = useMemo(() => {
+    if (!selectedSchoolForCenso) return null;
+
+    const schoolStudents = students.filter(s => s.schoolId === selectedSchoolForCenso.id || s.school === selectedSchoolForCenso.name);
+    const schoolProfs = professionals.filter(p => p.schoolId === selectedSchoolForCenso.id);
+    
+    return {
+        totalStudents: schoolStudents.length,
+        specialNeeds: schoolStudents.filter(s => s.specialNeeds).length,
+        transport: schoolStudents.filter(s => s.transportRequest).length,
+        // Filtra professores por string (exemplo simplificado)
+        teachers: schoolProfs.filter(p => p.role.toUpperCase().includes('PROFESSOR') || p.role.toUpperCase().includes('DOCENTE')).length,
+        staff: schoolProfs.length,
+        // Mock de turmas baseado no total de alunos (média de 25 por turma, mínimo 1)
+        classes: Math.ceil(schoolStudents.length / 25) || 1
+    };
+  }, [selectedSchoolForCenso, students, professionals]);
+
+  const filteredSchools = useMemo(() => schools.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || (s.inep && s.inep.includes(searchTerm))
+  ), [schools, searchTerm]);
 
   const filteredProfessionals = useMemo(() => professionals.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.role && p.role.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -59,6 +94,20 @@ export const AdminSchoolsManagement: React.FC = () => {
     setEditingItem(item);
     setFormData({ ...item });
     setIsFormModalOpen(true);
+  };
+
+  // Função para abrir o censo da escola com persistência na URL
+  const handleOpenSchoolCenso = (school: School) => {
+    setSelectedSchoolForCenso(school);
+    setActiveTab('censo');
+    // Adiciona o ID da escola na URL para permitir F5/Refresh
+    navigate(`/admin/escolas?tab=censo&schoolId=${school.id}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToUnits = () => {
+    setActiveTab('units');
+    navigate(`/admin/escolas?tab=units`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,6 +158,7 @@ export const AdminSchoolsManagement: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap gap-4 no-print">
+            <TabButton id="units" label="Escolas" icon={Building2} />
             <TabButton id="students" label="Alunos" icon={Users} />
             <TabButton id="professionals" label="Profissionais" icon={Briefcase} />
             <TabButton id="projects" label="Projetos" icon={Star} />
@@ -118,273 +168,301 @@ export const AdminSchoolsManagement: React.FC = () => {
 
         {activeTab === 'censo' ? (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
-            {/* Header do Relatório Educacenso */}
-            <div className="bg-white p-12 rounded-[2rem] shadow-luxury border border-slate-200 print:shadow-none print:border-slate-400">
-              <div className="flex flex-col items-center text-center mb-10">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Coat_of_arms_of_Brazil.svg/1200px-Coat_of_arms_of_Brazil.svg.png" className="w-16 h-16 mb-4" alt="Brasão do Brasil" />
-                <p className="text-[12px] font-bold text-slate-800 uppercase">Ministério da Educação</p>
-                <p className="text-[11px] font-medium text-slate-700">Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira</p>
-                <div className="w-full h-px bg-slate-300 my-4"></div>
-                <div className="text-left w-full space-y-1">
-                  <p className="text-[10px] font-black text-slate-900">Sistema disponível apenas para leitura.</p>
-                  <p className="text-[10px] font-bold text-slate-600">Escola fechada! Para cadastrar/editar dados, faz-se necessária a retificação do Censo.</p>
-                  <p className="text-[9px] text-slate-500 italic">As informações constantes neste recibo poderão sofrer alterações, devido a correções de inconsistências identificadas pela Secretaria Estadual de Educação ou pelo Inep.</p>
-                </div>
-                <div className="w-full h-px bg-slate-300 my-4"></div>
-                <div className="text-left w-full">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Educacenso 2025</h2>
-                  <h3 className="text-lg font-black text-slate-900 mt-1 uppercase">29463777 CENTRO MUNICIPAL DE ED INF CEMEI LINESIO BASTOS DE SANTANA</h3>
-                  <p className="text-md font-bold text-slate-600">Recibo</p>
-                </div>
-              </div>
-
-              {/* Seção Dados da Entidade */}
-              <div className="mb-10">
-                <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase">Dados da entidade</h4>
-                </div>
-                <div className="grid md:grid-cols-2 gap-x-12 gap-y-4 px-6 text-[11px]">
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Código da Escola:</span>
-                    <span className="font-black text-slate-900">29463777</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Nome da Escola:</span>
-                    <span className="font-black text-slate-900 text-right">CENTRO MUNICIPAL DE ED INF CEMEI LINESIO BASTOS DE SANTANA</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Situação de Funcionamento:</span>
-                    <span className="font-black text-slate-900">Em atividade</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Dependência administrativa:</span>
-                    <span className="font-black text-slate-900">Municipal</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Categoria de Escola Privada:</span>
-                    <span className="font-black text-slate-900">---</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Localização/ Zona da escola:</span>
-                    <span className="font-black text-slate-900">Urbana</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">UF:</span>
-                    <span className="font-black text-slate-900">Bahia</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-slate-500">Município:</span>
-                    <span className="font-black text-slate-900">Itaberaba</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção Turmas e Alunos */}
-              <div className="mb-10 overflow-x-auto">
-                <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase">Turmas e alunos</h4>
-                </div>
-                <table className="w-full text-center border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100">
-                      <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Turmas</th>
-                      <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Áreas do conhecimento confirmadas sem docente</th>
-                      <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Total de Alunos (as)</th>
-                      <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Alunos(as) com Deficiência, TEA e Altas Habilidades</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border border-slate-300 p-6 text-sm font-black">24</td>
-                      <td className="border border-slate-300 p-6 text-sm font-black">0</td>
-                      <td className="border border-slate-300 p-6 text-sm font-black">366</td>
-                      <td className="border border-slate-300 p-6 text-sm font-black">39</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Seção Profissionais Escolares */}
-              <div className="mb-10 overflow-x-auto">
-                <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase">Profissionais Escolares</h4>
-                </div>
-                <table className="w-full text-center border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100">
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Docentes</th>
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Tutores Auxiliares</th>
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Profissionais/ monitores atividade complementar</th>
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Instrutores da Educação Profissional</th>
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Auxiliares/ assistentes educacionais</th>
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Tradutores/ Intérpretes de Libras</th>
-                      <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Profissionais apoio escolar deficiência</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-sm font-black">28</td>
-                      <td className="border border-slate-300 p-4 text-sm font-black">0</td>
-                      <td className="border border-slate-300 p-4 text-sm font-black">0</td>
-                      <td className="border border-slate-300 p-4 text-sm font-black">0</td>
-                      <td className="border border-slate-300 p-4 text-sm font-black">10</td>
-                      <td className="border border-slate-300 p-4 text-sm font-black">0</td>
-                      <td className="border border-slate-300 p-4 text-sm font-black">16</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Seção Informações de Vínculo */}
-              <div className="mb-10 overflow-x-auto">
-                <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase">Informações de vínculo</h4>
-                </div>
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 text-center">
-                      <th rowSpan={2} className="border border-slate-300 p-3 text-[10px] font-black uppercase text-slate-600">Tipo de mediação didático-pedagógica</th>
-                      <th rowSpan={2} className="border border-slate-300 p-3 text-[10px] font-black uppercase text-slate-600">Total</th>
-                      <th colSpan={5} className="border border-slate-300 p-3 text-[10px] font-black uppercase text-slate-600">Matrículas</th>
-                    </tr>
-                    <tr className="bg-slate-50 text-center">
-                      <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">Ensino Regular</th>
-                      <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">EJA</th>
-                      <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">Curso Técnico</th>
-                      <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">Atividade Complementar</th>
-                      <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">AEE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-center font-black text-slate-900">
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">Presencial</td>
-                      <td className="border border-slate-300 p-4">392</td>
-                      <td className="border border-slate-300 p-4">359</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">33</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">Semipresencial</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">EAD</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                    </tr>
-                  </tbody>
-                  <tfoot className="bg-slate-100 text-center font-black text-slate-900">
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">Total</td>
-                      <td className="border border-slate-300 p-4">392</td>
-                      <td className="border border-slate-300 p-4">359</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">0</td>
-                      <td className="border border-slate-300 p-4">33</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Seção Alunos que utilizam transporte escolar */}
-              <div className="mb-10 w-fit">
-                <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase">Alunos de escolarização que utilizam transporte escolar</h4>
-                </div>
-                <table className="min-w-[400px] text-center border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100">
-                      <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Poder Público</th>
-                      <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Alunos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-[11px] font-bold">Municipal</td>
-                      <td className="border border-slate-300 p-4 font-black">135</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-[11px] font-bold">Estadual</td>
-                      <td className="border border-slate-300 p-4 font-black">0</td>
-                    </tr>
-                  </tbody>
-                  <tfoot className="bg-slate-100">
-                    <tr>
-                      <td className="border border-slate-300 p-4 text-[11px] font-black">Total</td>
-                      <td className="border border-slate-300 p-4 font-black">135</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Seção Autenticação */}
-              <div className="mb-10">
-                <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase">Autenticação</h4>
-                </div>
-                <div className="grid grid-cols-3 gap-8 px-6 text-[10px]">
-                  <div className="space-y-1">
-                    <p className="font-bold text-slate-500 uppercase">Nome do gestor escola</p>
-                    <p className="font-black text-slate-900 uppercase">PAULA VANESSA BOMFIM DE ABREU</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-slate-500 uppercase">CPF do gestor escolar</p>
-                    <p className="font-black text-slate-900">80231322534</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-slate-500 uppercase">Cargo</p>
-                    <p className="font-black text-slate-900 uppercase">Diretor</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rodapé Responsável */}
-              <div className="mt-16 pt-10 border-t-2 border-slate-900">
-                <h4 className="text-[12px] font-black text-slate-900 uppercase mb-6">Responsável pelo Fechamento do Censo Escolar - Educacenso 2025</h4>
-                <div className="grid grid-cols-2 gap-8 text-[11px]">
-                  <div className="space-y-3">
-                    <div className="flex gap-4">
-                      <span className="font-bold text-slate-500 min-w-[150px]">Nome do informante:</span>
-                      <span className="font-black text-slate-900 uppercase">NORA NOVAES MELO</span>
+            {!selectedSchoolForCenso ? (
+               <div className="flex flex-col items-center justify-center py-32 text-center border-4 border-dashed border-slate-100 rounded-[3rem]">
+                  <Building2 className="h-20 w-20 text-slate-200 mb-6" />
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-2">Nenhuma Unidade Selecionada</h3>
+                  <p className="text-slate-400 font-medium mb-8">Selecione uma escola na aba "Escolas" para visualizar o recibo do Censo.</p>
+                  <button onClick={() => setActiveTab('units')} className="btn-primary !h-14 !px-10 !text-[10px] !rounded-2xl">
+                    Ir para Lista de Escolas
+                  </button>
+               </div>
+            ) : (
+                <>
+                {/* Actions Bar */}
+                <div className="flex justify-between items-center no-print">
+                    <button onClick={handleBackToUnits} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 group-hover:-translate-x-1 transition-transform">
+                            <ArrowLeft className="h-4 w-4" />
+                        </div>
+                        Voltar para Lista
+                    </button>
+                    <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-widest flex items-center gap-2">
+                            <CheckCircle className="h-3 w-3" /> Dados Sincronizados
+                        </span>
                     </div>
-                    <div className="flex gap-4">
-                      <span className="font-bold text-slate-500 min-w-[150px]">CPF responsável:</span>
-                      <span className="font-black text-slate-900">08946353520</span>
+                </div>
+
+                {/* Header do Relatório Educacenso */}
+                <div className="bg-white p-12 rounded-[2rem] shadow-luxury border border-slate-200 print:shadow-none print:border-slate-400">
+                  <div className="flex flex-col items-center text-center mb-10">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Coat_of_arms_of_Brazil.svg/1200px-Coat_of_arms_of_Brazil.svg.png" className="w-16 h-16 mb-4" alt="Brasão do Brasil" />
+                    <p className="text-[12px] font-bold text-slate-800 uppercase">Ministério da Educação</p>
+                    <p className="text-[11px] font-medium text-slate-700">Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira</p>
+                    <div className="w-full h-px bg-slate-300 my-4"></div>
+                    <div className="text-left w-full space-y-1">
+                      <p className="text-[10px] font-black text-slate-900">Sistema disponível apenas para leitura.</p>
+                      <p className="text-[10px] font-bold text-slate-600">Escola fechada! Para cadastrar/editar dados, faz-se necessária a retificação do Censo.</p>
+                      <p className="text-[9px] text-slate-500 italic">As informações constantes neste recibo poderão sofrer alterações, devido a correções de inconsistências identificadas pela Secretaria Estadual de Educação ou pelo Inep.</p>
+                    </div>
+                    <div className="w-full h-px bg-slate-300 my-4"></div>
+                    <div className="text-left w-full">
+                      <h2 className="text-xl font-black text-slate-900 tracking-tight">Educacenso 2025</h2>
+                      <h3 className="text-lg font-black text-slate-900 mt-1 uppercase">{selectedSchoolForCenso.inep} {selectedSchoolForCenso.name}</h3>
+                      <p className="text-md font-bold text-slate-600">Recibo</p>
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex gap-4">
-                      <span className="font-bold text-slate-500 min-w-[150px]">Data/Hora do encerramento:</span>
-                      <span className="font-black text-slate-900 uppercase">15/10/2025 às 17:29:14</span>
+
+                  {/* Seção Dados da Entidade */}
+                  <div className="mb-10">
+                    <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
+                      <h4 className="text-[11px] font-black text-slate-900 uppercase">Dados da entidade</h4>
                     </div>
-                    <div className="flex gap-4">
-                      <span className="font-bold text-slate-500 min-w-[150px]">Código do recibo:</span>
-                      <span className="font-black text-slate-900 uppercase">1EFF15E6CB8081EFFAD0072661E5BA46</span>
+                    <div className="grid md:grid-cols-2 gap-x-12 gap-y-4 px-6 text-[11px]">
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Código da Escola:</span>
+                        <span className="font-black text-slate-900">{selectedSchoolForCenso.inep}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Nome da Escola:</span>
+                        <span className="font-black text-slate-900 text-right">{selectedSchoolForCenso.name}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Situação de Funcionamento:</span>
+                        <span className="font-black text-slate-900">Em atividade</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Dependência administrativa:</span>
+                        <span className="font-black text-slate-900">Municipal</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Categoria de Escola Privada:</span>
+                        <span className="font-black text-slate-900">---</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Localização/ Zona da escola:</span>
+                        <span className="font-black text-slate-900">Urbana</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">UF:</span>
+                        <span className="font-black text-slate-900">Bahia</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-500">Município:</span>
+                        <span className="font-black text-slate-900">Itaberaba</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <p className="text-[9px] text-slate-400 mt-10 text-right italic">Emitido em 28/10/2025 às 10:17:13</p>
-              </div>
-            </div>
 
-            {/* Ações de Impressão */}
-            <div className="flex justify-center no-print pb-20">
-              <button onClick={() => window.print()} className="btn-primary !h-20 !px-20 shadow-deep">
-                <Printer className="h-6 w-6" /> Imprimir Recibo Educacenso
-              </button>
-            </div>
+                  {/* Seção Turmas e Alunos */}
+                  <div className="mb-10 overflow-x-auto">
+                    <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
+                      <h4 className="text-[11px] font-black text-slate-900 uppercase">Turmas e alunos</h4>
+                    </div>
+                    <table className="w-full text-center border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Turmas</th>
+                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Áreas do conhecimento confirmadas sem docente</th>
+                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Total de Alunos (as)</th>
+                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Alunos(as) com Deficiência, TEA e Altas Habilidades</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.classes}</td>
+                          <td className="border border-slate-300 p-6 text-sm font-black">0</td>
+                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.totalStudents}</td>
+                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.specialNeeds}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Seção Profissionais Escolares */}
+                  <div className="mb-10 overflow-x-auto">
+                    <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
+                      <h4 className="text-[11px] font-black text-slate-900 uppercase">Profissionais Escolares</h4>
+                    </div>
+                    <table className="w-full text-center border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Docentes</th>
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Tutores Auxiliares</th>
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Profissionais/ monitores atividade complementar</th>
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Instrutores da Educação Profissional</th>
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Auxiliares/ assistentes educacionais</th>
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Tradutores/ Intérpretes de Libras</th>
+                          <th className="border border-slate-300 p-3 text-[9px] font-black uppercase text-slate-600">Profissionais apoio escolar deficiência</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-sm font-black">{censoData?.teachers}</td>
+                          <td className="border border-slate-300 p-4 text-sm font-black">0</td>
+                          <td className="border border-slate-300 p-4 text-sm font-black">0</td>
+                          <td className="border border-slate-300 p-4 text-sm font-black">0</td>
+                          <td className="border border-slate-300 p-4 text-sm font-black">{Math.max(0, (censoData?.staff || 0) - (censoData?.teachers || 0))}</td>
+                          <td className="border border-slate-300 p-4 text-sm font-black">0</td>
+                          <td className="border border-slate-300 p-4 text-sm font-black">{Math.ceil((censoData?.specialNeeds || 0) / 3)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Seção Informações de Vínculo */}
+                  <div className="mb-10 overflow-x-auto">
+                    <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
+                      <h4 className="text-[11px] font-black text-slate-900 uppercase">Informações de vínculo</h4>
+                    </div>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-center">
+                          <th rowSpan={2} className="border border-slate-300 p-3 text-[10px] font-black uppercase text-slate-600">Tipo de mediação didático-pedagógica</th>
+                          <th rowSpan={2} className="border border-slate-300 p-3 text-[10px] font-black uppercase text-slate-600">Total</th>
+                          <th colSpan={5} className="border border-slate-300 p-3 text-[10px] font-black uppercase text-slate-600">Matrículas</th>
+                        </tr>
+                        <tr className="bg-slate-50 text-center">
+                          <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">Ensino Regular</th>
+                          <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">EJA</th>
+                          <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">Curso Técnico</th>
+                          <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">Atividade Complementar</th>
+                          <th className="border border-slate-300 p-2 text-[8px] font-black uppercase text-slate-500">AEE</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-center font-black text-slate-900">
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">Presencial</td>
+                          <td className="border border-slate-300 p-4">{censoData?.totalStudents}</td>
+                          <td className="border border-slate-300 p-4">{censoData?.totalStudents}</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">{censoData?.specialNeeds}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">Semipresencial</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">EAD</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                        </tr>
+                      </tbody>
+                      <tfoot className="bg-slate-100 text-center font-black text-slate-900">
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-left text-[10px] uppercase">Total</td>
+                          <td className="border border-slate-300 p-4">{censoData?.totalStudents}</td>
+                          <td className="border border-slate-300 p-4">{censoData?.totalStudents}</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">0</td>
+                          <td className="border border-slate-300 p-4">{censoData?.specialNeeds}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  {/* Seção Alunos que utilizam transporte escolar */}
+                  <div className="mb-10 w-fit">
+                    <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
+                      <h4 className="text-[11px] font-black text-slate-900 uppercase">Alunos de escolarização que utilizam transporte escolar</h4>
+                    </div>
+                    <table className="min-w-[400px] text-center border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Poder Público</th>
+                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Alunos</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-[11px] font-bold">Municipal</td>
+                          <td className="border border-slate-300 p-4 font-black">{censoData?.transport}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-[11px] font-bold">Estadual</td>
+                          <td className="border border-slate-300 p-4 font-black">0</td>
+                        </tr>
+                      </tbody>
+                      <tfoot className="bg-slate-100">
+                        <tr>
+                          <td className="border border-slate-300 p-4 text-[11px] font-black">Total</td>
+                          <td className="border border-slate-300 p-4 font-black">{censoData?.transport}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  {/* Seção Autenticação */}
+                  <div className="mb-10">
+                    <div className="bg-slate-50 px-6 py-3 border-b-2 border-slate-900 mb-6">
+                      <h4 className="text-[11px] font-black text-slate-900 uppercase">Autenticação</h4>
+                    </div>
+                    <div className="grid grid-cols-3 gap-8 px-6 text-[10px]">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-500 uppercase">Nome do gestor escola</p>
+                        <p className="font-black text-slate-900 uppercase">PAULA VANESSA BOMFIM DE ABREU</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-500 uppercase">CPF do gestor escolar</p>
+                        <p className="font-black text-slate-900">80231322534</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-500 uppercase">Cargo</p>
+                        <p className="font-black text-slate-900 uppercase">Diretor</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rodapé Responsável */}
+                  <div className="mt-16 pt-10 border-t-2 border-slate-900">
+                    <h4 className="text-[12px] font-black text-slate-900 uppercase mb-6">Responsável pelo Fechamento do Censo Escolar - Educacenso 2025</h4>
+                    <div className="grid grid-cols-2 gap-8 text-[11px]">
+                      <div className="space-y-3">
+                        <div className="flex gap-4">
+                          <span className="font-bold text-slate-500 min-w-[150px]">Nome do informante:</span>
+                          <span className="font-black text-slate-900 uppercase">NORA NOVAES MELO</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="font-bold text-slate-500 min-w-[150px]">CPF responsável:</span>
+                          <span className="font-black text-slate-900">08946353520</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex gap-4">
+                          <span className="font-bold text-slate-500 min-w-[150px]">Data/Hora do encerramento:</span>
+                          <span className="font-black text-slate-900 uppercase">15/10/2025 às 17:29:14</span>
+                        </div>
+                        <div className="flex gap-4">
+                          <span className="font-bold text-slate-500 min-w-[150px]">Código do recibo:</span>
+                          <span className="font-black text-slate-900 uppercase">1EFF15E6CB8081EFFAD0072661E5BA46</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-slate-400 mt-10 text-right italic">Emitido em 28/10/2025 às 10:17:13</p>
+                  </div>
+                </div>
+
+                {/* Ações de Impressão */}
+                <div className="flex justify-center no-print pb-20">
+                  <button onClick={() => window.print()} className="btn-primary !h-20 !px-20 shadow-deep">
+                    <Printer className="h-6 w-6" /> Imprimir Recibo Educacenso
+                  </button>
+                </div>
+                </>
+            )}
           </div>
         ) : (
           <>
@@ -393,13 +471,13 @@ export const AdminSchoolsManagement: React.FC = () => {
                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
                  <input 
                    type="text" 
-                   placeholder={`Buscar por ${activeTab === 'professionals' ? 'nome/servidor' : activeTab === 'projects' ? 'nome/projeto' : 'escola/aluno'}...`} 
+                   placeholder={`Buscar por ${activeTab === 'professionals' ? 'nome/servidor' : activeTab === 'projects' ? 'nome/projeto' : activeTab === 'units' ? 'unidade escolar' : 'escola/aluno'}...`} 
                    value={searchTerm} 
                    onChange={e => setSearchTerm(e.target.value)} 
                    className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
                  />
                </div>
-               {activeTab !== 'students' && (
+               {activeTab !== 'students' && activeTab !== 'units' && (
                  <button 
                    onClick={handleOpenAddModal}
                    className="btn-primary !h-16 !px-12 !bg-[#0F172A] !text-[10px] !rounded-[1.8rem] whitespace-nowrap"
@@ -408,6 +486,48 @@ export const AdminSchoolsManagement: React.FC = () => {
                  </button>
                )}
             </div>
+
+            {/* Nova ABA UNIDADES */}
+            {activeTab === 'units' && (
+              <div className="card-requinte !p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-700">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade Escolar</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">INEP</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Localização</th>
+                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredSchools.map(s => (
+                      <tr key={s.id} className="group hover:bg-slate-50/50 transition-all">
+                        <td className="px-10 py-8">
+                            <button 
+                                onClick={() => handleOpenSchoolCenso(s)}
+                                className="font-black text-slate-900 uppercase text-sm mb-1 hover:text-emerald-600 hover:underline text-left"
+                            >
+                                {s.name}
+                            </button>
+                            <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest mt-1">Clique no nome para abrir o Censo</p>
+                        </td>
+                        <td className="px-10 py-8">
+                            <span className="font-mono font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg text-xs">{s.inep}</span>
+                        </td>
+                        <td className="px-10 py-8 text-center">
+                          <span className="px-5 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase border border-blue-100">{s.address}</span>
+                        </td>
+                        <td className="px-10 py-8 text-right">
+                           <button onClick={() => handleOpenSchoolCenso(s)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-emerald-600 shadow-sm transition-all group-hover:bg-emerald-50">
+                                <ArrowRight className="h-4.5 w-4.5" />
+                           </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {activeTab === 'professionals' && (
               <div className="card-requinte !p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-700">

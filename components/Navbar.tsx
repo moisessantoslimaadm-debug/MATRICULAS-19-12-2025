@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from '../router';
 import { GraduationCap, Menu, X, CloudOff, LogOut, ShieldCheck, Building, Briefcase, Star, Map, FileText, BarChart3 } from 'lucide-react';
@@ -62,7 +61,7 @@ export const Navbar: React.FC = () => {
             {(role === UserRole.ADMIN_SME || role === UserRole.DIRECTOR) && (
               <>
                 <Link to="/dashboard" className={isActive('/dashboard')}>Painel</Link>
-                <Link to="/admin/escolas?tab=students" className={isActive('/admin/escolas?tab=students')}>
+                <Link to="/admin/escolas?tab=units" className={isActive('/admin/escolas?tab=units')}>
                   <Building className="h-3.5 w-3.5" /> Escolas
                 </Link>
                 <Link to="/admin/escolas?tab=professionals" className={isActive('/admin/escolas?tab=professionals')}>
