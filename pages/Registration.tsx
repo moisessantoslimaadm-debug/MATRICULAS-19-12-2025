@@ -7,7 +7,7 @@ import { RegistrationFormState, RegistryStudent } from '../types';
 import { 
   Check, User, ShieldCheck, ChevronRight, Loader2, 
   MapPin, ChevronLeft, FileText, UserCheck, Smartphone, 
-  Zap, HeartPulse, Bus, LocateFixed, Info, AlertCircle 
+  Zap, HeartPulse, Bus, LocateFixed, Info, AlertCircle, Building 
 } from 'lucide-react';
 import { useNavigate } from '../router';
 
@@ -19,6 +19,7 @@ export const Registration: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [allocatedSchool, setAllocatedSchool] = useState<string | null>(null);
 
   const handleInputChange = (section: 'student' | 'guardian' | 'address', field: string, value: any) => {
     setFormState(prev => ({
@@ -38,6 +39,16 @@ export const Registration: React.FC = () => {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setCoords({ lat: latitude, lng: longitude });
+        
+        // Cálculo imediato da unidade de referência
+        const allocation = getNearestSchool(latitude, longitude);
+        if (allocation) {
+            setAllocatedSchool(allocation.school.name);
+            setFormState(prev => ({...prev, selectedSchoolId: allocation.school.id}));
+        } else {
+            setAllocatedSchool('Não foi possível determinar a unidade exata.');
+        }
+
         setIsLocating(false);
         addToast("Coordenadas nominais capturadas.", "success");
       },
@@ -57,7 +68,7 @@ export const Registration: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Geo-Alocação Síncrona
+    // Geo-Alocação Síncrona Final (Redundância)
     const lat = coords?.lat || -12.5253;
     const lng = coords?.lng || -40.2917;
     const allocation = getNearestSchool(lat, lng);
@@ -193,9 +204,21 @@ export const Registration: React.FC = () => {
                       </div>
 
                       {coords && (
-                        <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl animate-in zoom-in-95">
-                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                          <span className="text-[9px] font-black text-emerald-800 uppercase">Posicionamento: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}</span>
+                        <div className="space-y-6 animate-in zoom-in-95">
+                            <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl w-fit">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                <span className="text-[9px] font-black text-emerald-800 uppercase">Posicionamento: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}</span>
+                            </div>
+                            
+                            {allocatedSchool && (
+                                <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-blue-100 flex items-center gap-6">
+                                    <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-lg"><Building className="h-6 w-6" /></div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidade de Referência</p>
+                                        <p className="text-xl font-black text-slate-900 uppercase tracking-tight">{allocatedSchool}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                       )}
 
@@ -238,13 +261,13 @@ export const Registration: React.FC = () => {
                               <span className="text-[10px] font-black text-slate-400 uppercase">Estudante</span>
                               <span className="text-lg font-black text-slate-900 uppercase">{formState.student.fullName}</span>
                           </div>
-                          <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-black text-slate-400 uppercase">Território</span>
-                              <span className="text-lg font-black text-slate-900 uppercase">{formState.address.neighborhood || 'Itaberaba'}</span>
+                          <div className="flex justify-between items-center border-b border-slate-200 pb-6">
+                              <span className="text-[10px] font-black text-slate-400 uppercase">Unidade Alocada</span>
+                              <span className="text-lg font-black text-emerald-600 uppercase">{allocatedSchool || 'Geo-Processamento'}</span>
                           </div>
                           <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center gap-4">
                             <Info className="h-6 w-6 text-blue-600" />
-                            <p className="text-[11px] font-medium text-blue-900">O sistema alocará automaticamente a vaga na unidade escolar de maior conveniência geográfica.</p>
+                            <p className="text-[11px] font-medium text-blue-900">O sistema garantiu a vaga na unidade escolar de maior conveniência geográfica listada acima.</p>
                           </div>
                       </div>
                   </div>

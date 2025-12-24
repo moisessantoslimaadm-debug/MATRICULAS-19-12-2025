@@ -5,7 +5,7 @@ import {
   Building, Users, Layers, Star, Plus, Search, 
   Trash2, Briefcase, X, Save, MapPin, Building2, 
   ArrowRight, ArrowLeft, GraduationCap, UserCheck, 
-  Stethoscope, PaintBucket, Lock
+  Stethoscope, PaintBucket, Lock, Edit3
 } from 'lucide-react';
 import { Professional, Project, School, SchoolType } from '../types';
 
@@ -26,7 +26,8 @@ export const AdminSchoolsManagement: React.FC = () => {
   const { 
     professionals, projects, students, schools, 
     addProfessional, updateProfessional, removeProfessional,
-    addProject, updateProject, removeProject, addSchool,
+    addProject, updateProject, removeProject, 
+    addSchool, updateSchool, // Usando updateSchool
     removeStudent
   } = useData();
   
@@ -41,6 +42,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   // Modais
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
+  const [isEditSchoolMode, setIsEditSchoolMode] = useState(false); // Flag para edição de escola
   
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({ status: 'Ativo' });
@@ -135,15 +137,37 @@ export const AdminSchoolsManagement: React.FC = () => {
     setIsFormModalOpen(false);
   };
 
-  // Submit Escola
+  // Submit Escola (Criação ou Edição)
   const handleSchoolSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      await addSchool({
-          ...schoolFormData,
-          id: `sch-${Date.now()}`,
-      } as School);
+      if (isEditSchoolMode && selectedSchool) {
+          await updateSchool({ ...selectedSchool, ...schoolFormData } as School);
+      } else {
+          await addSchool({
+              ...schoolFormData,
+              id: `sch-${Date.now()}`,
+          } as School);
+      }
       setIsSchoolModalOpen(false);
       setSchoolFormData(INITIAL_SCHOOL_FORM);
+      setIsEditSchoolMode(false);
+  };
+
+  // Prepara modal para EDIÇÃO de escola
+  const handleEditSchool = () => {
+      if (!selectedSchool) return;
+      setSchoolFormData({
+          ...selectedSchool
+      });
+      setIsEditSchoolMode(true);
+      setIsSchoolModalOpen(true);
+  };
+
+  // Prepara modal para CRIAÇÃO de escola
+  const handleCreateSchool = () => {
+      setSchoolFormData(INITIAL_SCHOOL_FORM);
+      setIsEditSchoolMode(false);
+      setIsSchoolModalOpen(true);
   };
 
   const handleOpenEdit = (item: any) => {
@@ -195,7 +219,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                                 className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
                             />
                         </div>
-                        <button onClick={() => setIsSchoolModalOpen(true)} className="btn-primary !h-16 !px-8 !text-[10px] !bg-slate-900 shrink-0">
+                        <button onClick={handleCreateSchool} className="btn-primary !h-16 !px-8 !text-[10px] !bg-slate-900 shrink-0">
                             <Plus className="h-5 w-5" /> Nova Unidade
                         </button>
                     </div>
@@ -227,14 +251,14 @@ export const AdminSchoolsManagement: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL DE CRIAÇÃO DE ESCOLA */}
+            {/* MODAL DE CRIAÇÃO/EDIÇÃO DE ESCOLA */}
             {isSchoolModalOpen && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsSchoolModalOpen(false)}></div>
                     <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl relative p-12 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
                         <div className="flex justify-between items-center mb-10">
                             <h3 className="font-black text-slate-900 uppercase text-xl tracking-tight flex items-center gap-4">
-                                <Building className="h-6 w-6 text-emerald-600" /> Nova Unidade Escolar
+                                <Building className="h-6 w-6 text-emerald-600" /> {isEditSchoolMode ? 'Editar Unidade' : 'Nova Unidade Escolar'}
                             </h3>
                             <button onClick={() => setIsSchoolModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
@@ -306,7 +330,7 @@ export const AdminSchoolsManagement: React.FC = () => {
 
                             <div className="flex justify-end gap-3 pt-6">
                                 <button type="button" onClick={() => setIsSchoolModalOpen(false)} className="btn-secondary !h-14 !px-10 !text-[10px]">Cancelar</button>
-                                <button type="submit" className="btn-primary !h-14 !px-10 !text-[10px] !bg-emerald-600"><Save className="h-4 w-4" /> Registrar Escola</button>
+                                <button type="submit" className="btn-primary !h-14 !px-10 !text-[10px] !bg-emerald-600"><Save className="h-4 w-4" /> {isEditSchoolMode ? 'Atualizar Dados' : 'Registrar Escola'}</button>
                             </div>
                         </form>
                     </div>
@@ -323,7 +347,7 @@ export const AdminSchoolsManagement: React.FC = () => {
     <div className="min-h-screen bg-[#f8fafc] py-12 px-8 page-transition">
         <div className="max-w-[1600px] mx-auto space-y-10">
             {/* Header da Escola */}
-            <div className="bg-white rounded-[3rem] p-12 shadow-luxury border border-slate-100 relative overflow-hidden">
+            <div className="bg-white rounded-[3rem] p-12 shadow-luxury border border-slate-100 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-50 rounded-full blur-[120px] -mr-64 -mt-64 opacity-60"></div>
                 <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start gap-10">
                     <div className="flex flex-col gap-6">
@@ -331,11 +355,16 @@ export const AdminSchoolsManagement: React.FC = () => {
                             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Voltar para Rede
                         </button>
                         <div className="flex items-center gap-8">
-                            <div className="w-24 h-24 rounded-[2rem] bg-slate-900 border-[6px] border-white shadow-2xl overflow-hidden flex-shrink-0">
+                            <div className="w-24 h-24 rounded-[2rem] bg-slate-900 border-[6px] border-white shadow-2xl overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform duration-700">
                                 <img src={selectedSchool.image} className="w-full h-full object-cover" alt="School" />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">{selectedSchool.name}</h1>
+                                <div className="flex items-center gap-4 mb-2">
+                                    <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">{selectedSchool.name}</h1>
+                                    <button onClick={handleEditSchool} className="p-2 bg-slate-50 rounded-full text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shadow-sm" title="Editar Escola">
+                                        <Edit3 className="h-4 w-4" />
+                                    </button>
+                                </div>
                                 <p className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.2em] mt-3 bg-emerald-50 px-3 py-1 rounded-lg w-fit border border-emerald-100">INEP: {selectedSchool.inep} • {selectedSchool.address}</p>
                             </div>
                         </div>
