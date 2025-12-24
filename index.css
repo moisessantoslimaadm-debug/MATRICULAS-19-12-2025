@@ -92,15 +92,15 @@ body {
   }
 
   /* Oculta tudo que não for de impressão */
-  .no-print, nav, .fixed, button {
+  .no-print, nav, .fixed, button, header, footer {
     display: none !important;
   }
 
-  /* Mostra o layout de impressão */
+  /* Exibe o layout de impressão */
   .print-only {
     display: block !important;
     width: 210mm;
-    height: 297mm;
+    min-height: 297mm;
     position: absolute;
     top: 0;
     left: 0;

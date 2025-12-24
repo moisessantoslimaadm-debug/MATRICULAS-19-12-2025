@@ -162,7 +162,7 @@ export const Reports: React.FC = () => {
                     <div className="space-y-20 animate-in fade-in duration-1000">
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-12">
                              <HighDensityStat title="Censo Total" value={students.length} icon={Users} colorClass="bg-slate-900" sub="Registros Auditados" />
-                             <HighDensityStat title="Dossiês AEE" value={students.filter(s => s.specialNeeds).length} icon={HeartPulse} colorClass="bg-pink-600" sub="Inclusão Ativa" />
+                             <HighDensityStat title="Pastas AEE" value={students.filter(s => s.specialNeeds).length} icon={HeartPulse} colorClass="bg-pink-600" sub="Inclusão Ativa" />
                              <HighDensityStat title="Frotas Rurais" value={students.filter(s => s.transportRequest).length} icon={Bus} colorClass="bg-blue-600" sub="Itinerários Logísticos" />
                              <HighDensityStat title="Unidades" value={schools.length} icon={SchoolIcon} colorClass="bg-emerald-600" sub="Rede Municipal Ativa" />
                         </div>

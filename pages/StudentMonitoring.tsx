@@ -223,7 +223,6 @@ export const StudentMonitoring: React.FC = () => {
   }, [student]);
 
   // Mock Data para o Gráfico (simulando histórico mensal para visualização + dados atuais)
-  // Em produção, isso viria de um processamento real do histórico agrupado por mês
   const chartData = {
       attendance: [98, 95, 100, 92, parseInt(String(stats.attendancePercent)) || 100, 96, 98],
       grades: [3, 2, 3, 4, stats.gradeAverage === 'DE' ? 4 : stats.gradeAverage === 'DB' ? 3 : 2, 3, 4]
