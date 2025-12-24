@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from '../router';
-import { CheckCircle, Search, UserCheck, AlertCircle, Clock, ShieldCheck, Zap, Printer, ArrowRight, FolderOpen, Fingerprint } from 'lucide-react';
+import { CheckCircle, Search, UserCheck, AlertCircle, Clock, ShieldCheck, Zap, Printer, ArrowRight, FolderOpen, Fingerprint, Copy } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
 import { RegistryStudent } from '../types';
 
 export const Status: React.FC = () => {
   const { students } = useData();
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isSuccess = searchParams.get('success') === 'true';
+  const enrollmentId = searchParams.get('id'); // Obtém o ID real da URL
   
   const [studentInput, setStudentInput] = useState('');
   const [searchResults, setSearchResults] = useState<RegistryStudent[]>([]);
@@ -39,19 +42,38 @@ export const Status: React.FC = () => {
     setHasSearched(true);
   };
 
+  const handleCopyId = () => {
+    if (enrollmentId) {
+        navigator.clipboard.writeText(enrollmentId);
+        addToast("Protocolo copiado para a área de transferência.", "success");
+    }
+  };
+
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 page-transition">
         <div className="bg-white rounded-[4rem] shadow-2xl border border-emerald-100 p-16 max-w-xl w-full text-center">
-          <div className="w-32 h-32 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-12 shadow-xl shadow-emerald-50">
+          <div className="w-32 h-32 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-12 shadow-xl shadow-emerald-50 animate-in zoom-in duration-500">
             <CheckCircle className="h-16 w-16 text-emerald-600" />
           </div>
           <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none mb-6">Protocolo <br/><span className="text-emerald-600">Transmitido.</span></h2>
           <p className="text-slate-500 font-medium text-lg mb-12 leading-relaxed">Seu registro nominal foi enviado à rede municipal de ensino.</p>
-          <div className="bg-slate-900 py-10 px-10 rounded-[3rem] mb-12 border border-slate-800">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.4em] mb-3">Chave de Acompanhamento</p>
-            <span className="text-4xl font-black text-emerald-400 tracking-tighter">MAT-{Math.floor(Math.random() * 900000) + 100000}</span>
+          
+          <div className="bg-slate-900 py-10 px-10 rounded-[3rem] mb-12 border border-slate-800 relative group overflow-hidden">
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.4em] mb-3 relative z-10">Chave de Acompanhamento</p>
+            <div className="flex items-center justify-center gap-4 relative z-10">
+                <span className="text-4xl font-black text-emerald-400 tracking-tighter">{enrollmentId || 'PROCESSANDO...'}</span>
+                <button 
+                    onClick={handleCopyId} 
+                    className="p-2 bg-white/10 rounded-xl hover:bg-white/20 text-emerald-400 transition-colors"
+                    title="Copiar Protocolo"
+                >
+                    <Copy className="h-5 w-5" />
+                </button>
+            </div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors"></div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
              <button onClick={() => window.print()} className="btn-secondary"><Printer className="h-4 w-4" /> Imprimir</button>
              <Link to="/" className="btn-primary !bg-emerald-600">Início <ArrowRight className="h-4 w-4" /></Link>

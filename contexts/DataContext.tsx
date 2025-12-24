@@ -113,7 +113,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       setProfessionals(await db.professionals.toArray());
       setProjects(await db.projects.toArray());
     } finally {
-      setTimeout(() => setIsLoading(false), 800);
+      // Performance Boost: Remoção de delay artificial
+      setIsLoading(false);
     }
   };
 

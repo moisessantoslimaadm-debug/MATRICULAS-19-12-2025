@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from '../router';
 import { 
@@ -10,7 +9,7 @@ import { MUNICIPALITY_NAME } from '../constants';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  // Estado de carregamento removido para navegação instantânea
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -21,8 +20,8 @@ export const Home: React.FC = () => {
   }, []);
 
   const startRegistration = () => {
-    setIsLoading(true);
-    setTimeout(() => navigate('/registration'), 800);
+    // Navegação imediata sem delay artificial
+    navigate('/registration');
   };
 
   return (
@@ -59,7 +58,7 @@ export const Home: React.FC = () => {
                   onClick={startRegistration}
                   className="btn-primary !h-20 !px-16 !text-[13px] !bg-slate-900 hover:!bg-emerald-600 shadow-deep active:scale-95 transition-all group"
                 >
-                  {isLoading ? <Zap className="h-6 w-6 animate-spin" /> : <>Iniciar Matrícula <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform" /></>}
+                  Iniciar Matrícula <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform" />
                 </button>
                 <Link to="/status" className="btn-secondary !h-20 !px-12 !text-[13px] hover:border-emerald-200 transition-all active:scale-95 shadow-luxury">
                   Acompanhar Protocolo

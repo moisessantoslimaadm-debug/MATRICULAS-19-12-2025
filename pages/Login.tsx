@@ -94,16 +94,14 @@ export const Login: React.FC = () => {
         }
     }
 
-    // --- EXECUTA LOGIN MOCK ---
+    // --- EXECUTA LOGIN MOCK (IMEDIATO) ---
     if (mockUser) {
-        setTimeout(() => {
-            sessionStorage.setItem('admin_auth', 'true');
-            sessionStorage.setItem('user_role', mockUser.role);
-            sessionStorage.setItem('user_data', JSON.stringify(mockUser));
-            addToast(`Bem-vindo(a), ${mockUser.name}`, 'success');
-            navigate(redirectPath);
-            setIsLoading(false);
-        }, 800);
+        sessionStorage.setItem('admin_auth', 'true');
+        sessionStorage.setItem('user_role', mockUser.role);
+        sessionStorage.setItem('user_data', JSON.stringify(mockUser));
+        addToast(`Bem-vindo(a), ${mockUser.name}`, 'success');
+        navigate(redirectPath);
+        setIsLoading(false);
         return;
     }
 

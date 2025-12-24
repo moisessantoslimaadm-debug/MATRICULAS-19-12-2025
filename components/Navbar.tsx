@@ -29,12 +29,10 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => {
     const currentPath = location.pathname;
     
-    // Lógica simplificada para active state
-    if (path === '/admin/escolas' && currentPath.includes('/admin/escolas')) {
-       return 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all bg-emerald-50/50';
-    }
+    // Lógica aprimorada para sub-rotas e parâmetros
+    const isActiveLink = currentPath === path || (path !== '/' && currentPath.startsWith(path));
 
-    return currentPath === path
+    return isActiveLink
       ? 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all bg-emerald-50/50' 
       : 'text-slate-500 hover:text-emerald-700 font-semibold px-3 py-4 transition-all text-[10px] uppercase tracking-wider flex items-center gap-2 hover:bg-slate-50';
   };

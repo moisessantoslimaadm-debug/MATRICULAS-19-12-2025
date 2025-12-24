@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
@@ -6,7 +5,6 @@ import {
   PieChart as PieIcon, Printer, Download, 
   School as SchoolIcon, Users, HeartPulse, Bus, 
   TrendingUp, Activity, Database, ArrowRight, Layers, Target, ShieldCheck,
-  // Fix: Added Building import from lucide-react
   Building
 } from 'lucide-react';
 
@@ -122,6 +120,30 @@ export const Reports: React.FC = () => {
         }).sort((a, b) => b.total - a.total);
     }, [schools, students]);
 
+    const handleExportCSV = () => {
+        const headers = ["ESCOLA", "TOTAL_ALUNOS", "AEE", "CAPACIDADE_VAGAS", "TAXA_OCUPACAO"];
+        const csvContent = [
+            headers.join(';'),
+            ...schoolComparison.map(s => [
+                `"${s.name}"`,
+                s.total,
+                s.aee,
+                s.capacity,
+                s.occupancy.toFixed(2) + '%'
+            ].join(';'))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `relatorio_rede_sme_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addToast("Base analítica exportada com sucesso.", "success");
+    };
+
     return (
         <div className="min-h-screen bg-[#fcfdfe] py-24 px-12 page-transition">
             <div className="max-w-[1600px] mx-auto space-y-24">
@@ -137,7 +159,7 @@ export const Reports: React.FC = () => {
                         <button onClick={() => window.print()} className="btn-primary !h-24 !px-16 !bg-white !text-slate-900 border border-slate-100 shadow-luxury hover:!bg-slate-50">
                             <Printer className="h-7 w-7" /> Pasta do Aluno PDF
                         </button>
-                        <button onClick={() => addToast("Base nominal exportada.", "success")} className="btn-primary !h-24 !px-16 !bg-slate-900 shadow-blue-900/10">
+                        <button onClick={handleExportCSV} className="btn-primary !h-24 !px-16 !bg-slate-900 shadow-blue-900/10">
                             <Download className="h-7 w-7" /> Exportar CSV MEC
                         </button>
                     </div>
@@ -279,7 +301,7 @@ export const Reports: React.FC = () => {
                                         <p className="text-slate-400 text-xl font-medium leading-relaxed">Dados auditados e validados via barramento municipal síncrono. Garantia de integridade para fins de estatísticas oficiais MEC/Inep.</p>
                                     </div>
                                 </div>
-                                <button className="px-16 py-8 bg-white text-slate-900 rounded-[3rem] text-[13px] font-black uppercase tracking-[0.4em] hover:bg-emerald-50 transition-all shadow-deep active:scale-95">
+                                <button onClick={handleExportCSV} className="px-16 py-8 bg-white text-slate-900 rounded-[3rem] text-[13px] font-black uppercase tracking-[0.4em] hover:bg-emerald-50 transition-all shadow-deep active:scale-95">
                                     Emitir Relatório Oficial
                                 </button>
                             </div>

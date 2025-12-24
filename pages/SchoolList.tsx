@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
+import { useToast } from '../contexts/ToastContext';
 import { 
   MapPin, Search, Building, Users, 
   Layers, ArrowRight, ShieldCheck, 
@@ -56,6 +57,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
 export const SchoolList: React.FC = () => {
   const navigate = useNavigate();
   const { schools, students } = useData();
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'units' | 'students' | 'classes'>('units');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -83,6 +85,30 @@ export const SchoolList: React.FC = () => {
     });
     return Object.values(classMap);
   }, [students]);
+
+  const handleExportPublicData = () => {
+    const headers = ["NOME_ALUNO", "INEP_MEC", "ESCOLA", "TURMA", "STATUS"];
+    const csvContent = [
+        headers.join(';'),
+        ...filteredStudents.map(s => [
+            `"${s.name}"`,
+            s.inepId || '',
+            `"${s.school}"`,
+            `"${s.className || ''}"`,
+            s.status
+        ].join(';'))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `base_publica_inep_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast("Base pública baixada.", "success");
+  };
 
   return (
     <div className="min-h-screen bg-[#fcfdfe] py-16 px-8 page-transition">
@@ -257,7 +283,7 @@ export const SchoolList: React.FC = () => {
                         <p className="text-blue-200/60 text-xs font-medium mt-2">Dados auditados via Educacenso 2025 • Integração Nominal SME Itaberaba.</p>
                     </div>
                 </div>
-                <button className="px-10 py-5 bg-white text-slate-900 rounded-[2rem] text-[10px] font-black uppercase tracking-ultra hover:bg-blue-50 transition-all shadow-xl">
+                <button onClick={handleExportPublicData} className="px-10 py-5 bg-white text-slate-900 rounded-[2rem] text-[10px] font-black uppercase tracking-ultra hover:bg-blue-50 transition-all shadow-xl">
                     Exportar Base Nominal Inep
                 </button>
             </div>

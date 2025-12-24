@@ -1,11 +1,10 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, MapPin, Layers, 
   Search, Compass, Navigation2, Navigation, Globe,
-  ShieldCheck
+  ShieldCheck, Loader2
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -20,11 +19,13 @@ export const MapAnalysis: React.FC = () => {
   const heatLayerRef = useRef<any>(null);
   const schoolMarkersRef = useRef<any>(null);
   const studentMarkersRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
 
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
   const [mapStyle, setMapStyle] = useState<'voyager' | 'satellite' | 'dark'>('voyager');
   const [isMapReady, setIsMapReady] = useState(false);
   const [searchStreet, setSearchStreet] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
 
   const tileProviders = {
     voyager: {
@@ -64,6 +65,10 @@ export const MapAnalysis: React.FC = () => {
         updateMapTiles('voyager');
         schoolMarkersRef.current = L.layerGroup().addTo(map);
         studentMarkersRef.current = L.layerGroup().addTo(map);
+        
+        // Force resize to prevent gray areas
+        setTimeout(() => map.invalidateSize(), 100);
+        
         setIsMapReady(true);
     }
     return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
@@ -71,17 +76,20 @@ export const MapAnalysis: React.FC = () => {
 
   useEffect(() => {
     if (!mapRef.current || !isMapReady) return;
+    
+    // Ensure map fits container on update
+    mapRef.current.invalidateSize();
+
     if (heatLayerRef.current) mapRef.current.removeLayer(heatLayerRef.current);
     schoolMarkersRef.current.clearLayers();
     studentMarkersRef.current.clearLayers();
 
-    // Ícone SVG estático para o popup (Leaflet não renderiza componentes React stringificados corretamente)
+    // Ícone SVG estático para o popup
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     const shieldIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
 
     // Plotagem de Unidades Escolares
     schools.forEach(school => {
-        // Proteção contra dados nulos
         if (!school || typeof school.lat !== 'number' || typeof school.lng !== 'number') return;
 
         const icon = L.divIcon({
@@ -121,7 +129,6 @@ export const MapAnalysis: React.FC = () => {
         }
     } else {
         students.forEach(s => {
-            // Proteção contra dados nulos
             if (!s || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
 
             const marker = L.circleMarker([s.lat, s.lng], {
@@ -144,7 +151,7 @@ export const MapAnalysis: React.FC = () => {
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // Busca nominal profunda por Aluno, CPF ou Logradouro com validação de nulidade
+    // Busca nominal profunda
     const match = students.find(s => 
         s && (
             (s.name && s.name.toLowerCase().includes(term)) || 
@@ -162,6 +169,58 @@ export const MapAnalysis: React.FC = () => {
     } else {
         addToast("Critério nominal não localizado no barramento.", "warning");
     }
+  };
+
+  const handleLocateMe = () => {
+    setIsLocating(true);
+    if (!navigator.geolocation) {
+        addToast("Geolocalização não suportada pelo navegador.", "error");
+        setIsLocating(false);
+        return;
+    }
+    
+    addToast("Buscando sinal GPS...", "info");
+    
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            
+            if (mapRef.current) {
+                // Remove marcador anterior do usuário se existir
+                if (userMarkerRef.current) {
+                    mapRef.current.removeLayer(userMarkerRef.current);
+                }
+
+                mapRef.current.flyTo([latitude, longitude], 17, { 
+                    duration: 2,
+                    easeLinearity: 0.25 
+                });
+
+                // Cria ícone pulsante personalizado
+                const userIcon = L.divIcon({
+                    className: 'bg-transparent',
+                    html: `<div class="relative">
+                             <div class="absolute -top-3 -left-3 w-6 h-6 bg-blue-500 rounded-full animate-ping opacity-75"></div>
+                             <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
+                           </div>`
+                });
+
+                userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon })
+                    .addTo(mapRef.current)
+                    .bindPopup(`<div class="text-[10px] font-black uppercase tracking-widest text-slate-900 p-1">Sua Localização Nominal</div>`)
+                    .openPopup();
+            }
+            
+            setIsLocating(false);
+            addToast("Localização nominal confirmada.", "success");
+        },
+        (err) => {
+            console.error(err);
+            addToast("Não foi possível obter sua localização.", "error");
+            setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   return (
@@ -236,8 +295,14 @@ export const MapAnalysis: React.FC = () => {
         </div>
 
         <div className="absolute bottom-10 right-10 z-[300] flex flex-col gap-4">
-            <button onClick={() => mapRef.current.flyTo([-12.5253, -40.2917], 15, { duration: 1.5 })} className="p-5 bg-white rounded-2xl shadow-luxury text-slate-900 hover:text-emerald-600 transition-all border border-slate-100"><Maximize size={24} /></button>
-            <button onClick={() => addToast("GPS Local Ativado", "info")} className="p-5 bg-[#0F172A] rounded-2xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all"><Navigation size={24} /></button>
+            <button onClick={() => { mapRef.current.flyTo([-12.5253, -40.2917], 15, { duration: 1.5 }); mapRef.current.invalidateSize(); }} className="p-5 bg-white rounded-2xl shadow-luxury text-slate-900 hover:text-emerald-600 transition-all border border-slate-100"><Maximize size={24} /></button>
+            <button 
+                onClick={handleLocateMe} 
+                disabled={isLocating}
+                className="p-5 bg-[#0F172A] rounded-2xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+                {isLocating ? <Loader2 size={24} className="animate-spin" /> : <Navigation size={24} />}
+            </button>
         </div>
       </div>
 

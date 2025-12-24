@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { INITIAL_REGISTRATION_STATE, MUNICIPALITY_NAME } from '../constants';
 import { useData } from '../contexts/DataContext';
@@ -92,11 +91,14 @@ export const Registration: React.FC = () => {
       transportRequest: formState.student.needsTransport
     };
 
-    setTimeout(async () => {
+    try {
       await addStudent(newStudent);
       setIsSubmitting(false);
       navigate(`/status?success=true&id=${newStudent.enrollmentId}`);
-    }, 2000);
+    } catch (error) {
+      setIsSubmitting(false);
+      addToast("Erro no processamento da matrícula.", "error");
+    }
   };
 
   const StepCircle = ({ step, icon: Icon, label }: any) => (

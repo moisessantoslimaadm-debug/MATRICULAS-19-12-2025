@@ -23,6 +23,53 @@ export const AdminData: React.FC = () => {
   const paginated = filtered.slice((currentPage - 1) * 12, currentPage * 12);
   const totalPages = Math.ceil(filtered.length / 12);
 
+  const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      addToast("Nenhum dado para exportar.", "warning");
+      return;
+    }
+
+    // Cabeçalhos compatíveis com Layout Inep/MEC
+    const headers = [
+      "ID_SISTEMA", "INEP_ID", "MATRICULA_RA", "NOME_COMPLETO", 
+      "DATA_NASCIMENTO", "CPF", "SEXO", "RACA_COR", 
+      "ESCOLA_ATUAL", "TURMA", "TURNO", "STATUS_MATRICULA", 
+      "AEE_DEFICIENCIA", "TRANSPORTE_PUBLICO", "ZONA_RESIDENCIAL"
+    ];
+
+    const csvContent = [
+      headers.join(';'),
+      ...filtered.map(s => [
+        s.id,
+        s.inepId || '',
+        s.enrollmentId || '',
+        `"${s.name}"`, // Aspas para evitar quebra em nomes compostos
+        s.birthDate,
+        s.cpf,
+        s.sex || '',
+        s.race || '',
+        `"${s.school || ''}"`,
+        `"${s.className || ''}"`,
+        s.classSchedule || '',
+        s.status,
+        s.specialNeeds ? 'SIM' : 'NAO',
+        s.transportRequest ? 'SIM' : 'NAO',
+        s.residenceZone || ''
+      ].join(';'))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `censo_nominal_sme_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    addToast("Arquivo CSV gerado com sucesso.", "success");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-6 page-transition">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -31,7 +78,7 @@ export const AdminData: React.FC = () => {
             <h1 className="text-xl font-bold text-slate-900 uppercase">Censo <span className="text-emerald-600">Nominal</span></h1>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base de dados síncrona SME</p>
           </div>
-          <button onClick={() => addToast("Gerando relatório...", "info")} className="btn-primary !h-8 !text-[9px]">
+          <button onClick={handleExportCSV} className="btn-primary !h-8 !text-[9px] hover:!bg-emerald-700">
             <Download className="h-3 w-3" /> Exportar CSV
           </button>
         </header>
