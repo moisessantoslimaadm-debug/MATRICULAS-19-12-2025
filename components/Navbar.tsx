@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from '../router';
-import { GraduationCap, Menu, X, CloudOff, LogOut, ShieldCheck, Building, Briefcase, Star, Map, FileText, BarChart3 } from 'lucide-react';
+import { GraduationCap, Menu, X, CloudOff, LogOut, Building, Map, FileText } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { UserRole } from '../types';
 
@@ -18,6 +18,7 @@ export const Navbar: React.FC = () => {
     const userData = JSON.parse(sessionStorage.getItem('user_data') || '{}');
     setRole(savedRole);
     setUserName(userData.name || '');
+    setIsOpen(false); // Fecha menu ao mudar de rota
   }, [location.pathname, location.search]);
 
   const handleLogout = () => {
@@ -27,91 +28,145 @@ export const Navbar: React.FC = () => {
 
   const isActive = (path: string) => {
     const currentPath = location.pathname;
-    const currentSearch = location.search;
     
-    // Simplificado para verificar apenas o caminho base
-    if (path === '/admin/escolas' && currentPath === '/admin/escolas') {
-       return 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all';
-    }
-
-    if (path.includes('?tab=')) {
-      const [base, query] = path.split('?');
-      return currentPath === base && currentSearch.includes(query)
-        ? 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all' 
-        : 'text-slate-500 hover:text-emerald-700 font-semibold px-3 py-4 transition-all text-[10px] uppercase tracking-wider flex items-center gap-2';
+    // Lógica simplificada para active state
+    if (path === '/admin/escolas' && currentPath.includes('/admin/escolas')) {
+       return 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all bg-emerald-50/50';
     }
 
     return currentPath === path
-      ? 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all' 
-      : 'text-slate-500 hover:text-emerald-700 font-semibold px-3 py-4 transition-all text-[10px] uppercase tracking-wider flex items-center gap-2';
+      ? 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all bg-emerald-50/50' 
+      : 'text-slate-500 hover:text-emerald-700 font-semibold px-3 py-4 transition-all text-[10px] uppercase tracking-wider flex items-center gap-2 hover:bg-slate-50';
   };
 
-  return (
-    <nav className="sticky top-0 z-[100] px-6 bg-white border-b border-slate-200 shadow-sm">
-      <div className="max-w-[1600px] mx-auto flex justify-between items-center h-14">
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="bg-[#064e3b] p-1.5 rounded-md text-white">
-              <GraduationCap className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-slate-900 tracking-tight leading-none">
-                SME <span className="text-emerald-600">Digital</span>
-              </span>
-              <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Governo de Itaberaba</span>
-            </div>
-          </Link>
+  const MobileLink = ({ to, children, icon: Icon }: any) => (
+    <Link 
+      to={to} 
+      className={`flex items-center gap-4 p-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${location.pathname === to ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`}
+    >
+      {Icon && <Icon className="h-5 w-5" />}
+      {children}
+    </Link>
+  );
 
-          <div className="hidden lg:flex items-center gap-1">
-            {(role === UserRole.ADMIN_SME || role === UserRole.DIRECTOR) && (
-              <>
-                <Link to="/dashboard" className={isActive('/dashboard')}>Painel</Link>
-                <Link to="/admin/escolas" className={isActive('/admin/escolas')}>
-                  <Building className="h-3.5 w-3.5" /> Gestão de Rede
-                </Link>
-                <Link to="/admin/map" className={isActive('/admin/map')}>
-                  <Map className="h-3.5 w-3.5" /> Mapa Geo
-                </Link>
-                <Link to="/admin/data" className={isActive('/admin/data')}>
-                  <FileText className="h-3.5 w-3.5" /> Censo
-                </Link>
-              </>
-            )}
-            {!role && (
+  return (
+    <>
+      <nav className="sticky top-0 z-[100] px-6 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300 supports-[backdrop-filter]:bg-white/60">
+        <div className="max-w-[1600px] mx-auto flex justify-between items-center h-16">
+          <div className="flex items-center gap-6">
+            {/* Toggle Mobile */}
+            <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+
+            <Link to="/" className="flex items-center gap-3">
+              <div className="bg-[#064e3b] p-2 rounded-lg text-white shadow-lg shadow-emerald-900/20">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-sm text-slate-900 tracking-tight leading-none">
+                  SME <span className="text-emerald-600">Digital</span>
+                </span>
+                <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Governo de Itaberaba</span>
+              </div>
+            </Link>
+
+            {/* Desktop Menu */}
+            <div className="hidden lg:flex items-center gap-1 ml-6">
+              {(role === UserRole.ADMIN_SME || role === UserRole.DIRECTOR) && (
                 <>
-                <Link to="/" className={isActive('/')}>Início</Link>
-                <Link to="/schools" className={isActive('/schools')}>Unidades</Link>
-                <Link to="/registration" className={isActive('/registration')}>Matrícula</Link>
-                <Link to="/status" className={isActive('/status')}>Protocolo</Link>
+                  <Link to="/dashboard" className={isActive('/dashboard')}>Painel</Link>
+                  <Link to="/admin/escolas" className={isActive('/admin/escolas')}>
+                    <Building className="h-3.5 w-3.5" /> Gestão de Rede
+                  </Link>
+                  <Link to="/admin/map" className={isActive('/admin/map')}>
+                    <Map className="h-3.5 w-3.5" /> Mapa Geo
+                  </Link>
+                  <Link to="/admin/data" className={isActive('/admin/data')}>
+                    <FileText className="h-3.5 w-3.5" /> Censo
+                  </Link>
                 </>
+              )}
+              {!role && (
+                  <>
+                  <Link to="/" className={isActive('/')}>Início</Link>
+                  <Link to="/schools" className={isActive('/schools')}>Unidades</Link>
+                  <Link to="/registration" className={isActive('/registration')}>Matrícula</Link>
+                  <Link to="/status" className={isActive('/status')}>Protocolo</Link>
+                  </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {isOffline && (
+              <div className="hidden sm:flex items-center gap-1.5 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 text-red-600 text-[9px] font-black uppercase tracking-wide animate-pulse">
+                <CloudOff className="h-3 w-3" /> Offline Mode
+              </div>
+            )}
+
+            {role ? (
+              <div className="flex items-center gap-3 border-l pl-6 border-slate-200">
+                <div className="text-right hidden sm:block">
+                  <span className="text-[10px] font-bold text-slate-900 block leading-none">{userName}</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Gestor Municipal</span>
+                </div>
+                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Sair do Sistema">
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" className="btn-primary !h-10 !px-5 !text-[10px] !rounded-xl !bg-slate-900 shadow-lg">
+                  Acesso Restrito
+              </Link>
             )}
           </div>
         </div>
+      </nav>
 
-        <div className="flex items-center gap-4">
-          {isOffline && (
-            <div className="flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded text-red-600 text-[8px] font-bold uppercase">
-              <CloudOff className="h-3 w-3" /> Offline
+      {/* Mobile Menu Overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[90] lg:hidden">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute top-16 left-0 w-3/4 max-w-sm h-[calc(100vh-64px)] bg-white border-r border-slate-200 shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-left duration-300">
+            <div className="space-y-6">
+               <div className="pb-6 border-b border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Navegação Principal</p>
+                  <div className="space-y-2">
+                    {!role ? (
+                      <>
+                        <MobileLink to="/">Início</MobileLink>
+                        <MobileLink to="/schools">Unidades Escolares</MobileLink>
+                        <MobileLink to="/registration">Realizar Matrícula</MobileLink>
+                        <MobileLink to="/status">Consultar Protocolo</MobileLink>
+                      </>
+                    ) : (
+                      <>
+                         <MobileLink to="/dashboard">Painel de Controle</MobileLink>
+                         <MobileLink to="/admin/escolas">Gestão de Escolas</MobileLink>
+                         <MobileLink to="/admin/map">Mapa Territorial</MobileLink>
+                         <MobileLink to="/admin/data">Censo Nominal</MobileLink>
+                      </>
+                    )}
+                  </div>
+               </div>
+               
+               {role && (
+                 <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Conta</p>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
+                        <p className="font-bold text-slate-900 text-sm">{userName}</p>
+                        <p className="text-xs text-emerald-600 font-medium">{role}</p>
+                    </div>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 p-4 rounded-xl bg-red-50 text-red-600 font-bold uppercase text-xs">
+                        <LogOut className="h-4 w-4" /> Encerrar Sessão
+                    </button>
+                 </div>
+               )}
             </div>
-          )}
-
-          {role ? (
-            <div className="flex items-center gap-3 border-l pl-4 border-slate-200">
-              <div className="text-right hidden sm:block">
-                <span className="text-[10px] font-bold text-slate-900 block leading-none">{userName}</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase">Gestor Municipal</span>
-              </div>
-              <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Sair do Sistema">
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <Link to="/login" className="btn-primary !h-8 !px-3 !text-[9px]">
-                Acesso Restrito
-            </Link>
-          )}
+          </div>
         </div>
-      </div>
-    </nav>
+      )}
+    </>
   );
 };

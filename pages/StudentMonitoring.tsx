@@ -228,6 +228,19 @@ export const StudentMonitoring: React.FC = () => {
       grades: [3, 2, 3, 4, stats.gradeAverage === 'DE' ? 4 : stats.gradeAverage === 'DB' ? 3 : 2, 3, 4]
   };
 
+  const handleBack = () => {
+    // Verifica se é um usuário logado (Admin/Professor)
+    const role = sessionStorage.getItem('user_role');
+    
+    if (role) {
+        // Se for admin, volta para o Dashboard principal
+        navigate('/dashboard');
+    } else {
+        // Se for acesso público (via Portal do Aluno/Status), volta para a tela inicial
+        navigate('/');
+    }
+  };
+
   if (!student) return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-10">
         <div className="relative w-16 h-16">
@@ -247,10 +260,10 @@ export const StudentMonitoring: React.FC = () => {
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-12 page-transition no-print">
       <div className="max-w-7xl mx-auto space-y-12">
         <div className="flex items-center justify-between">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-emerald-600 transition-all group">
+            <button onClick={handleBack} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-emerald-600 transition-all group">
                 <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 group-hover:-translate-x-2 transition-transform">
                     <ArrowLeft className="h-5 w-5" />
-                </div> Voltar ao Painel
+                </div> Voltar
             </button>
             <div className="flex items-center gap-4 bg-emerald-50 px-6 py-2.5 rounded-2xl border border-emerald-100 shadow-sm">
                 <div className="h-2.5 w-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]"></div>

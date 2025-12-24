@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, Loader2, HelpCircle, FileText, Calendar, MapPin, GraduationCap, ExternalLink, Globe } from 'lucide-react';
 import { ChatMessage } from '../types';
@@ -6,7 +5,7 @@ import { sendMessageToGemini } from '../services/geminiService';
 import { useData } from '../contexts/DataContext';
 
 export const ChatAssistant: React.FC = () => {
-  const { schools } = useData(); 
+  const { schools, students } = useData(); 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 'welcome', role: 'model', text: 'Olá! Sou o Edu, seu assistente escolar da SME Itaberaba 🤖.\n\nTenho acesso direto ao barramento nominal e ao Google Search para tirar dúvidas sobre a rede. O que você precisa saber hoje?' }
@@ -40,7 +39,8 @@ export const ChatAssistant: React.FC = () => {
     setMessages(prev => [...prev, { id: modelMsgId, role: 'model', text: '', isLoading: true }]);
 
     try {
-      const response = await sendMessageToGemini(userMsg.text, schools);
+      // Passando students também para ter estatísticas globais
+      const response = await sendMessageToGemini(userMsg.text, schools, students);
       
       setMessages(prev => prev.map(msg => 
         msg.id === modelMsgId 
@@ -74,7 +74,7 @@ export const ChatAssistant: React.FC = () => {
   const suggestions = [
     { icon: <MapPin className="h-3 w-3" />, text: "Escolas mais próximas" },
     { icon: <FileText className="h-3 w-3" />, text: "Legislação BNCC 2025" },
-    { icon: <GraduationCap className="h-3 w-3" />, text: "Vagas para AEE" },
+    { icon: <GraduationCap className="h-3 w-3" />, text: "Quantos alunos na rede?" },
     { icon: <Calendar className="h-3 w-3" />, text: "Calendário letivo" },
   ];
 

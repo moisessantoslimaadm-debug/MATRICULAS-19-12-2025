@@ -54,8 +54,8 @@ const ProgressionVisual = ({ data }: { data: PerformanceRow[] }) => {
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
                     <defs>
                         <linearGradient id="gradPath" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
-                            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                            <stop offset="0%" stopColor="#10b981" stopColorOpacity="0.2" />
+                            <stop offset="100%" stopColor="#10b981" stopColorOpacity="0" />
                         </linearGradient>
                     </defs>
                     <path d={`M ${padding} ${height - padding} L ${points} L ${width - padding} ${height - padding} Z`} fill="url(#gradPath)" />
@@ -140,7 +140,7 @@ export const PerformanceIndicators: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-24 gap-12">
             <div className="space-y-10">
-                <button onClick={() => navigate(-1)} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group">
+                <button onClick={() => navigate('/dashboard')} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group">
                     <div className="bg-slate-100 p-3 rounded-2xl group-hover:bg-emerald-50 transition-colors">
                       <ArrowLeft className="h-5 w-5" />
                     </div> Voltar ao Painel

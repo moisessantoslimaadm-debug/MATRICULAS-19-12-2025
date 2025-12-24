@@ -1,7 +1,6 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { MUNICIPALITY_NAME } from '../constants';
-import { School } from '../types';
+import { School, RegistryStudent } from '../types';
 
 const BASE_SYSTEM_INSTRUCTION = `
 Você é o "Edu", o orquestrador de inteligência artificial da Secretaria de Educação de ${MUNICIPALITY_NAME}.
@@ -14,6 +13,7 @@ Seu papel é atuar como um consultor estratégico e técnico para pais, respons�
 
 --- PROTOCOLOS OPERACIONAIS ---
 - Utilize a ferramenta de busca do Google (googleSearch) para verificar prazos de matrícula nacionais, legislações do MEC (como a BNCC 2025) e informações geográficas de Itaberaba.
+- Se o usuário perguntar sobre estatísticas, utilize o sumário executivo fornecido.
 - Se o usuário perguntar sobre escolas específicas, utilize os dados do contexto local fornecido das unidades ativas.
 - SEMPRE extraia as URLs dos "groundingChunks" e as liste no final da mensagem como "Fontes Oficiais Consultadas".
 `;
@@ -25,15 +25,28 @@ const formatSchoolsContext = (schools: School[]): string => {
   )).join("\n");
 };
 
-export const sendMessageToGemini = async (message: string, currentSchools: School[]) => {
+export const sendMessageToGemini = async (message: string, currentSchools: School[], allStudents: RegistryStudent[] = []) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const context = formatSchoolsContext(currentSchools);
+  const schoolsContext = formatSchoolsContext(currentSchools);
+  
+  // Cálculo de Estatísticas Básicas para Contexto
+  const totalStudents = allStudents.length;
+  const totalSpecialNeeds = allStudents.filter(s => s.specialNeeds).length;
+  const totalTransport = allStudents.filter(s => s.transportRequest).length;
+
+  const statsContext = `
+--- SUMÁRIO EXECUTIVO DA REDE ---
+- Total de Alunos Matriculados: ${totalStudents}
+- Alunos com Necessidades Especiais (AEE): ${totalSpecialNeeds}
+- Alunos utilizando Transporte Escolar: ${totalTransport}
+- Total de Unidades Escolares: ${currentSchools.length}
+  `;
   
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: message,
     config: {
-      systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n\n--- UNIDADES ATIVAS NO BARRAMENTO SME ---\n${context}`,
+      systemInstruction: `${BASE_SYSTEM_INSTRUCTION}\n${statsContext}\n\n--- UNIDADES ATIVAS NO BARRAMENTO SME ---\n${schoolsContext}`,
       temperature: 0.2,
       tools: [{ googleSearch: {} }]
     }

@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLog, AppLog } from '../contexts/LogContext';
 import { X, AlertTriangle, Info, AlertCircle, Trash2, Copy, Bug, ChevronDown, ChevronRight, CheckCircle } from 'lucide-react';
 
 export const LogViewer: React.FC = () => {
   const { logs, isViewerOpen, setIsViewerOpen, clearLogs } = useLog();
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+
+  // Listener para atalho de teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+            setIsViewerOpen(!isViewerOpen);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isViewerOpen, setIsViewerOpen]);
 
   if (!isViewerOpen) return null;
 

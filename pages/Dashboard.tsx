@@ -1,10 +1,11 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useLog } from '../contexts/LogContext';
 import { useNavigate, Link } from '../router';
 import { 
   Users, School, LayoutGrid, Map, Building, FileText, 
   ChevronRight, Activity, ArrowUpRight, Bus, Database, 
-  HeartPulse, Bell, ShieldCheck, Zap, Globe, Terminal, RefreshCw, MapPin
+  HeartPulse, ShieldCheck, Zap, Globe, Terminal, RefreshCw, MapPin
 } from 'lucide-react';
 import { MUNICIPALITY_NAME } from '../constants';
 
@@ -31,28 +32,22 @@ const MetricCard = ({ title, value, icon: Icon, colorClass, trend, sub }: any) =
 
 export const Dashboard: React.FC = () => {
   const { students, schools, isLoading } = useData();
+  const { logs } = useLog();
   const navigate = useNavigate();
   const [userData, setUserData] = useState<any>(null);
-  const [syncLogs, setSyncLogs] = useState<string[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Efeito para auto-scroll do terminal
+  useEffect(() => {
+    if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0; // Mostra os mais recentes (top da lista invertida)
+    }
+  }, [logs]);
 
   useEffect(() => {
     const data = JSON.parse(sessionStorage.getItem('user_data') || '{}');
     if (!sessionStorage.getItem('user_role')) { navigate('/login'); return; }
     setUserData(data);
-
-    const logInterval = setInterval(() => {
-        const events = [
-            "Validando NIRE via barramento municipal...",
-            "Sincronizando pasta AEE com base nacional...",
-            "Geoprocessamento: Alocação automática em Unidade JOÃO XXIII",
-            "MEC: Matrícula nominal auditada com sucesso.",
-            "Inep: Censo Escolar 2025 atualizado via API.",
-            "Logística: Rota de transporte escolar otimizada.",
-            "Segurança: Backup síncrono concluído."
-        ];
-        setSyncLogs(prev => [events[Math.floor(Math.random() * events.length)], ...prev].slice(0, 5));
-    }, 4000);
-    return () => clearInterval(logInterval);
   }, [navigate]);
 
   const stats = useMemo(() => ({
@@ -168,24 +163,28 @@ export const Dashboard: React.FC = () => {
             
             <div className="col-span-12 xl:col-span-4 space-y-12">
                 <div className="bg-slate-900 rounded-[4rem] p-12 text-white shadow-deep relative overflow-hidden min-h-[500px]">
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-10">
+                    <div className="relative z-10 h-full flex flex-col">
+                        <div className="flex justify-between items-center mb-10 shrink-0">
                             <div className="flex items-center gap-4">
                                 <Terminal className="h-6 w-6 text-emerald-400" />
                                 <h3 className="text-[12px] font-black uppercase tracking-[0.4em]">Barramento Síncrono</h3>
                             </div>
                             <RefreshCw className="h-4 w-4 text-emerald-400 animate-spin" />
                         </div>
-                        <div className="space-y-6 font-mono text-[10px]">
-                            {syncLogs.map((log, i) => (
-                                <div key={i} className="border-l border-emerald-500/30 pl-4 py-1 animate-in fade-in slide-in-from-left-2 duration-700">
-                                    <span className="text-emerald-500/50 mr-2">[{new Date().toLocaleTimeString()}]</span>
-                                    <span className="text-slate-300">{log}</span>
+                        <div className="flex-1 overflow-y-auto space-y-4 font-mono text-[10px] scrollbar-hide pr-2" ref={scrollRef}>
+                            {logs.length === 0 ? (
+                                <span className="text-slate-500 italic">Aguardando eventos do sistema...</span>
+                            ) : logs.slice(0, 20).map((log, i) => (
+                                <div key={log.id} className="border-l border-emerald-500/30 pl-4 py-1 animate-in fade-in slide-in-from-left-2 duration-300">
+                                    <span className="text-emerald-500/50 mr-2">[{log.timestamp.toLocaleTimeString()}]</span>
+                                    <span className={log.type === 'error' ? 'text-red-400 font-bold' : log.type === 'warning' ? 'text-amber-400' : 'text-slate-300'}>
+                                        {log.message}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60 pointer-events-none"></div>
                 </div>
 
                 <div className="card-requinte !p-16 space-y-12">
