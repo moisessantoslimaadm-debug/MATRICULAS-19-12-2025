@@ -254,7 +254,7 @@ export const Registration: React.FC = () => {
                       </div>
                       <div className="space-y-4">
                         <h2 className="text-5xl font-black text-slate-900 uppercase tracking-tighter">Consolidação.</h2>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] max-w-sm mx-auto">Verifique os dados nominais antes de transmitir ao barramento municipal.</p>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] max-w-sm mx-auto">Verifique os dados nominais antes de criar a Pasta do Aluno.</p>
                       </div>
                       <div className="bg-slate-50/50 p-12 rounded-[3.5rem] border border-slate-100 text-left space-y-6 shadow-inner">
                           <div className="flex justify-between items-center border-b border-slate-200 pb-6">
@@ -281,7 +281,7 @@ export const Registration: React.FC = () => {
                       <button type="button" onClick={nextStep} className="btn-primary !h-16 !px-12 !text-[11px] !rounded-[1.5rem]">Próximo Passo <ChevronRight className="h-5 w-5" /></button>
                   ) : (
                       <button type="submit" disabled={isSubmitting} className="btn-primary !h-16 !px-12 !text-[11px] !bg-emerald-600 !rounded-[1.5rem] active:scale-95 group">
-                          {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <>Transmitir Dossiê <Zap className="h-5 w-5 group-hover:scale-125 transition-transform" /></>}
+                          {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <>Criar Pasta do Aluno <Zap className="h-5 w-5 group-hover:scale-125 transition-transform" /></>}
                       </button>
                   )}
               </div>

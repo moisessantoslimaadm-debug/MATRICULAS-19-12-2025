@@ -77,17 +77,49 @@ body {
 
 .skeleton-box { @apply bg-slate-200 animate-pulse rounded-xl; }
 
-.no-print {
-  @media print {
+/* --- ESTILOS DE IMPRESSÃO A4 --- */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  
+  body {
+    background-color: white !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Oculta tudo que não for de impressão */
+  .no-print, nav, .fixed, button {
     display: none !important;
+  }
+
+  /* Mostra o layout de impressão */
+  .print-only {
+    display: block !important;
+    width: 210mm;
+    height: 297mm;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: white;
+    z-index: 9999;
+    padding: 15mm;
+  }
+
+  /* Reseta sombras e efeitos para papel */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
   }
 }
 
 .print-only {
   display: none;
-  @media print {
-    display: block !important;
-  }
 }
 
 /* Glassmorphism Classes */

@@ -32,6 +32,19 @@ export interface PerformanceRow {
   concept?: 'DI' | 'EP' | 'DB' | 'DE';
 }
 
+export interface AttendanceRecord {
+    date: string;
+    present: boolean;
+}
+
+export interface TeacherNote {
+    id: string;
+    date: string;
+    author: string;
+    content: string;
+    type: 'Behavior' | 'Academic' | 'General';
+}
+
 export interface Professional {
   id: string;
   name: string;
@@ -93,6 +106,8 @@ export interface RegistryStudent {
     zone: 'Urbana' | 'Rural';
   };
   performanceHistory?: PerformanceRow[];
+  attendanceHistory?: AttendanceRecord[];
+  teacherNotes?: TeacherNote[];
   lastSync?: string;
   geoDistance?: number; 
   projects?: string[]; // IDs dos projetos vinculados

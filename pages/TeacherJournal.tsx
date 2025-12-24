@@ -1,11 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
-  Save, Search, Loader2, ClipboardCheck, Award, User, 
-  CheckCircle, XCircle, ChevronLeft, Target, Star, Activity, Cloud
+  Save, Search, Loader2, ClipboardCheck, MessageSquare, 
+  CheckCircle, XCircle, ChevronLeft, Calendar, Edit3, User
 } from 'lucide-react';
 import { useNavigate } from '../router';
+import { TeacherNote } from '../types';
 
 const CONCEPTS = ['', 'DI', 'EP', 'DB', 'DE'];
 const CONCEPT_STYLE: Record<string, string> = {
@@ -22,56 +23,84 @@ export const TeacherJournal: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // Estado local para manipulação ágil antes do salvamento
+  // Estado local
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [grades, setGrades] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({}); // Novas notas para salvar
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null); // Qual aluno está com campo de obs aberto
 
   const userData = JSON.parse(sessionStorage.getItem('user_data') || '{}');
   const filtered = students.filter(s => s.status === 'Matriculado' && s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // Carrega notas existentes do banco (Supabase/Dexie) ao iniciar
   useEffect(() => {
     const initialGrades: Record<string, string> = {};
+    const initialAttendance: Record<string, boolean> = {};
+
     students.forEach(s => {
-        // Exemplo: Mapeia a nota de "LÍNGUA PORTUGUESA" da 1ª unidade para visualização rápida no diário
-        // Em um caso real, haveria um seletor de Disciplina/Unidade no topo da tela
+        // Carrega nota atual
         const grade = s.performanceHistory?.find(h => h.subject === 'LÍNGUA PORTUGUESA')?.g1?.[0];
         if (grade) initialGrades[s.id] = grade;
+
+        // Verifica se já tem frequência pra hoje (simulação)
+        const todayRecord = s.attendanceHistory?.find(r => r.date === selectedDate);
+        if (todayRecord) initialAttendance[s.id] = todayRecord.present;
     });
     setGrades(initialGrades);
-  }, [students]);
+    setAttendance(initialAttendance);
+  }, [students, selectedDate]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-        // Prepara o payload para atualização em lote no Supabase
         const studentsToUpdate = filtered.map(student => {
-            // Se houve alteração na nota, atualiza o histórico do aluno
+            let updatedStudent = { ...student };
+
+            // 1. Atualizar Frequência
+            if (attendance[student.id] !== undefined) {
+                const currentHistory = student.attendanceHistory || [];
+                // Remove registro existente da mesma data para substituir
+                const cleanHistory = currentHistory.filter(r => r.date !== selectedDate);
+                cleanHistory.push({ date: selectedDate, present: attendance[student.id] });
+                updatedStudent.attendanceHistory = cleanHistory;
+            }
+
+            // 2. Atualizar Notas
             if (grades[student.id]) {
-                const currentHistory = student.performanceHistory || [];
-                // Lógica de Upsert para a disciplina LÍNGUA PORTUGUESA (Exemplo)
+                const currentHistory = updatedStudent.performanceHistory || [];
                 const subjectIndex = currentHistory.findIndex(h => h.subject === 'LÍNGUA PORTUGUESA');
                 let newHistory = [...currentHistory];
                 
                 if (subjectIndex >= 0) {
                     const newG1 = [...(newHistory[subjectIndex].g1 || ['', '', ''])];
-                    newG1[0] = grades[student.id]; // Atualiza 1ª nota
+                    newG1[0] = grades[student.id]; 
                     newHistory[subjectIndex] = { ...newHistory[subjectIndex], g1: newG1 };
                 } else {
-                    newHistory.push({ 
-                        subject: 'LÍNGUA PORTUGUESA', 
-                        g1: [grades[student.id], '', ''] 
-                    });
+                    newHistory.push({ subject: 'LÍNGUA PORTUGUESA', g1: [grades[student.id], '', ''] });
                 }
-                return { ...student, performanceHistory: newHistory };
+                updatedStudent.performanceHistory = newHistory;
             }
-            return student;
+
+            // 3. Adicionar Observação
+            if (notes[student.id]) {
+                const newNote: TeacherNote = {
+                    id: `note-${Date.now()}-${Math.random()}`,
+                    date: selectedDate,
+                    author: userData.name || 'Professor',
+                    content: notes[student.id],
+                    type: 'Academic'
+                };
+                updatedStudent.teacherNotes = [newNote, ...(updatedStudent.teacherNotes || [])];
+            }
+
+            return updatedStudent;
         });
 
-        // Envia para o Contexto -> Dexie -> Supabase
         await updateStudents(studentsToUpdate);
-        addToast("Diário de Classe sincronizado com o Supabase.", "success");
+        setNotes({}); // Limpa notas após salvar
+        setOpenNoteId(null);
+        addToast("Diário sincronizado com a Pasta do Aluno.", "success");
     } catch (error) {
         console.error(error);
         addToast("Erro ao sincronizar dados.", "error");
@@ -89,7 +118,7 @@ export const TeacherJournal: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-8 page-transition">
       <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-24 gap-10">
+        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-16 gap-10">
           <div className="space-y-8">
             <button onClick={() => navigate('/dashboard')} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
                 <ChevronLeft className="h-4 w-4 group-hover:-translate-x-2 transition-transform" /> Voltar ao Painel
@@ -103,11 +132,23 @@ export const TeacherJournal: React.FC = () => {
                 <p className="text-slate-500 font-medium text-xl mt-6">Escola: <span className="text-slate-900 font-black">{userData.schoolName || 'Rede Municipal'}</span> • Prof. {userData.name}</p>
             </div>
           </div>
-          <button onClick={handleSave} disabled={isSaving} className="btn-primary !h-20 !px-16 shadow-emerald-200 group relative overflow-hidden">
-            {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6 group-hover:scale-110 transition-transform" />}
-            <span className="relative z-10">Sincronizar Nuvem</span>
-            {isSaving && <div className="absolute inset-0 bg-white/20 animate-pulse"></div>}
-          </button>
+          
+          <div className="flex flex-col items-end gap-4">
+             <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+                <Calendar className="h-5 w-5 text-slate-400" />
+                <input 
+                    type="date" 
+                    value={selectedDate} 
+                    onChange={e => setSelectedDate(e.target.value)}
+                    className="font-bold text-slate-700 bg-transparent outline-none uppercase text-sm"
+                />
+             </div>
+             <button onClick={handleSave} disabled={isSaving} className="btn-primary !h-20 !px-16 shadow-emerald-200 group relative overflow-hidden">
+                {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6 group-hover:scale-110 transition-transform" />}
+                <span className="relative z-10">Sincronizar Pasta</span>
+                {isSaving && <div className="absolute inset-0 bg-white/20 animate-pulse"></div>}
+             </button>
+          </div>
         </header>
 
         <div className="bg-white rounded-[4rem] shadow-luxury border border-slate-100 overflow-hidden">
@@ -139,80 +180,74 @@ export const TeacherJournal: React.FC = () => {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante</th>
-                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Frequência (Hoje)</th>
-                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Língua Portuguesa (Avaliação)</th>
+                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Frequência ({selectedDate.split('-').reverse().join('/')})</th>
+                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Avaliação (Português)</th>
+                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Relatório</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(s => (
                   <tr key={s.id} className="hover:bg-slate-50/50 transition-colors duration-300">
-                    <td className="px-12 py-10">
+                    <td className="px-12 py-8">
                       <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-emerald-600 font-black text-2xl">
+                        <div className="w-14 h-14 rounded-[1.2rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-emerald-600 font-black text-xl">
                           {s.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-black text-slate-900 text-xl uppercase tracking-tighter leading-none mb-3">{s.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">RA Municipal: {s.enrollmentId || '---'}</p>
+                          <p className="font-black text-slate-900 text-lg uppercase tracking-tighter leading-none mb-2">{s.name}</p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">RA: {s.enrollmentId}</p>
                         </div>
                       </div>
+                      {openNoteId === s.id && (
+                          <div className="mt-4 animate-in slide-in-from-top-2">
+                              <textarea 
+                                  className="w-full p-4 rounded-xl border border-blue-200 bg-blue-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                  placeholder={`Escreva uma observação para a pasta de ${s.name}...`}
+                                  value={notes[s.id] || ''}
+                                  onChange={e => setNotes({...notes, [s.id]: e.target.value})}
+                              />
+                          </div>
+                      )}
                     </td>
-                    <td className="px-12 py-10 text-center">
-                      <div className="flex justify-center gap-5">
+                    <td className="px-12 py-8 text-center">
+                      <div className="flex justify-center gap-4">
                         <button 
                           onClick={() => setAttendance({...attendance, [s.id]: true})}
-                          className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all duration-500 ${attendance[s.id] === true ? 'bg-emerald-500 text-white shadow-xl scale-110' : 'bg-slate-50 text-slate-200 hover:text-emerald-300'}`}
+                          className={`w-14 h-14 rounded-[1.2rem] flex items-center justify-center transition-all duration-300 ${attendance[s.id] === true ? 'bg-emerald-500 text-white shadow-lg scale-110' : 'bg-slate-50 text-slate-300 hover:text-emerald-400 border border-slate-100'}`}
                         >
-                          <CheckCircle className="h-8 w-8" />
+                          <CheckCircle className="h-6 w-6" />
                         </button>
                         <button 
                           onClick={() => setAttendance({...attendance, [s.id]: false})}
-                          className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all duration-500 ${attendance[s.id] === false ? 'bg-red-500 text-white shadow-xl scale-110' : 'bg-slate-50 text-slate-200 hover:text-red-300'}`}
+                          className={`w-14 h-14 rounded-[1.2rem] flex items-center justify-center transition-all duration-300 ${attendance[s.id] === false ? 'bg-red-500 text-white shadow-lg scale-110' : 'bg-slate-50 text-slate-300 hover:text-red-400 border border-slate-100'}`}
                         >
-                          <XCircle className="h-8 w-8" />
+                          <XCircle className="h-6 w-6" />
                         </button>
                       </div>
                     </td>
-                    <td className="px-12 py-10">
+                    <td className="px-12 py-8">
                       <div className="flex justify-center">
                          <button 
                             onClick={() => cycleGrade(s.id)}
-                            className={`w-28 h-16 rounded-[1.5rem] border-2 font-black text-lg transition-all duration-500 flex items-center justify-center gap-3 ${grades[s.id] ? CONCEPT_STYLE[grades[s.id]] : 'bg-slate-50 border-dashed border-slate-200 text-slate-300 hover:border-blue-400 hover:text-blue-400'}`}
+                            className={`w-24 h-14 rounded-[1.2rem] border-2 font-black text-lg transition-all duration-500 flex items-center justify-center gap-2 ${grades[s.id] ? CONCEPT_STYLE[grades[s.id]] : 'bg-slate-50 border-dashed border-slate-200 text-slate-300 hover:border-blue-400 hover:text-blue-400'}`}
                          >
                             {grades[s.id] || '--'}
-                            {grades[s.id] === 'DE' && <Star className="h-4 w-4 fill-current" />}
                          </button>
                       </div>
+                    </td>
+                    <td className="px-12 py-8 text-right">
+                        <button 
+                            onClick={() => setOpenNoteId(openNoteId === s.id ? null : s.id)}
+                            className={`p-4 rounded-[1.2rem] border transition-all ${notes[s.id] ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-100 text-slate-300 hover:text-blue-500 hover:border-blue-200'}`}
+                        >
+                            <MessageSquare className="h-5 w-5" />
+                        </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-        
-        <div className="mt-16 grid md:grid-cols-3 gap-10">
-            <div className="card-requinte !p-10 flex items-center gap-6">
-                <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-lg"><Target className="h-6 w-6" /></div>
-                <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total da Turma</p>
-                    <p className="text-3xl font-black text-slate-900 tracking-tighter">{filtered.length}</p>
-                </div>
-            </div>
-            <div className="card-requinte !p-10 flex items-center gap-6">
-                <div className="bg-emerald-500 p-4 rounded-2xl text-white shadow-lg"><Activity className="h-6 w-6" /></div>
-                <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Média de Presença</p>
-                    <p className="text-3xl font-black text-slate-900 tracking-tighter">94%</p>
-                </div>
-            </div>
-            <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl flex items-center gap-6 border border-slate-800">
-                <div className="bg-blue-400 p-4 rounded-2xl text-slate-900 shadow-lg"><Cloud className="h-6 w-6" /></div>
-                <div>
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Status Sincronismo</p>
-                    <p className="text-xl font-black tracking-tight uppercase text-emerald-400">Supabase Online</p>
-                </div>
-            </div>
         </div>
       </div>
     </div>

@@ -133,7 +133,7 @@ export const Home: React.FC = () => {
           <div className="grid md:grid-cols-3 gap-12">
             {[
               { icon: <MapIcon className="h-8 w-8" />, title: "Geo-Alocação", desc: "Sistema síncrono que aloca estudantes automaticamente na unidade mais próxima de sua residência nominal.", color: "bg-blue-50 text-blue-600", border: "hover:border-blue-200" },
-              { icon: <ShieldCheck className="h-8 w-8" />, title: "Dossiê Auditado", desc: "Rastreabilidade completa de cada matrícula, garantindo integridade de dados perante o MEC e Inep.", color: "bg-emerald-50 text-emerald-600", border: "hover:border-emerald-200" },
+              { icon: <ShieldCheck className="h-8 w-8" />, title: "Pasta Digital", desc: "Rastreabilidade completa de cada matrícula (Pasta do Aluno), garantindo integridade de dados perante o MEC e Inep.", color: "bg-emerald-50 text-emerald-600", border: "hover:border-emerald-200" },
               { icon: <BarChart3 className="h-8 w-8" />, title: "BI de Gestão", desc: "Indicadores em tempo real sobre ocupação de salas, carência de vagas e fluxos de transporte escolar.", color: "bg-indigo-50 text-indigo-600", border: "hover:border-indigo-200" }
             ].map((f, i) => (
               <div key={i} className={`bg-white p-14 rounded-[4rem] border border-slate-100 hover:shadow-deep transition-all duration-700 group ${f.border}`}>

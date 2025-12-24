@@ -135,7 +135,7 @@ export const Reports: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap gap-6">
                         <button onClick={() => window.print()} className="btn-primary !h-24 !px-16 !bg-white !text-slate-900 border border-slate-100 shadow-luxury hover:!bg-slate-50">
-                            <Printer className="h-7 w-7" /> Dossiê PDF
+                            <Printer className="h-7 w-7" /> Pasta do Aluno PDF
                         </button>
                         <button onClick={() => addToast("Base nominal exportada.", "success")} className="btn-primary !h-24 !px-16 !bg-slate-900 shadow-blue-900/10">
                             <Download className="h-7 w-7" /> Exportar CSV MEC
