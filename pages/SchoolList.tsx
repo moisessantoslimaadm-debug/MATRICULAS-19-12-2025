@@ -1,11 +1,11 @@
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
   MapPin, Search, Building, Users, 
   Layers, ArrowRight, ShieldCheck, 
-  Clock, HeartPulse, Bus, Database, Info, MoreVertical
+  Clock, HeartPulse, Bus, Database, Info, MoreVertical,
+  FolderOpen
 } from 'lucide-react';
 import { School, RegistryStudent } from '../types';
 
@@ -54,6 +54,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
 };
 
 export const SchoolList: React.FC = () => {
+  const navigate = useNavigate();
   const { schools, students } = useData();
   const [activeTab, setActiveTab] = useState<'units' | 'students' | 'classes'>('units');
   const [searchTerm, setSearchTerm] = useState('');
@@ -180,6 +181,14 @@ export const SchoolList: React.FC = () => {
                                     <span className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                                         {s.status}
                                     </span>
+                                </td>
+                                <td className="px-8 py-6 text-right">
+                                    <button 
+                                        onClick={() => navigate(`/student/monitoring?id=${s.id}`)}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-500 rounded-xl transition-all text-[9px] font-black uppercase tracking-wide group/btn"
+                                    >
+                                        <FolderOpen className="h-3 w-3" /> Ver Pasta
+                                    </button>
                                 </td>
                             </tr>
                         ))}

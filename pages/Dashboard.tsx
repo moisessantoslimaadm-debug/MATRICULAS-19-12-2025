@@ -43,7 +43,7 @@ export const Dashboard: React.FC = () => {
     const logInterval = setInterval(() => {
         const events = [
             "Validando NIRE via barramento municipal...",
-            "Sincronizando dossiê AEE com base nacional...",
+            "Sincronizando pasta AEE com base nacional...",
             "Geoprocessamento: Alocação automática em Unidade JOÃO XXIII",
             "MEC: Matrícula nominal auditada com sucesso.",
             "Inep: Censo Escolar 2025 atualizado via API.",
@@ -109,7 +109,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-10">
             <MetricCard title="Censo Nominal" value={stats.total} icon={Users} colorClass="bg-slate-900" trend="+2.4%" sub="Alunos" />
-            <MetricCard title="Atendimento AEE" value={stats.aee} icon={HeartPulse} colorClass="bg-pink-600" sub="Dossiês" />
+            <MetricCard title="Pastas AEE" value={stats.aee} icon={HeartPulse} colorClass="bg-pink-600" sub="Atendimentos" />
             <MetricCard title="Frotas Ativas" value={stats.transport} icon={Bus} colorClass="bg-blue-600" sub="Rotas" />
             <MetricCard title="Unidades" value={stats.unidades} icon={School} colorClass="bg-emerald-600" sub="Inep" />
         </div>

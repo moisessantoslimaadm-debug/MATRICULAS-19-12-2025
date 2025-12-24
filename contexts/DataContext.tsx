@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { School, RegistryStudent, Professional, Project } from '../types';
 import { MOCK_SCHOOLS, MOCK_STUDENT_REGISTRY, MOCK_PROFESSIONALS, MOCK_PROJECTS } from '../constants';
@@ -26,7 +25,7 @@ interface DataContextType {
   linkStudentToProject: (studentId: string, projectId: string) => Promise<void>;
   getNearestSchool: (lat: number, lng: number) => { school: School; distance: number } | null;
   addSchool: (school: School) => Promise<void>;
-  updateSchool: (school: School) => Promise<void>; // Nova função
+  updateSchool: (school: School) => Promise<void>; 
   refreshData: () => Promise<void>;
 }
 
@@ -169,7 +168,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       if (error) console.error("Cloud Sync Delayed:", error);
 
       addToast("Matrícula transmitida ao barramento nominal.", "success");
-    } catch (error) { addToast("Falha ao persistir dossiê.", "error"); }
+    } catch (error) { addToast("Falha ao persistir pasta.", "error"); }
   };
 
   const updateStudent = async (student: RegistryStudent) => {

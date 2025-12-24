@@ -137,7 +137,7 @@ export const AdminData: React.FC = () => {
              </div>
              <div className="mt-8 flex justify-end gap-2">
                 <button onClick={() => setEditingStudent(null)} className="btn-secondary !h-8 !text-[9px]">Descartar</button>
-                <button onClick={() => { updateStudent(editingStudent); setEditingStudent(null); addToast("Dossiê Sincronizado", "success"); }} className="btn-primary !h-8 !text-[9px]"><Save className="h-3 w-3" /> Salvar</button>
+                <button onClick={() => { updateStudent(editingStudent); setEditingStudent(null); addToast("Pasta Sincronizada", "success"); }} className="btn-primary !h-8 !text-[9px]"><Save className="h-3 w-3" /> Salvar</button>
              </div>
           </div>
         </div>
