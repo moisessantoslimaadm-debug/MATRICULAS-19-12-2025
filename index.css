@@ -96,7 +96,7 @@ body {
     display: none !important;
   }
 
-  /* Exibe o layout de impressão */
+  /* Mostra o layout de impressão */
   .print-only {
     display: block !important;
     width: 210mm;

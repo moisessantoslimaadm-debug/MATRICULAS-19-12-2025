@@ -1,18 +1,21 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from '../router';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../services/supabaseClient';
 import { 
   GraduationCap, Lock, User, Loader2, ShieldCheck, 
-  ChevronRight, Zap, Sparkles, Mail, Key
+  ChevronRight, Zap, Sparkles, Mail, Key, Fingerprint
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { MOCK_STUDENT_REGISTRY } from '../constants';
+import { useData } from '../contexts/DataContext'; // Importando para acesso aos alunos
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
+  // Acesso direto aos dados para validar login de aluno (mock/local)
+  // Em produção, isso seria uma query no backend
+  const { students } = useData(); 
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,14 +27,43 @@ export const Login: React.FC = () => {
 
     const inputUser = email.trim().toUpperCase();
     const inputPass = password.trim();
+    const cleanInputUser = inputUser.replace(/\D/g, ''); // Apenas números para CPF/Matrícula
 
-    // --- MODO DE TESTE / CREDENCIAIS SIMULADAS ---
-    // Intercepta logins específicos para demonstração sem bater no Supabase
-    if (['SME', 'DIRETOR', 'PROFESSOR', 'ALUNO'].includes(inputUser)) {
-        let mockUser = null;
-        let redirectPath = '/dashboard';
+    let mockUser = null;
+    let redirectPath = '/dashboard';
 
-        // 1. USUÁRIO SME (ADMIN)
+    // --- LÓGICA DE LOGIN POR IDENTIFICADOR (ALUNO) ---
+    // Verifica se o input corresponde a um CPF ou Matrícula de aluno existente
+    const studentMatch = students.find(s => {
+        const sCpf = s.cpf.replace(/\D/g, '');
+        const sMat = s.enrollmentId ? s.enrollmentId.replace(/\D/g, '') : '';
+        return sCpf === cleanInputUser || sMat === cleanInputUser;
+    });
+
+    if (studentMatch) {
+        // Validação Simplificada para Aluno:
+        // Se encontrou o aluno, verifica se a senha é o próprio CPF (para facilitar o teste conforme pedido)
+        // Ou se a senha é uma data de nascimento (formato simples)
+        const sCpf = studentMatch.cpf.replace(/\D/g, '');
+        
+        // Regra: Senha pode ser o CPF ou '1234' (default demo)
+        if (inputPass === sCpf || inputPass === '1234') {
+            mockUser = {
+                id: studentMatch.id,
+                name: studentMatch.name,
+                role: UserRole.STUDENT,
+                email: 'aluno@rede.ba.gov.br', // Placeholder
+                photo: studentMatch.photo
+            };
+            redirectPath = `/student/monitoring?id=${studentMatch.id}`;
+        } else {
+             addToast('Senha inválida. Para alunos, use seu CPF.', 'error');
+             setIsLoading(false);
+             return;
+        }
+    }
+    // --- LÓGICA DE LOGIN ADMINISTRATIVO (HARDCODED DEMO) ---
+    else if (['SME', 'DIRETOR', 'PROFESSOR'].includes(inputUser)) {
         if (inputUser === 'SME' && inputPass === '1234') {
             mockUser = {
                 id: 'mock-admin-sme',
@@ -40,18 +72,16 @@ export const Login: React.FC = () => {
                 email: 'sme@itaberaba.ba.gov.br'
             };
         }
-        // 2. USUÁRIO DIRETOR
         else if (inputUser === 'DIRETOR' && inputPass === '1234') {
             mockUser = {
                 id: 'mock-diretor',
                 name: 'Ediana Silva (Diretora)',
                 role: UserRole.DIRECTOR,
-                schoolId: '29446309', // ID do Centro Municipal
+                schoolId: '29446309',
                 schoolName: 'CENTRO MUNICIPAL DE EDUCACAO BASICA',
                 email: 'direcao@itaberaba.ba.gov.br'
             };
         }
-        // 3. USUÁRIO PROFESSOR
         else if (inputUser === 'PROFESSOR' && inputPass === '1234') {
             mockUser = {
                 id: 'mock-professor',
@@ -62,49 +92,23 @@ export const Login: React.FC = () => {
             };
             redirectPath = '/journal';
         }
-        // 4. USUÁRIO ALUNO
-        else if (inputUser === 'ALUNO') {
-            // Busca a aluna Luana para validar o CPF como senha
-            const targetStudent = MOCK_STUDENT_REGISTRY.find(s => s.name.includes('LUANA'));
-            
-            // Aceita o CPF com ou sem pontuação para facilitar
-            const cleanPass = inputPass.replace(/\D/g, '');
-            const cleanCpf = targetStudent?.cpf.replace(/\D/g, '');
-
-            if (targetStudent && (inputPass === targetStudent.cpf || cleanPass === cleanCpf)) {
-                mockUser = {
-                    id: targetStudent.id,
-                    name: targetStudent.name,
-                    role: UserRole.STUDENT,
-                    email: 'aluno@rede.ba.gov.br',
-                    photo: targetStudent.photo
-                };
-                redirectPath = `/student/monitoring?id=${targetStudent.id}`;
-            } else {
-                addToast('Senha incorreta. Para ALUNO, use o CPF: 081.589.275-64', 'error');
-                setIsLoading(false);
-                return;
-            }
-        }
-
-        if (mockUser) {
-            setTimeout(() => {
-                sessionStorage.setItem('admin_auth', 'true');
-                sessionStorage.setItem('user_role', mockUser.role);
-                sessionStorage.setItem('user_data', JSON.stringify(mockUser));
-                addToast(`Ambiente de Demonstração: ${mockUser.name}`, 'success');
-                navigate(redirectPath);
-                setIsLoading(false);
-            }, 800);
-            return;
-        } else {
-            addToast('Credenciais de teste inválidas.', 'error');
-            setIsLoading(false);
-            return;
-        }
     }
 
-    // --- AUTENTICAÇÃO REAL (SUPABASE) ---
+    // --- EXECUTA LOGIN MOCK ---
+    if (mockUser) {
+        setTimeout(() => {
+            sessionStorage.setItem('admin_auth', 'true');
+            sessionStorage.setItem('user_role', mockUser.role);
+            sessionStorage.setItem('user_data', JSON.stringify(mockUser));
+            addToast(`Bem-vindo(a), ${mockUser.name}`, 'success');
+            navigate(redirectPath);
+            setIsLoading(false);
+        }, 800);
+        return;
+    }
+
+    // --- FALBACK: AUTENTICAÇÃO REAL (SUPABASE) ---
+    // Se não for aluno nem usuário demo, tenta Supabase
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.includes('@') ? email : `${email}@itaberaba.ba.gov.br`,
@@ -133,7 +137,7 @@ export const Login: React.FC = () => {
         else navigate('/dashboard');
       }
     } catch (error: any) {
-      addToast(error.message || 'Erro na autenticação nominal.', 'error');
+      addToast('Credenciais não localizadas no barramento.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -186,12 +190,12 @@ export const Login: React.FC = () => {
 
           <form onSubmit={handleLogin} className="space-y-10 relative z-10">
             <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Usuário ou E-mail</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Usuário, CPF ou Matrícula</label>
                 <div className="relative group">
                     <User className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
                     <input 
                         type="text" required value={email} onChange={e => setEmail(e.target.value)}
-                        placeholder="Ex: SME, DIRETOR, PROFESSOR..."
+                        placeholder="Ex: 000.000.000-00 ou SME..."
                         className="input-premium pl-16 !h-14 !text-sm"
                     />
                 </div>
@@ -219,7 +223,9 @@ export const Login: React.FC = () => {
           
           <div className="mt-20 pt-10 border-t border-slate-100 flex justify-between items-center relative z-10">
               <span className="text-[9px] font-black text-slate-300 uppercase tracking-ultra">Cloud Sync enabled</span>
-              <Link to="/status" className="text-[9px] font-black text-emerald-600 uppercase tracking-ultra hover:underline">Recuperar Acesso</Link>
+              <Link to="/status" className="text-[9px] font-black text-emerald-600 uppercase tracking-ultra hover:underline flex items-center gap-2">
+                <Fingerprint className="h-4 w-4" /> Consultar Pasta sem Senha
+              </Link>
           </div>
           
           <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-50 rounded-full blur-[120px] opacity-30 -z-0"></div>

@@ -35,7 +35,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   const [params] = useSearchParams();
   
   const schoolIdParam = params.get('schoolId');
-  const viewParam = params.get('view') || 'overview'; // overview, students, staff, projects
+  const viewParam = params.get('view') || 'overview'; // overview, students, projects
   
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -73,37 +73,6 @@ export const AdminSchoolsManagement: React.FC = () => {
      return projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [projects, searchTerm]);
 
-  // --- AGRUPAMENTO INTELIGENTE DE PROFISSIONAIS ---
-  const groupedStaff = useMemo(() => {
-    const groups = {
-        management: [] as Professional[],
-        teachers: [] as Professional[],
-        caregivers: [] as Professional[],
-        security: [] as Professional[],
-        cleaning: [] as Professional[],
-        others: [] as Professional[]
-    };
-
-    schoolProfessionals.forEach(p => {
-        const role = p.role.toUpperCase();
-        if (role.includes('DIRETOR') || role.includes('COORDENADOR') || role.includes('SECRETÁRI') || role.includes('GESTOR')) {
-            groups.management.push(p);
-        } else if (role.includes('PROFESSOR') || role.includes('DOCENTE') || role.includes('EDUCADOR')) {
-            groups.teachers.push(p);
-        } else if (role.includes('CUIDADOR') || role.includes('AEE') || role.includes('AUXILIAR DE CLASSE')) {
-            groups.caregivers.push(p);
-        } else if (role.includes('PORTEIRO') || role.includes('VIGIA') || role.includes('SEGURANÇA')) {
-            groups.security.push(p);
-        } else if (role.includes('LIMPEZA') || role.includes('SERVIÇOS GERAIS') || role.includes('MERENDEIRA')) {
-            groups.cleaning.push(p);
-        } else {
-            groups.others.push(p);
-        }
-    });
-
-    return groups;
-  }, [schoolProfessionals]);
-
   // --- AÇÕES ---
 
   const handleOpenSchool = (school: School) => {
@@ -116,21 +85,12 @@ export const AdminSchoolsManagement: React.FC = () => {
     setSearchTerm('');
   };
 
-  // Submit Genérico (Profissionais / Projetos)
+  // Submit Genérico (Projetos)
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSchool) return;
 
-    if (viewParam === 'staff') {
-        const payload = { 
-            ...formData, 
-            schoolId: selectedSchool.id, 
-            schoolName: selectedSchool.name 
-        } as Professional;
-        
-        if (editingItem) await updateProfessional(payload);
-        else await addProfessional({ ...payload, id: `prof-${Date.now()}` });
-    } else if (viewParam === 'projects') {
+    if (viewParam === 'projects') {
         if (editingItem) await updateProject(formData as Project);
         else await addProject({ ...formData, id: `proj-${Date.now()}` } as Project);
     }
@@ -341,7 +301,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   }
 
   // --------------------------------------------------------------------------------
-  // VIEW 2: DASHBOARD DA ESCOLA (ABAS: ALUNOS, PROFISSIONAIS, PROJETOS)
+  // VIEW 2: DASHBOARD DA ESCOLA (ABAS: ALUNOS, PROJETOS)
   // --------------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#f8fafc] py-12 px-8 page-transition">
@@ -373,7 +333,6 @@ export const AdminSchoolsManagement: React.FC = () => {
                         {[
                             { id: 'overview', label: 'Visão Geral', icon: Building2 },
                             { id: 'students', label: 'Alunos', icon: GraduationCap },
-                            { id: 'staff', label: 'Profissionais', icon: Briefcase },
                             { id: 'projects', label: 'Projetos', icon: Star },
                         ].map(tab => (
                             <button 
@@ -455,7 +414,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                                     <h4 className="font-black text-slate-900 text-xs uppercase leading-tight truncate">{student.name}</h4>
                                     <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">CPF: {student.cpf}</p>
                                     <div className="flex gap-2 mt-3">
-                                        <button onClick={() => navigate(`/student/monitoring?id=${student.id}`)} className="p-2 bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">Ver Dossiê</button>
+                                        <button onClick={() => navigate(`/student/monitoring?id=${student.id}`)} className="p-2 bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">Ver Pasta</button>
                                         <button onClick={() => removeStudent(student.id)} className="p-2 bg-slate-50 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="h-3 w-3" /></button>
                                     </div>
                                 </div>
@@ -465,60 +424,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                 </div>
             )}
 
-            {/* ABA 3: PROFISSIONAIS (CATEGORIZADOS) */}
-            {viewParam === 'staff' && (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500">
-                    <div className="flex justify-between items-center">
-                         <div className="relative group w-full max-w-md">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
-                            <input 
-                                type="text" placeholder="Buscar profissional..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} 
-                                className="input-premium pl-14 !h-14 !text-[11px] !bg-white" 
-                            />
-                        </div>
-                        <button onClick={handleOpenAdd} className="btn-primary !h-14 !px-8 !text-[10px] !bg-emerald-600 shadow-emerald-200">
-                            <Plus className="h-4 w-4" /> Novo Servidor
-                        </button>
-                    </div>
-
-                    <div className="space-y-16">
-                        {[
-                            { title: 'Gestão Escolar', data: groupedStaff.management, icon: UserCheck, color: 'text-purple-600' },
-                            { title: 'Corpo Docente', data: groupedStaff.teachers, icon: GraduationCap, color: 'text-blue-600' },
-                            { title: 'AEE & Cuidadores', data: groupedStaff.caregivers, icon: Stethoscope, color: 'text-pink-600' },
-                            { title: 'Segurança & Portaria', data: groupedStaff.security, icon: Lock, color: 'text-slate-600' },
-                            { title: 'Serviços Gerais & Limpeza', data: groupedStaff.cleaning, icon: PaintBucket, color: 'text-emerald-600' },
-                            { title: 'Outros', data: groupedStaff.others, icon: Briefcase, color: 'text-slate-400' },
-                        ].map((group) => group.data.length > 0 && (
-                            <div key={group.title} className="space-y-6">
-                                <h3 className="flex items-center gap-4 text-[12px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-4">
-                                    <group.icon className={`h-5 w-5 ${group.color}`} /> {group.title}
-                                    <span className="ml-auto bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[9px]">{group.data.length}</span>
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {group.data.map(prof => (
-                                        <div key={prof.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-lg transition-all group relative overflow-hidden">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-500 text-xs">{prof.name.charAt(0)}</div>
-                                                <span className="px-2 py-1 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase">{prof.status}</span>
-                                            </div>
-                                            <h4 className="font-black text-slate-900 text-xs uppercase leading-tight mb-1">{prof.name}</h4>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-4">{prof.role}</p>
-                                            
-                                            <div className="flex gap-2 pt-4 border-t border-slate-50">
-                                                <button onClick={() => handleOpenEdit(prof)} className="flex-1 py-2 bg-slate-50 rounded-lg text-[9px] font-black uppercase text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">Editar</button>
-                                                <button onClick={() => removeProfessional(prof.id)} className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* 4. PROJETOS */}
+            {/* ABA 3: PROJETOS */}
             {viewParam === 'projects' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
                     <div className="flex justify-end">
@@ -561,41 +467,6 @@ export const AdminSchoolsManagement: React.FC = () => {
                     </div>
                     
                     <form onSubmit={handleFormSubmit} className="space-y-6">
-                        {viewParam === 'staff' && (
-                            <>
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="input-premium" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cargo / Função</label>
-                                    <select required value={formData.role || ''} onChange={e => setFormData({...formData, role: e.target.value})} className="input-premium h-14">
-                                        <option value="">Selecione...</option>
-                                        <option value="Diretor Escolar">Diretor Escolar</option>
-                                        <option value="Professor">Professor</option>
-                                        <option value="Cuidador">Cuidador / AEE</option>
-                                        <option value="Porteiro">Porteiro / Segurança</option>
-                                        <option value="Auxiliar de Limpeza">Auxiliar de Limpeza</option>
-                                        <option value="Secretário Escolar">Secretário Escolar</option>
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF</label>
-                                        <input type="text" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} className="input-premium" placeholder="000.000.000-00" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
-                                        <select value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value})} className="input-premium h-14">
-                                            <option value="Ativo">Ativo</option>
-                                            <option value="Licença">Licença</option>
-                                            <option value="Desligado">Desligado</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                        
                         {viewParam === 'projects' && (
                              <>
                                 <div className="space-y-2">

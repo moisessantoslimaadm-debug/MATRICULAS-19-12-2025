@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useSearchParams, Link } from '../router';
-import { CheckCircle, Search, UserCheck, AlertCircle, Clock, ShieldCheck, Zap, Printer, ArrowRight } from 'lucide-react';
+import { useSearchParams, Link, useNavigate } from '../router';
+import { CheckCircle, Search, UserCheck, AlertCircle, Clock, ShieldCheck, Zap, Printer, ArrowRight, FolderOpen, Fingerprint } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { RegistryStudent } from '../types';
 
 export const Status: React.FC = () => {
   const { students } = useData();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isSuccess = searchParams.get('success') === 'true';
   
@@ -16,8 +17,24 @@ export const Status: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentInput.trim()) return;
+    
+    // Normalização para busca (remove pontos e traços para comparar números)
     const term = studentInput.toLowerCase().trim();
-    const found = students.filter(s => s.name.toLowerCase().includes(term) || (s.enrollmentId && s.enrollmentId.toLowerCase().includes(term)));
+    const cleanTerm = term.replace(/\D/g, ''); 
+
+    const found = students.filter(s => {
+        const sName = s.name.toLowerCase();
+        const sCpf = s.cpf.replace(/\D/g, '');
+        const sEnrollment = s.enrollmentId ? s.enrollmentId.replace(/\D/g, '') : '';
+        const sInep = s.inepId ? s.inepId.toString() : '';
+
+        // Busca por Nome OU (se tiver números digitados) por CPF/Matrícula/INEP
+        if (cleanTerm.length > 3) {
+            return sName.includes(term) || sCpf.includes(cleanTerm) || sEnrollment.includes(cleanTerm) || sInep.includes(cleanTerm);
+        }
+        return sName.includes(term);
+    });
+
     setSearchResults(found);
     setHasSearched(true);
   };
@@ -46,53 +63,77 @@ export const Status: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-20 px-6 page-transition">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <header className="text-center mb-16">
             <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-slate-900 rounded-full mb-6">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="text-[9px] font-bold text-white uppercase tracking-widest">Consulta Nominal Segura</span>
+                <span className="text-[9px] font-bold text-white uppercase tracking-widest">Portal do Aluno</span>
             </div>
-            <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight leading-none mb-6 uppercase">Status do <span className="text-emerald-600">Aluno.</span></h1>
-            <p className="text-slate-500 font-medium text-lg">Acompanhe a alocação e situação de vaga.</p>
+            <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight leading-none mb-6 uppercase">Acesso <span className="text-emerald-600">Nominal.</span></h1>
+            <p className="text-slate-500 font-medium text-lg">Informe seus dados para acessar sua Pasta Digital.</p>
         </header>
 
-        <form onSubmit={handleSearch} className="mb-16 relative">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
+        <form onSubmit={handleSearch} className="mb-16 relative max-w-2xl mx-auto">
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">
+                <Fingerprint className="h-6 w-6" />
+            </div>
             <input 
-                type="text" placeholder="Protocolo ou nome do aluno..." value={studentInput} onChange={e => setStudentInput(e.target.value)}
-                className="w-full pl-16 pr-32 py-6 bg-white border border-slate-200 rounded-[2rem] shadow-sm focus:ring-4 focus:ring-emerald-50 focus:border-emerald-600 outline-none transition-all font-bold text-slate-700 text-lg"
+                type="text" 
+                placeholder="Digite seu CPF, Nº de Matrícula, INEP ou Nome..." 
+                value={studentInput} 
+                onChange={e => setStudentInput(e.target.value)}
+                className="w-full pl-16 pr-36 py-6 bg-white border border-slate-200 rounded-[2rem] shadow-luxury focus:ring-[6px] focus:ring-emerald-50 focus:border-emerald-500 outline-none transition-all font-bold text-slate-700 text-lg placeholder:text-slate-300 placeholder:font-normal"
             />
-            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-[1.5rem] font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all">Consultar</button>
+            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-[1.5rem] font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg active:scale-95">
+                Localizar
+            </button>
         </form>
 
         <div className="space-y-6">
             {searchResults.map(s => (
-                <div key={s.id} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8 group hover:shadow-luxury transition-all duration-500">
-                    <div className="flex items-center gap-8">
-                        <div className="w-20 h-20 rounded-2xl bg-slate-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
+                <div key={s.id} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-8 group hover:shadow-deep hover:border-emerald-100 transition-all duration-500 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-50 transition-colors"></div>
+                    
+                    <div className="flex flex-col md:flex-row items-center gap-8 relative z-10 text-center md:text-left">
+                        <div className="w-24 h-24 rounded-[2rem] bg-slate-50 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
                             {s.photo ? <img src={s.photo} className="w-full h-full object-cover" /> : <UserCheck className="h-10 w-10 text-slate-200" />}
                         </div>
                         <div>
                             <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none mb-3">{s.name}</h3>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                                {s.enrollmentId || 'PENDENTE'} <span className="w-1 h-1 rounded-full bg-slate-200"></span> {s.school || 'Geoprocessamento Ativo'}
+                            <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                                    RA: {s.enrollmentId || '---'}
+                                </p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                                    CPF: {s.cpf}
+                                </p>
+                            </div>
+                            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-4 flex items-center justify-center md:justify-start gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                {s.school || 'Unidade em Alocação'}
                             </p>
                         </div>
                     </div>
-                    <div className="flex flex-col items-center md:items-end gap-4">
-                        <span className={`px-6 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest border shadow-sm ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{s.status}</span>
-                        <div className="flex items-center gap-2 opacity-40">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span className="text-[9px] font-bold uppercase tracking-widest">Atualizado Hoje</span>
-                        </div>
+
+                    <div className="flex flex-col items-center md:items-end gap-6 relative z-10 w-full md:w-auto">
+                        <span className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                            Situação: {s.status}
+                        </span>
+                        <button 
+                            onClick={() => navigate(`/student/monitoring?id=${s.id}`)}
+                            className="btn-primary !h-14 !px-8 !text-[10px] !bg-slate-900 hover:!bg-emerald-600 w-full md:w-auto shadow-xl"
+                        >
+                            <FolderOpen className="h-4 w-4 mr-2" /> Abrir Pasta do Aluno
+                        </button>
                     </div>
                 </div>
             ))}
             
             {hasSearched && searchResults.length === 0 && (
-                <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[3rem]">
-                    <AlertCircle className="h-12 w-12 text-slate-200 mx-auto mb-6" />
-                    <p className="text-slate-300 font-bold text-lg uppercase tracking-widest">Protocolo não localizado</p>
+                <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/30">
+                    <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-6" />
+                    <p className="text-slate-400 font-bold text-lg uppercase tracking-widest">Identificação Nominal Não Localizada</p>
+                    <p className="text-slate-400 text-xs mt-2">Verifique o CPF ou Matrícula digitada.</p>
                 </div>
             )}
         </div>
