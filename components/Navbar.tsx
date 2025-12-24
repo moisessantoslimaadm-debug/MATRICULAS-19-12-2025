@@ -29,6 +29,11 @@ export const Navbar: React.FC = () => {
     const currentPath = location.pathname;
     const currentSearch = location.search;
     
+    // Simplificado para verificar apenas o caminho base
+    if (path === '/admin/escolas' && currentPath === '/admin/escolas') {
+       return 'text-emerald-700 font-bold border-b-2 border-emerald-600 px-3 py-4 text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all';
+    }
+
     if (path.includes('?tab=')) {
       const [base, query] = path.split('?');
       return currentPath === base && currentSearch.includes(query)
@@ -61,14 +66,8 @@ export const Navbar: React.FC = () => {
             {(role === UserRole.ADMIN_SME || role === UserRole.DIRECTOR) && (
               <>
                 <Link to="/dashboard" className={isActive('/dashboard')}>Painel</Link>
-                <Link to="/admin/escolas?tab=units" className={isActive('/admin/escolas?tab=units')}>
-                  <Building className="h-3.5 w-3.5" /> Escolas
-                </Link>
-                <Link to="/admin/escolas?tab=professionals" className={isActive('/admin/escolas?tab=professionals')}>
-                  <Briefcase className="h-3.5 w-3.5" /> Profissionais
-                </Link>
-                <Link to="/admin/escolas?tab=projects" className={isActive('/admin/escolas?tab=projects')}>
-                  <Star className="h-3.5 w-3.5" /> Projetos
+                <Link to="/admin/escolas" className={isActive('/admin/escolas')}>
+                  <Building className="h-3.5 w-3.5" /> Gestão de Rede
                 </Link>
                 <Link to="/admin/map" className={isActive('/admin/map')}>
                   <Map className="h-3.5 w-3.5" /> Mapa Geo

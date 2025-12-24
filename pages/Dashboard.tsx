@@ -124,7 +124,7 @@ export const Dashboard: React.FC = () => {
                     <div className="grid md:grid-cols-2 gap-8 relative z-10">
                         {[
                             { icon: Map, title: "Geoprocessamento", desc: "Monitoramento territorial nominal.", to: "/admin/map", color: "text-emerald-600 bg-emerald-50" },
-                            { icon: Building, title: "Gestão de Rede", desc: "Base nominal profissional e física.", to: "/admin/escolas?tab=units", color: "text-blue-600 bg-blue-50" },
+                            { icon: Building, title: "Gestão de Rede", desc: "Base nominal profissional e física.", to: "/admin/escolas", color: "text-blue-600 bg-blue-50" },
                             { icon: FileText, title: "Inteligência BI", desc: "Análise preditiva de ocupação.", to: "/reports", color: "text-indigo-600 bg-indigo-50" },
                             { icon: Activity, title: "Monitoramento", desc: "Acompanhamento nominal de rendimento.", to: "/performance", color: "text-amber-600 bg-amber-50" }
                         ].map((mod, i) => (

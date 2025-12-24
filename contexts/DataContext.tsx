@@ -25,6 +25,7 @@ interface DataContextType {
   removeProject: (id: string) => Promise<void>;
   linkStudentToProject: (studentId: string, projectId: string) => Promise<void>;
   getNearestSchool: (lat: number, lng: number) => { school: School; distance: number } | null;
+  addSchool: (school: School) => Promise<void>; // Nova função
   refreshData: () => Promise<void>;
 }
 
@@ -132,6 +133,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       if (dist < minDistance) { minDistance = dist; nearest = school; }
     });
     return { school: nearest, distance: minDistance };
+  };
+
+  const addSchool = async (school: School) => {
+    try {
+      await db.schools.add(school);
+      setSchools(prev => [...prev, school]);
+      await supabase.from('schools').insert(school);
+      addToast("Unidade escolar registrada com sucesso.", "success");
+    } catch (error) {
+      addToast("Erro ao registrar escola.", "error");
+    }
   };
 
   const addStudent = async (student: RegistryStudent) => {
@@ -268,7 +280,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       addStudent, updateStudent, updateStudents, removeStudent,
       addProfessional, updateProfessional, removeProfessional,
       addProject, updateProject, removeProject,
-      linkStudentToProject, getNearestSchool, refreshData: loadData
+      linkStudentToProject, getNearestSchool, addSchool, refreshData: loadData
     }}>
       {children}
     </DataContext.Provider>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate, useSearchParams } from '../router';
@@ -6,15 +5,28 @@ import {
   Building, Users, Layers, Star, Plus, Search, 
   Trash2, Briefcase, X, Save, MapPin, Building2, 
   ArrowRight, ArrowLeft, GraduationCap, UserCheck, 
-  Stethoscope, PaintBucket, Lock, Shield
+  Stethoscope, PaintBucket, Lock
 } from 'lucide-react';
-import { Professional, Project, School } from '../types';
+import { Professional, Project, School, SchoolType } from '../types';
+
+const INITIAL_SCHOOL_FORM: Partial<School> = {
+    name: '',
+    inep: '',
+    address: '',
+    availableSlots: 400,
+    types: [],
+    hasAEE: false,
+    image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80',
+    lat: -12.5265,
+    lng: -40.2925,
+    rating: 5
+};
 
 export const AdminSchoolsManagement: React.FC = () => {
   const { 
     professionals, projects, students, schools, 
     addProfessional, updateProfessional, removeProfessional,
-    addProject, updateProject, removeProject,
+    addProject, updateProject, removeProject, addSchool,
     removeStudent
   } = useData();
   
@@ -25,9 +37,14 @@ export const AdminSchoolsManagement: React.FC = () => {
   const viewParam = params.get('view') || 'overview'; // overview, students, staff, projects
   
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Modais
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
+  
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({ status: 'Ativo' });
+  const [schoolFormData, setSchoolFormData] = useState<Partial<School>>(INITIAL_SCHOOL_FORM);
 
   // Escola Selecionada (Contexto Atual)
   const selectedSchool = useMemo(() => 
@@ -51,9 +68,6 @@ export const AdminSchoolsManagement: React.FC = () => {
   }, [professionals, selectedSchool, searchTerm]);
 
   const schoolProjects = useMemo(() => {
-     // Filtra projetos genéricos ou vinculados (lógica simplificada: mostra todos se não houver filtro específico de escola no type Project, 
-     // mas idealmente Project deveria ter schoolId. Assumindo projetos globais ou filtragem futura).
-     // Para este exemplo, mostramos todos os projetos quando dentro da escola para vincular alunos.
      return projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [projects, searchTerm]);
 
@@ -100,6 +114,7 @@ export const AdminSchoolsManagement: React.FC = () => {
     setSearchTerm('');
   };
 
+  // Submit Genérico (Profissionais / Projetos)
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSchool) return;
@@ -120,6 +135,17 @@ export const AdminSchoolsManagement: React.FC = () => {
     setIsFormModalOpen(false);
   };
 
+  // Submit Escola
+  const handleSchoolSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      await addSchool({
+          ...schoolFormData,
+          id: `sch-${Date.now()}`,
+      } as School);
+      setIsSchoolModalOpen(false);
+      setSchoolFormData(INITIAL_SCHOOL_FORM);
+  };
+
   const handleOpenEdit = (item: any) => {
     setEditingItem(item);
     setFormData({ ...item });
@@ -130,6 +156,16 @@ export const AdminSchoolsManagement: React.FC = () => {
     setEditingItem(null);
     setFormData({ status: 'Ativo' });
     setIsFormModalOpen(true);
+  };
+
+  // Manipulação de Tipos de Escola
+  const toggleSchoolType = (type: SchoolType) => {
+      const currentTypes = schoolFormData.types || [];
+      if (currentTypes.includes(type)) {
+          setSchoolFormData({ ...schoolFormData, types: currentTypes.filter(t => t !== type) });
+      } else {
+          setSchoolFormData({ ...schoolFormData, types: [...currentTypes, type] });
+      }
   };
 
   // --------------------------------------------------------------------------------
@@ -148,15 +184,20 @@ export const AdminSchoolsManagement: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="relative group w-full max-w-xl">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar Unidade Escolar..." 
-                            value={searchTerm} 
-                            onChange={e => setSearchTerm(e.target.value)} 
-                            className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
-                        />
+                    <div className="flex items-center gap-4 w-full max-w-xl">
+                        <div className="relative group flex-1">
+                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar Unidade Escolar..." 
+                                value={searchTerm} 
+                                onChange={e => setSearchTerm(e.target.value)} 
+                                className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
+                            />
+                        </div>
+                        <button onClick={() => setIsSchoolModalOpen(true)} className="btn-primary !h-16 !px-8 !text-[10px] !bg-slate-900 shrink-0">
+                            <Plus className="h-5 w-5" /> Nova Unidade
+                        </button>
                     </div>
                 </header>
 
@@ -185,6 +226,92 @@ export const AdminSchoolsManagement: React.FC = () => {
                     ))}
                 </div>
             </div>
+
+            {/* MODAL DE CRIAÇÃO DE ESCOLA */}
+            {isSchoolModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsSchoolModalOpen(false)}></div>
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl relative p-12 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex justify-between items-center mb-10">
+                            <h3 className="font-black text-slate-900 uppercase text-xl tracking-tight flex items-center gap-4">
+                                <Building className="h-6 w-6 text-emerald-600" /> Nova Unidade Escolar
+                            </h3>
+                            <button onClick={() => setIsSchoolModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="h-5 w-5 text-slate-400" /></button>
+                        </div>
+                        
+                        <form onSubmit={handleSchoolSubmit} className="space-y-8">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Instituição</label>
+                                <input type="text" required value={schoolFormData.name} onChange={e => setSchoolFormData({...schoolFormData, name: e.target.value.toUpperCase()})} className="input-premium" placeholder="EX: ESCOLA MUNICIPAL..." />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código INEP</label>
+                                    <input type="text" required value={schoolFormData.inep} onChange={e => setSchoolFormData({...schoolFormData, inep: e.target.value})} className="input-premium" placeholder="00000000" />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capacidade de Alunos</label>
+                                    <input type="number" required value={schoolFormData.availableSlots} onChange={e => setSchoolFormData({...schoolFormData, availableSlots: parseInt(e.target.value)})} className="input-premium" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
+                                <input type="text" required value={schoolFormData.address} onChange={e => setSchoolFormData({...schoolFormData, address: e.target.value})} className="input-premium" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Latitude</label>
+                                    <input type="number" step="any" value={schoolFormData.lat} onChange={e => setSchoolFormData({...schoolFormData, lat: parseFloat(e.target.value)})} className="input-premium" />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Longitude</label>
+                                    <input type="number" step="any" value={schoolFormData.lng} onChange={e => setSchoolFormData({...schoolFormData, lng: parseFloat(e.target.value)})} className="input-premium" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Imagem (URL)</label>
+                                <input type="text" value={schoolFormData.image} onChange={e => setSchoolFormData({...schoolFormData, image: e.target.value})} className="input-premium" />
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-slate-100">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Modalidades de Ensino</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {Object.values(SchoolType).map((type) => (
+                                        <label key={type} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${schoolFormData.types?.includes(type) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-white'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={schoolFormData.types?.includes(type)}
+                                                onChange={() => toggleSchoolType(type)}
+                                                className="rounded text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <span className="text-[10px] font-bold uppercase">{type}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <input 
+                                    type="checkbox" 
+                                    checked={schoolFormData.hasAEE}
+                                    onChange={e => setSchoolFormData({...schoolFormData, hasAEE: e.target.checked})}
+                                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-[11px] font-black text-blue-800 uppercase tracking-wide">Unidade possui Sala de Recursos (AEE)?</span>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-6">
+                                <button type="button" onClick={() => setIsSchoolModalOpen(false)} className="btn-secondary !h-14 !px-10 !text-[10px]">Cancelar</button>
+                                <button type="submit" className="btn-primary !h-14 !px-10 !text-[10px] !bg-emerald-600"><Save className="h-4 w-4" /> Registrar Escola</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
   }
