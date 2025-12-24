@@ -119,10 +119,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   useEffect(() => { loadData(); }, []);
 
   const getNearestSchool = (lat: number, lng: number) => {
-    if (schools.length === 0) return null;
-    let nearest = schools[0];
+    // FIX: Filtra escolas válidas (com coordenadas numéricas) antes de calcular
+    const validSchools = schools.filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number');
+    
+    if (validSchools.length === 0) return null;
+    
+    let nearest = validSchools[0];
     let minDistance = calculateDistance(lat, lng, nearest.lat, nearest.lng);
-    schools.forEach(school => {
+    
+    validSchools.forEach(school => {
       const dist = calculateDistance(lat, lng, school.lat, school.lng);
       if (dist < minDistance) { minDistance = dist; nearest = school; }
     });

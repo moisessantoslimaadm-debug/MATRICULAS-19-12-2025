@@ -1,310 +1,476 @@
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate, useSearchParams } from '../router';
 import { 
   Building, Users, Layers, Star, Plus, Search, 
-  ChevronRight, Trash2, Edit3, Globe, Briefcase, 
-  Zap, X, Save, ShieldCheck, Printer, FileText,
-  MapPin, CheckCircle, Info, Building2, ArrowRight, ArrowLeft
+  Trash2, Briefcase, X, Save, MapPin, Building2, 
+  ArrowRight, ArrowLeft, GraduationCap, UserCheck, 
+  Stethoscope, PaintBucket, Lock, Shield
 } from 'lucide-react';
-import { Professional, Project, RegistryStudent, School } from '../types';
+import { Professional, Project, School } from '../types';
 
 export const AdminSchoolsManagement: React.FC = () => {
   const { 
     professionals, projects, students, schools, 
     addProfessional, updateProfessional, removeProfessional,
-    addProject, updateProject, removeProject, 
-    updateStudent, removeStudent
+    addProject, updateProject, removeProject,
+    removeStudent
   } = useData();
   
   const navigate = useNavigate();
   const [params] = useSearchParams();
   
-  const tabParam = params.get('tab');
   const schoolIdParam = params.get('schoolId');
-  
-  const [activeTab, setActiveTab] = useState<'units' | 'professionals' | 'students' | 'projects' | 'censo'>(
-    (tabParam as any) || 'units'
-  );
+  const viewParam = params.get('view') || 'overview'; // overview, students, staff, projects
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({ status: 'Ativo' });
-  const [selectedSchoolForCenso, setSelectedSchoolForCenso] = useState<School | null>(null);
 
-  // Sincronização com URL para Deep Linking
-  useEffect(() => {
-    if (tabParam) setActiveTab(tabParam as any);
-    if (tabParam === 'censo' && schoolIdParam && schools.length > 0) {
-        const school = schools.find(s => s.id === schoolIdParam);
-        if (school) setSelectedSchoolForCenso(school);
-    }
-  }, [tabParam, schoolIdParam, schools]);
+  // Escola Selecionada (Contexto Atual)
+  const selectedSchool = useMemo(() => 
+    schools.find(s => s.id === schoolIdParam), 
+  [schools, schoolIdParam]);
 
-  const censoData = useMemo(() => {
-    if (!selectedSchoolForCenso) return null;
-    const schoolStudents = students.filter(s => s.schoolId === selectedSchoolForCenso.id || s.school === selectedSchoolForCenso.name);
-    const schoolProfs = professionals.filter(p => p.schoolId === selectedSchoolForCenso.id);
-    return {
-        totalStudents: schoolStudents.length,
-        specialNeeds: schoolStudents.filter(s => s.specialNeeds).length,
-        transport: schoolStudents.filter(s => s.transportRequest).length,
-        teachers: schoolProfs.filter(p => p.role.toUpperCase().includes('PROFESSOR')).length,
-        staff: schoolProfs.length,
-        classes: Math.ceil(schoolStudents.length / 25) || 1
+  // --- FILTROS DE DADOS DA ESCOLA SELECIONADA ---
+
+  const schoolStudents = useMemo(() => {
+    if (!selectedSchool) return [];
+    return students.filter(s => 
+      s.schoolId === selectedSchool.id || s.school === selectedSchool.name
+    ).filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [students, selectedSchool, searchTerm]);
+
+  const schoolProfessionals = useMemo(() => {
+    if (!selectedSchool) return [];
+    return professionals.filter(p => 
+      p.schoolId === selectedSchool.id || p.schoolName === selectedSchool.name
+    ).filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [professionals, selectedSchool, searchTerm]);
+
+  const schoolProjects = useMemo(() => {
+     // Filtra projetos genéricos ou vinculados (lógica simplificada: mostra todos se não houver filtro específico de escola no type Project, 
+     // mas idealmente Project deveria ter schoolId. Assumindo projetos globais ou filtragem futura).
+     // Para este exemplo, mostramos todos os projetos quando dentro da escola para vincular alunos.
+     return projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [projects, searchTerm]);
+
+  // --- AGRUPAMENTO INTELIGENTE DE PROFISSIONAIS ---
+  const groupedStaff = useMemo(() => {
+    const groups = {
+        management: [] as Professional[],
+        teachers: [] as Professional[],
+        caregivers: [] as Professional[],
+        security: [] as Professional[],
+        cleaning: [] as Professional[],
+        others: [] as Professional[]
     };
-  }, [selectedSchoolForCenso, students, professionals]);
 
-  const filteredItems = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    if (activeTab === 'units') return schools.filter(s => s.name.toLowerCase().includes(term) || s.inep?.includes(term));
-    if (activeTab === 'professionals') return professionals.filter(p => p.name.toLowerCase().includes(term) || p.cpf.includes(term));
-    if (activeTab === 'students') return students.filter(s => s.name.toLowerCase().includes(term) || s.cpf.includes(term));
-    if (activeTab === 'projects') return projects.filter(p => p.name.toLowerCase().includes(term));
-    return [];
-  }, [activeTab, schools, professionals, students, projects, searchTerm]);
+    schoolProfessionals.forEach(p => {
+        const role = p.role.toUpperCase();
+        if (role.includes('DIRETOR') || role.includes('COORDENADOR') || role.includes('SECRETÁRI') || role.includes('GESTOR')) {
+            groups.management.push(p);
+        } else if (role.includes('PROFESSOR') || role.includes('DOCENTE') || role.includes('EDUCADOR')) {
+            groups.teachers.push(p);
+        } else if (role.includes('CUIDADOR') || role.includes('AEE') || role.includes('AUXILIAR DE CLASSE')) {
+            groups.caregivers.push(p);
+        } else if (role.includes('PORTEIRO') || role.includes('VIGIA') || role.includes('SEGURANÇA')) {
+            groups.security.push(p);
+        } else if (role.includes('LIMPEZA') || role.includes('SERVIÇOS GERAIS') || role.includes('MERENDEIRA')) {
+            groups.cleaning.push(p);
+        } else {
+            groups.others.push(p);
+        }
+    });
 
-  const handleOpenSchoolCenso = (school: School) => {
-    setSelectedSchoolForCenso(school);
-    setActiveTab('censo');
-    navigate(`/admin/escolas?tab=censo&schoolId=${school.id}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return groups;
+  }, [schoolProfessionals]);
+
+  // --- AÇÕES ---
+
+  const handleOpenSchool = (school: School) => {
+    navigate(`/admin/escolas?schoolId=${school.id}&view=overview`);
+    setSearchTerm('');
   };
 
   const handleBackToUnits = () => {
-    setActiveTab('units');
-    navigate(`/admin/escolas?tab=units`);
+    navigate(`/admin/escolas`);
+    setSearchTerm('');
   };
 
-  const handleOpenAddModal = () => {
-    setEditingItem(null);
-    setFormData({ status: 'Ativo' });
-    setIsFormModalOpen(true);
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSchool) return;
+
+    if (viewParam === 'staff') {
+        const payload = { 
+            ...formData, 
+            schoolId: selectedSchool.id, 
+            schoolName: selectedSchool.name 
+        } as Professional;
+        
+        if (editingItem) await updateProfessional(payload);
+        else await addProfessional({ ...payload, id: `prof-${Date.now()}` });
+    } else if (viewParam === 'projects') {
+        if (editingItem) await updateProject(formData as Project);
+        else await addProject({ ...formData, id: `proj-${Date.now()}` } as Project);
+    }
+    setIsFormModalOpen(false);
   };
 
-  const handleOpenEditModal = (item: any) => {
+  const handleOpenEdit = (item: any) => {
     setEditingItem(item);
     setFormData({ ...item });
     setIsFormModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (activeTab === 'professionals') {
-      if (editingItem) await updateProfessional(formData as Professional);
-      else await addProfessional({ ...formData, id: `prof-${Date.now()}` } as Professional);
-    } else if (activeTab === 'projects') {
-      if (editingItem) await updateProject(formData as Project);
-      else await addProject({ ...formData, id: `proj-${Date.now()}`, participantsCount: 0, status: 'Ativo' } as Project);
-    } else if (activeTab === 'students' && editingItem) {
-      await updateStudent(formData as RegistryStudent);
-    }
-    setIsFormModalOpen(false);
+  const handleOpenAdd = () => {
+    setEditingItem(null);
+    setFormData({ status: 'Ativo' });
+    setIsFormModalOpen(true);
   };
 
-  const TabButton = ({ id, label, icon: Icon }: any) => (
-    <button 
-      onClick={() => { navigate(`/admin/escolas?tab=${id}`); setActiveTab(id); setSearchTerm(''); }}
-      className={`flex items-center gap-4 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${activeTab === id ? 'bg-[#0F172A] text-white shadow-deep scale-105' : 'bg-white text-slate-400 hover:text-slate-900 border border-slate-100'}`}
-    >
-      <Icon className={`h-4 w-4 ${activeTab === id ? 'text-emerald-400' : 'text-slate-300'}`} />
-      {label}
-    </button>
-  );
-
-  return (
-    <div className="min-h-screen bg-[#f8fafc] py-20 px-12 page-transition">
-      <div className="max-w-[1600px] mx-auto space-y-12">
-        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-12 border-b border-slate-200 pb-16 no-print">
-          <div className="space-y-6">
-            <div className="flex items-center gap-6">
-                <div className="bg-[#064e3b] p-5 rounded-[2rem] text-white shadow-2xl rotate-3"><Building className="h-10 w-10" /></div>
-                <div>
-                    <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">Gestão de <br/><span className="text-emerald-600">Unidades.</span></h1>
-                </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-2xl shadow-sm border border-slate-100">
-                <Globe className="h-4 w-4 text-emerald-500" />
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">SME Itaberaba • Cloud Sincronizado</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-4 no-print">
-            <TabButton id="units" label="Escolas" icon={Building2} />
-            <TabButton id="students" label="Alunos" icon={Users} />
-            <TabButton id="professionals" label="Profissionais" icon={Briefcase} />
-            <TabButton id="projects" label="Projetos" icon={Star} />
-            <TabButton id="censo" label="Censo 2025" icon={FileText} />
-          </div>
-        </header>
-
-        {activeTab === 'censo' && selectedSchoolForCenso ? (
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
-                <div className="flex justify-between items-center no-print">
-                    <button onClick={handleBackToUnits} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group">
-                        <ArrowLeft className="h-4 w-4" /> Voltar para Lista
-                    </button>
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-widest flex items-center gap-2">
-                        <CheckCircle className="h-3 w-3" /> Certificação Nominal MEC
-                    </span>
-                </div>
-
-                <div className="bg-white p-12 rounded-[2rem] shadow-luxury border border-slate-200 print:shadow-none print:border-slate-400">
-                  <div className="flex flex-col items-center text-center mb-10">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Coat_of_arms_of_Brazil.svg/1200px-Coat_of_arms_of_Brazil.svg.png" className="w-16 h-16 mb-4" alt="Brasão do Brasil" />
-                    <p className="text-[12px] font-bold text-slate-800 uppercase">Ministério da Educação</p>
-                    <p className="text-[11px] font-medium text-slate-700">Inep - Educacenso 2025</p>
-                    <div className="w-full h-px bg-slate-300 my-4"></div>
-                    <div className="text-left w-full">
-                      <h2 className="text-xl font-black text-slate-900 tracking-tight">Recibo de Fechamento de Unidade</h2>
-                      <h3 className="text-lg font-black text-slate-900 mt-1 uppercase">{selectedSchoolForCenso.inep} - {selectedSchoolForCenso.name}</h3>
+  // --------------------------------------------------------------------------------
+  // VIEW 1: LISTA DE ESCOLAS (ROOT)
+  // --------------------------------------------------------------------------------
+  if (!selectedSchool) {
+    return (
+        <div className="min-h-screen bg-[#f8fafc] py-20 px-12 page-transition">
+            <div className="max-w-[1600px] mx-auto space-y-12">
+                <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-12 border-b border-slate-200 pb-16 no-print">
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-6">
+                            <div className="bg-[#064e3b] p-5 rounded-[2rem] text-white shadow-2xl rotate-3"><Building className="h-10 w-10" /></div>
+                            <div>
+                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">Rede <br/><span className="text-emerald-600">Municipal.</span></h1>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-
-                  <div className="mb-10 overflow-x-auto">
-                    <table className="w-full text-center border-collapse">
-                      <thead>
-                        <tr className="bg-slate-100">
-                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Turmas</th>
-                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Total Alunos</th>
-                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Alunos AEE</th>
-                          <th className="border border-slate-300 p-4 text-[10px] font-black uppercase text-slate-600">Docentes Ativos</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.classes}</td>
-                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.totalStudents}</td>
-                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.specialNeeds}</td>
-                          <td className="border border-slate-300 p-6 text-sm font-black">{censoData?.teachers}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-16 pt-10 border-t-2 border-slate-900">
-                    <div className="grid grid-cols-2 gap-8 text-[11px]">
-                      <div className="space-y-3">
-                        <div className="flex gap-4"><span className="font-bold text-slate-500">Responsável SME:</span><span className="font-black uppercase">SISTEMA SÍNCRONO NOMINAL</span></div>
-                        <div className="flex gap-4"><span className="font-bold text-slate-500">ID Auditoria:</span><span className="font-mono font-black text-[9px]">{selectedSchoolForCenso.id.toUpperCase()}</span></div>
-                      </div>
-                      <div className="text-right italic text-slate-400 text-[9px]">Documento digital emitido em {new Date().toLocaleString()}</div>
+                    <div className="relative group w-full max-w-xl">
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar Unidade Escolar..." 
+                            value={searchTerm} 
+                            onChange={e => setSearchTerm(e.target.value)} 
+                            className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
+                        />
                     </div>
-                  </div>
-                </div>
+                </header>
 
-                <div className="flex justify-center no-print pb-20">
-                  <button onClick={() => window.print()} className="btn-primary !h-20 !px-20 shadow-deep">
-                    <Printer className="h-6 w-6" /> Imprimir Recibo Oficial
-                  </button>
-                </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-10 no-print">
-               <div className="relative group w-full max-w-2xl">
-                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
-                 <input 
-                   type="text" 
-                   placeholder={`Buscar em ${activeTab === 'professionals' ? 'Profissionais' : activeTab === 'students' ? 'Alunos' : 'Escolas'}...`} 
-                   value={searchTerm} 
-                   onChange={e => setSearchTerm(e.target.value)} 
-                   className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
-                 />
-               </div>
-               {['professionals', 'projects'].includes(activeTab) && (
-                 <button onClick={handleOpenAddModal} className="btn-primary !h-16 !px-10 shadow-emerald-200">
-                    <Plus className="h-5 w-5" /> Novo Registro
-                 </button>
-               )}
-            </div>
-
-            <div className="card-requinte !p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-700">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identificação</th>
-                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Detalhes Técnicos</th>
-                      <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredItems.map((item: any) => (
-                      <tr key={item.id} className="group hover:bg-slate-50/50 transition-all">
-                        <td className="px-10 py-8">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-emerald-600">
-                                    {item.name?.charAt(0)}
-                                </div>
-                                <div>
-                                    <p className="font-black text-slate-900 uppercase text-sm">{item.name}</p>
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase">{item.cpf || item.inep || 'Cód: ' + item.id}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {schools.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map(school => (
+                        <div key={school.id} className="card-requinte group flex flex-col h-full hover:-translate-y-2 cursor-pointer" onClick={() => handleOpenSchool(school)}>
+                            <div className="h-40 relative overflow-hidden border-b border-slate-100">
+                                <img src={school.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt={school.name} />
+                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-sm">INEP: {school.inep}</div>
+                            </div>
+                            <div className="p-8 flex flex-col flex-1">
+                                <h3 className="text-lg font-black text-slate-900 uppercase leading-tight group-hover:text-emerald-600 transition-colors mb-4 underline decoration-transparent underline-offset-4 group-hover:decoration-emerald-500">
+                                    {school.name}
+                                </h3>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-6 flex items-center gap-2">
+                                    <MapPin className="h-3 w-3 text-emerald-500" /> {school.address}
+                                </p>
+                                <div className="mt-auto pt-6 border-t border-slate-50 flex justify-between items-center">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{school.types[0]}</span>
+                                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm">
+                                        <ArrowRight className="h-4 w-4" />
+                                    </div>
                                 </div>
                             </div>
-                        </td>
-                        <td className="px-10 py-8">
-                            <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase border border-blue-100">
-                                {item.role || item.status || item.school || item.address}
-                            </span>
-                        </td>
-                        <td className="px-10 py-8 text-right">
-                           <div className="flex justify-end gap-3">
-                                {activeTab === 'units' ? (
-                                    <button onClick={() => handleOpenSchoolCenso(item)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-emerald-600 shadow-sm transition-all">
-                                        <ArrowRight className="h-4.5 w-4.5" />
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button onClick={() => handleOpenEditModal(item)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600"><Edit3 className="h-4 w-4" /></button>
-                                        <button onClick={() => activeTab === 'professionals' ? removeProfessional(item.id) : activeTab === 'students' ? removeStudent(item.id) : removeProject(item.id)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-                                    </>
-                                )}
-                           </div>
-                        </td>
-                      </tr>
+                        </div>
                     ))}
-                  </tbody>
-                </table>
+                </div>
             </div>
-          </>
-        )}
-      </div>
-
-      {/* Modal de Formulário Único para Gestão */}
-      {isFormModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setIsFormModalOpen(false)}></div>
-          <div className="bg-white rounded-[3rem] shadow-deep w-full max-w-xl relative p-12 animate-in zoom-in-95 duration-200">
-             <div className="flex justify-between items-center mb-10">
-                <h3 className="text-2xl font-black text-slate-900 uppercase">Gestão Nominal</h3>
-                <button onClick={() => setIsFormModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X className="h-6 w-6" /></button>
-             </div>
-             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Nome Completo</label>
-                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="input-premium !h-14 !text-sm" />
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Documento / CPF</label>
-                        <input type="text" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} className="input-premium !h-14 !text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Status / Função</label>
-                        <input type="text" value={formData.role || formData.status || ''} onChange={e => setFormData({...formData, role: e.target.value})} className="input-premium !h-14 !text-sm" />
-                    </div>
-                </div>
-                <div className="pt-6 flex gap-4">
-                    <button type="button" onClick={() => setIsFormModalOpen(false)} className="btn-secondary flex-1 !h-14">Cancelar</button>
-                    <button type="submit" className="btn-primary flex-1 !h-14 !bg-emerald-600">Salvar no Cloud</button>
-                </div>
-             </form>
-          </div>
         </div>
-      )}
+    );
+  }
+
+  // --------------------------------------------------------------------------------
+  // VIEW 2: DASHBOARD DA ESCOLA (ABAS: ALUNOS, PROFISSIONAIS, PROJETOS)
+  // --------------------------------------------------------------------------------
+  return (
+    <div className="min-h-screen bg-[#f8fafc] py-12 px-8 page-transition">
+        <div className="max-w-[1600px] mx-auto space-y-10">
+            {/* Header da Escola */}
+            <div className="bg-white rounded-[3rem] p-12 shadow-luxury border border-slate-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-50 rounded-full blur-[120px] -mr-64 -mt-64 opacity-60"></div>
+                <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start gap-10">
+                    <div className="flex flex-col gap-6">
+                         <button onClick={handleBackToUnits} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group w-fit">
+                            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Voltar para Rede
+                        </button>
+                        <div className="flex items-center gap-8">
+                            <div className="w-24 h-24 rounded-[2rem] bg-slate-900 border-[6px] border-white shadow-2xl overflow-hidden flex-shrink-0">
+                                <img src={selectedSchool.image} className="w-full h-full object-cover" alt="School" />
+                            </div>
+                            <div>
+                                <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">{selectedSchool.name}</h1>
+                                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.2em] mt-3 bg-emerald-50 px-3 py-1 rounded-lg w-fit border border-emerald-100">INEP: {selectedSchool.inep} • {selectedSchool.address}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-4 flex-wrap">
+                        {[
+                            { id: 'overview', label: 'Visão Geral', icon: Building2 },
+                            { id: 'students', label: 'Alunos', icon: GraduationCap },
+                            { id: 'staff', label: 'Profissionais', icon: Briefcase },
+                            { id: 'projects', label: 'Projetos', icon: Star },
+                        ].map(tab => (
+                            <button 
+                                key={tab.id}
+                                onClick={() => navigate(`/admin/escolas?schoolId=${selectedSchool.id}&view=${tab.id}`)}
+                                className={`flex items-center gap-3 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewParam === tab.id ? 'bg-slate-900 text-white shadow-xl scale-105' : 'bg-slate-50 text-slate-400 hover:bg-white hover:shadow-lg border border-transparent hover:border-slate-100'}`}
+                            >
+                                <tab.icon className={`h-4 w-4 ${viewParam === tab.id ? 'text-emerald-400' : ''}`} />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* ABA 1: VISÃO GERAL */}
+            {viewParam === 'overview' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
+                     <div className="card-requinte !p-10 flex flex-col justify-between h-48 border-l-[8px] border-emerald-500">
+                        <Users className="h-8 w-8 text-emerald-600" />
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Alunos</p>
+                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{schoolStudents.length}</p>
+                        </div>
+                     </div>
+                     <div className="card-requinte !p-10 flex flex-col justify-between h-48 border-l-[8px] border-blue-500">
+                        <Briefcase className="h-8 w-8 text-blue-600" />
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Corpo Docente</p>
+                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{schoolProfessionals.length}</p>
+                        </div>
+                     </div>
+                     <div className="card-requinte !p-10 flex flex-col justify-between h-48 border-l-[8px] border-amber-500">
+                        <Layers className="h-8 w-8 text-amber-600" />
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Capacidade</p>
+                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{selectedSchool.availableSlots}</p>
+                        </div>
+                     </div>
+                     <button 
+                        onClick={() => navigate(`/admin/escolas?schoolId=${selectedSchool.id}&view=students`)}
+                        className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-deep flex flex-col justify-center items-center gap-4 hover:bg-emerald-600 transition-colors group"
+                     >
+                        <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white group-hover:text-emerald-600 transition-all">
+                            <ArrowRight className="h-6 w-6" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Gerenciar Turmas</span>
+                     </button>
+                </div>
+            )}
+
+            {/* ABA 2: ALUNOS */}
+            {viewParam === 'students' && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
+                    <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <div className="relative group w-full max-w-md">
+                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar aluno nesta escola..." 
+                                value={searchTerm} 
+                                onChange={e => setSearchTerm(e.target.value)} 
+                                className="input-premium pl-14 !h-14 !text-[11px] !bg-slate-50" 
+                            />
+                        </div>
+                        <div className="text-right">
+                            <span className="block text-2xl font-black text-slate-900">{schoolStudents.length}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Matriculados</span>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {schoolStudents.map(student => (
+                            <div key={student.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-lg transition-all group flex items-start gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-emerald-600 font-black text-lg border border-slate-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                    {student.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-black text-slate-900 text-xs uppercase leading-tight truncate">{student.name}</h4>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">CPF: {student.cpf}</p>
+                                    <div className="flex gap-2 mt-3">
+                                        <button onClick={() => navigate(`/student/monitoring?id=${student.id}`)} className="p-2 bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">Ver Dossiê</button>
+                                        <button onClick={() => removeStudent(student.id)} className="p-2 bg-slate-50 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="h-3 w-3" /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ABA 3: PROFISSIONAIS (CATEGORIZADOS) */}
+            {viewParam === 'staff' && (
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-500">
+                    <div className="flex justify-between items-center">
+                         <div className="relative group w-full max-w-md">
+                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                            <input 
+                                type="text" placeholder="Buscar profissional..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} 
+                                className="input-premium pl-14 !h-14 !text-[11px] !bg-white" 
+                            />
+                        </div>
+                        <button onClick={handleOpenAdd} className="btn-primary !h-14 !px-8 !text-[10px] !bg-emerald-600 shadow-emerald-200">
+                            <Plus className="h-4 w-4" /> Novo Servidor
+                        </button>
+                    </div>
+
+                    <div className="space-y-16">
+                        {[
+                            { title: 'Gestão Escolar', data: groupedStaff.management, icon: UserCheck, color: 'text-purple-600' },
+                            { title: 'Corpo Docente', data: groupedStaff.teachers, icon: GraduationCap, color: 'text-blue-600' },
+                            { title: 'AEE & Cuidadores', data: groupedStaff.caregivers, icon: Stethoscope, color: 'text-pink-600' },
+                            { title: 'Segurança & Portaria', data: groupedStaff.security, icon: Lock, color: 'text-slate-600' },
+                            { title: 'Serviços Gerais & Limpeza', data: groupedStaff.cleaning, icon: PaintBucket, color: 'text-emerald-600' },
+                            { title: 'Outros', data: groupedStaff.others, icon: Briefcase, color: 'text-slate-400' },
+                        ].map((group) => group.data.length > 0 && (
+                            <div key={group.title} className="space-y-6">
+                                <h3 className="flex items-center gap-4 text-[12px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-4">
+                                    <group.icon className={`h-5 w-5 ${group.color}`} /> {group.title}
+                                    <span className="ml-auto bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[9px]">{group.data.length}</span>
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {group.data.map(prof => (
+                                        <div key={prof.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-lg transition-all group relative overflow-hidden">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-500 text-xs">{prof.name.charAt(0)}</div>
+                                                <span className="px-2 py-1 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-bold uppercase">{prof.status}</span>
+                                            </div>
+                                            <h4 className="font-black text-slate-900 text-xs uppercase leading-tight mb-1">{prof.name}</h4>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-4">{prof.role}</p>
+                                            
+                                            <div className="flex gap-2 pt-4 border-t border-slate-50">
+                                                <button onClick={() => handleOpenEdit(prof)} className="flex-1 py-2 bg-slate-50 rounded-lg text-[9px] font-black uppercase text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">Editar</button>
+                                                <button onClick={() => removeProfessional(prof.id)} className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* 4. PROJETOS */}
+            {viewParam === 'projects' && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
+                    <div className="flex justify-end">
+                        <button onClick={handleOpenAdd} className="btn-primary !h-14 !px-8 !text-[10px] !bg-emerald-600 shadow-emerald-200">
+                            <Plus className="h-4 w-4" /> Novo Projeto
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {schoolProjects.map(proj => (
+                            <div key={proj.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-luxury flex gap-8 items-center relative overflow-hidden group">
+                                <div className="w-32 h-32 rounded-[2rem] bg-slate-100 flex-shrink-0 overflow-hidden">
+                                    {proj.image ? <img src={proj.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Project" /> : <Star className="h-10 w-10 text-slate-300 m-auto" />}
+                                </div>
+                                <div>
+                                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase tracking-widest mb-3 inline-block">{proj.category}</span>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">{proj.name}</h3>
+                                    <p className="text-[10px] font-medium text-slate-400 leading-relaxed max-w-sm">{proj.description}</p>
+                                    <div className="mt-4 flex items-center gap-4">
+                                        <button onClick={() => handleOpenEdit(proj)} className="text-[10px] font-black uppercase text-slate-400 hover:text-emerald-600 transition-colors">Gerenciar</button>
+                                        <button onClick={() => removeProject(proj.id)} className="text-[10px] font-black uppercase text-slate-400 hover:text-red-600 transition-colors">Arquivar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+
+        {/* Modal de Formulário Genérico */}
+        {isFormModalOpen && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsFormModalOpen(false)}></div>
+                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg relative p-10 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="font-black text-slate-900 uppercase text-lg tracking-tight">
+                            {editingItem ? 'Editar Registro' : 'Novo Cadastro'}
+                        </h3>
+                        <button onClick={() => setIsFormModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="h-5 w-5 text-slate-400" /></button>
+                    </div>
+                    
+                    <form onSubmit={handleFormSubmit} className="space-y-6">
+                        {viewParam === 'staff' && (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="input-premium" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cargo / Função</label>
+                                    <select required value={formData.role || ''} onChange={e => setFormData({...formData, role: e.target.value})} className="input-premium h-14">
+                                        <option value="">Selecione...</option>
+                                        <option value="Diretor Escolar">Diretor Escolar</option>
+                                        <option value="Professor">Professor</option>
+                                        <option value="Cuidador">Cuidador / AEE</option>
+                                        <option value="Porteiro">Porteiro / Segurança</option>
+                                        <option value="Auxiliar de Limpeza">Auxiliar de Limpeza</option>
+                                        <option value="Secretário Escolar">Secretário Escolar</option>
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF</label>
+                                        <input type="text" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} className="input-premium" placeholder="000.000.000-00" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                                        <select value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value})} className="input-premium h-14">
+                                            <option value="Ativo">Ativo</option>
+                                            <option value="Licença">Licença</option>
+                                            <option value="Desligado">Desligado</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                        
+                        {viewParam === 'projects' && (
+                             <>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Projeto</label>
+                                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="input-premium" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                                    <textarea required value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} className="input-premium h-32 py-4" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
+                                        <input type="text" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} className="input-premium" />
+                                    </div>
+                                     <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Orçamento</label>
+                                        <input type="text" value={formData.budget || ''} onChange={e => setFormData({...formData, budget: e.target.value})} className="input-premium" />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="flex justify-end gap-3 pt-6">
+                            <button type="button" onClick={() => setIsFormModalOpen(false)} className="btn-secondary !h-12 !px-8 !text-[10px]">Cancelar</button>
+                            <button type="submit" className="btn-primary !h-12 !px-8 !text-[10px] !bg-slate-900"><Save className="h-4 w-4" /> Salvar Dados</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
     </div>
   );
 };

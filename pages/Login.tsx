@@ -5,9 +5,10 @@ import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../services/supabaseClient';
 import { 
   GraduationCap, Lock, User, Loader2, ShieldCheck, 
-  ChevronRight, Zap, Sparkles, Mail
+  ChevronRight, Zap, Sparkles, Mail, Key
 } from 'lucide-react';
 import { UserRole } from '../types';
+import { MOCK_STUDENT_REGISTRY } from '../constants';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -21,8 +22,90 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    const inputUser = email.trim().toUpperCase();
+    const inputPass = password.trim();
+
+    // --- MODO DE TESTE / CREDENCIAIS SIMULADAS ---
+    // Intercepta logins específicos para demonstração sem bater no Supabase
+    if (['SME', 'DIRETOR', 'PROFESSOR', 'ALUNO'].includes(inputUser)) {
+        let mockUser = null;
+        let redirectPath = '/dashboard';
+
+        // 1. USUÁRIO SME (ADMIN)
+        if (inputUser === 'SME' && inputPass === '1234') {
+            mockUser = {
+                id: 'mock-admin-sme',
+                name: 'Secretaria de Educação (SME)',
+                role: UserRole.ADMIN_SME,
+                email: 'sme@itaberaba.ba.gov.br'
+            };
+        }
+        // 2. USUÁRIO DIRETOR
+        else if (inputUser === 'DIRETOR' && inputPass === '1234') {
+            mockUser = {
+                id: 'mock-diretor',
+                name: 'Ediana Silva (Diretora)',
+                role: UserRole.DIRECTOR,
+                schoolId: '29446309', // ID do Centro Municipal
+                schoolName: 'CENTRO MUNICIPAL DE EDUCACAO BASICA',
+                email: 'direcao@itaberaba.ba.gov.br'
+            };
+        }
+        // 3. USUÁRIO PROFESSOR
+        else if (inputUser === 'PROFESSOR' && inputPass === '1234') {
+            mockUser = {
+                id: 'mock-professor',
+                name: 'Prof. Antônio Carlos',
+                role: UserRole.TEACHER,
+                schoolId: '29446309',
+                email: 'prof.antonio@itaberaba.ba.gov.br'
+            };
+            redirectPath = '/journal';
+        }
+        // 4. USUÁRIO ALUNO
+        else if (inputUser === 'ALUNO') {
+            // Busca a aluna Luana para validar o CPF como senha
+            const targetStudent = MOCK_STUDENT_REGISTRY.find(s => s.name.includes('LUANA'));
+            
+            // Aceita o CPF com ou sem pontuação para facilitar
+            const cleanPass = inputPass.replace(/\D/g, '');
+            const cleanCpf = targetStudent?.cpf.replace(/\D/g, '');
+
+            if (targetStudent && (inputPass === targetStudent.cpf || cleanPass === cleanCpf)) {
+                mockUser = {
+                    id: targetStudent.id,
+                    name: targetStudent.name,
+                    role: UserRole.STUDENT,
+                    email: 'aluno@rede.ba.gov.br',
+                    photo: targetStudent.photo
+                };
+                redirectPath = `/student/monitoring?id=${targetStudent.id}`;
+            } else {
+                addToast('Senha incorreta. Para ALUNO, use o CPF: 081.589.275-64', 'error');
+                setIsLoading(false);
+                return;
+            }
+        }
+
+        if (mockUser) {
+            setTimeout(() => {
+                sessionStorage.setItem('admin_auth', 'true');
+                sessionStorage.setItem('user_role', mockUser.role);
+                sessionStorage.setItem('user_data', JSON.stringify(mockUser));
+                addToast(`Ambiente de Demonstração: ${mockUser.name}`, 'success');
+                navigate(redirectPath);
+                setIsLoading(false);
+            }, 800);
+            return;
+        } else {
+            addToast('Credenciais de teste inválidas.', 'error');
+            setIsLoading(false);
+            return;
+        }
+    }
+
+    // --- AUTENTICAÇÃO REAL (SUPABASE) ---
     try {
-      // Autenticação Real via Supabase (Senhas protegidas com Hashing no Servidor)
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.includes('@') ? email : `${email}@itaberaba.ba.gov.br`,
         password: password,
@@ -31,7 +114,6 @@ export const Login: React.FC = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Busca perfil estendido se necessário ou usa metadados
         const role = data.user.user_metadata?.role || UserRole.ADMIN_SME;
         const userData = { 
           id: data.user.id, 
@@ -104,21 +186,21 @@ export const Login: React.FC = () => {
 
           <form onSubmit={handleLogin} className="space-y-10 relative z-10">
             <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">E-mail ou Usuário</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Usuário ou E-mail</label>
                 <div className="relative group">
-                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
+                    <User className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
                     <input 
                         type="text" required value={email} onChange={e => setEmail(e.target.value)}
-                        placeholder="Ex: gestor@itaberaba.ba.gov.br"
+                        placeholder="Ex: SME, DIRETOR, PROFESSOR..."
                         className="input-premium pl-16 !h-14 !text-sm"
                     />
                 </div>
             </div>
 
             <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Token de Segurança (Senha)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Token de Segurança</label>
                 <div className="relative group">
-                    <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
+                    <Key className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-emerald-600 transition-colors" />
                     <input 
                         type="password" required value={password} onChange={e => setPassword(e.target.value)}
                         placeholder="••••••••"

@@ -5,7 +5,7 @@ import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, MapPin, Layers, 
   Search, Compass, Navigation2, Navigation, Globe,
-  Map as MapIcon, Target, ShieldCheck, Zap
+  ShieldCheck
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -75,8 +75,15 @@ export const MapAnalysis: React.FC = () => {
     schoolMarkersRef.current.clearLayers();
     studentMarkersRef.current.clearLayers();
 
+    // Ícone SVG estático para o popup (Leaflet não renderiza componentes React stringificados corretamente)
+    const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+    const shieldIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
+
     // Plotagem de Unidades Escolares
     schools.forEach(school => {
+        // Proteção contra dados nulos
+        if (!school || typeof school.lat !== 'number' || typeof school.lng !== 'number') return;
+
         const icon = L.divIcon({
             html: `<div class="marker-container">
                     <div class="marker-school shadow-deep">
@@ -93,7 +100,7 @@ export const MapAnalysis: React.FC = () => {
                         <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
                         <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
                         <div class="pt-3 border-t border-slate-50 flex justify-between items-center">
-                            <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2"><Zap size={10} /> Base Ativa</span>
+                            <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">${zapIconSvg} Base Ativa</span>
                             <span class="text-[10px] font-black text-slate-900 uppercase">Vagas: ${school.availableSlots}</span>
                         </div>
                       </div>`)
@@ -102,7 +109,10 @@ export const MapAnalysis: React.FC = () => {
 
     // Plotagem de Alunos / Mapa de Calor
     if (activeLayer === 'heat') {
-        const heatData = students.map(s => [s.lat, s.lng, 1.0]); 
+        const heatData = students
+            .filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number')
+            .map(s => [s.lat, s.lng, 1.0]); 
+            
         if (typeof L.heatLayer === 'function' && heatData.length > 0) {
             heatLayerRef.current = L.heatLayer(heatData, { 
                 radius: 40, blur: 25, maxZoom: 16,
@@ -111,11 +121,14 @@ export const MapAnalysis: React.FC = () => {
         }
     } else {
         students.forEach(s => {
+            // Proteção contra dados nulos
+            if (!s || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
+
             const marker = L.circleMarker([s.lat, s.lng], {
                 radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
             });
             marker.bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-luxury">
-                <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1.5"><ShieldCheck size={10} /> Aluno Nominal</p>
+                <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">${shieldIconSvg} Aluno Nominal</p>
                 <h4 class="font-black text-slate-900 uppercase text-xs mb-3 leading-tight">${s.name}</h4>
                 <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                   <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest">Escola: ${s.school || 'Geoprocessamento SME'}</p>
@@ -131,14 +144,16 @@ export const MapAnalysis: React.FC = () => {
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // Busca nominal profunda por Aluno, CPF ou Logradouro
+    // Busca nominal profunda por Aluno, CPF ou Logradouro com validação de nulidade
     const match = students.find(s => 
-        s.name.toLowerCase().includes(term) || 
-        s.cpf.includes(term) ||
-        (s.address && s.address.street.toLowerCase().includes(term))
-    ) || schools.find(s => s.name.toLowerCase().includes(term));
+        s && (
+            (s.name && s.name.toLowerCase().includes(term)) || 
+            (s.cpf && s.cpf.includes(term)) ||
+            (s.address && s.address.street && s.address.street.toLowerCase().includes(term))
+        )
+    ) || schools.find(s => s && s.name && s.name.toLowerCase().includes(term));
 
-    if (match) {
+    if (match && typeof match.lat === 'number' && typeof match.lng === 'number') {
         mapRef.current.flyTo([match.lat, match.lng], 18, { 
             duration: 1.8,
             easeLinearity: 0.15
