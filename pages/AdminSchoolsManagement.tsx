@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
-import { useNavigate, useSearchParams } from '../router';
+import { useNavigate, useSearchParams, useLocation } from '../router';
 import { 
   Building, Users, Layers, Star, Plus, Search, 
   Trash2, Briefcase, X, Save, MapPin, Building2, 
   ArrowRight, ArrowLeft, GraduationCap, UserCheck, 
-  Edit3, LayoutDashboard, Home
+  Edit3, LayoutDashboard, Home, FolderOpen
 } from 'lucide-react';
 import { Professional, Project, School, SchoolType } from '../types';
 
@@ -32,6 +32,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   } = useData();
   
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   
   const schoolIdParam = params.get('schoolId');
@@ -48,29 +49,41 @@ export const AdminSchoolsManagement: React.FC = () => {
   const [formData, setFormData] = useState<any>({ status: 'Ativo' });
   const [schoolFormData, setSchoolFormData] = useState<Partial<School>>(INITIAL_SCHOOL_FORM);
 
+  // Define a seção ativa baseada na rota (se não houver escola selecionada)
+  const activeSection = useMemo(() => {
+      if (location.pathname.includes('/admin/profissionais')) return 'profissionais';
+      if (location.pathname.includes('/admin/projetos')) return 'projetos';
+      return 'escolas';
+  }, [location.pathname]);
+
   // Escola Selecionada (Contexto Atual)
   const selectedSchool = useMemo(() => 
     schools.find(s => s.id === schoolIdParam), 
   [schools, schoolIdParam]);
 
-  // --- FILTROS DE DADOS DA ESCOLA SELECIONADA ---
+  // --- FILTROS DE DADOS DA ESCOLA SELECIONADA OU GLOBAIS ---
+  const filteredSchools = useMemo(() => 
+    schools.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())), 
+  [schools, searchTerm]);
+
+  const filteredProfessionals = useMemo(() => {
+    const list = selectedSchool 
+        ? professionals.filter(p => p.schoolId === selectedSchool.id || p.schoolName === selectedSchool.name)
+        : professionals;
+    return list.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [professionals, selectedSchool, searchTerm]);
+
+  const filteredProjects = useMemo(() => {
+     // Projetos geralmente são globais ou vinculados, aqui assumimos globais para simplificar a demo se não houver filtro complexo
+     return projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [projects, searchTerm]);
+
   const schoolStudents = useMemo(() => {
     if (!selectedSchool) return [];
     return students.filter(s => 
       s.schoolId === selectedSchool.id || s.school === selectedSchool.name
     ).filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [students, selectedSchool, searchTerm]);
-
-  const schoolProfessionals = useMemo(() => {
-    if (!selectedSchool) return [];
-    return professionals.filter(p => 
-      p.schoolId === selectedSchool.id || p.schoolName === selectedSchool.name
-    ).filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [professionals, selectedSchool, searchTerm]);
-
-  const schoolProjects = useMemo(() => {
-     return projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [projects, searchTerm]);
 
   // --- AÇÕES ---
   const handleOpenSchool = (school: School) => {
@@ -89,9 +102,7 @@ export const AdminSchoolsManagement: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSchool) return;
-
-    if (viewParam === 'projects') {
+    if (viewParam === 'projects' || activeSection === 'projetos') {
         if (editingItem) await updateProject(formData as Project);
         else await addProject({ ...formData, id: `proj-${Date.now()}` } as Project);
     }
@@ -152,7 +163,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   };
 
   // --------------------------------------------------------------------------------
-  // VIEW 1: LISTA DE ESCOLAS (ROOT)
+  // VIEW 1: LISTAS GLOBAIS (ROOT - SEM ESCOLA SELECIONADA)
   // --------------------------------------------------------------------------------
   if (!selectedSchool) {
     return (
@@ -164,9 +175,17 @@ export const AdminSchoolsManagement: React.FC = () => {
                             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Voltar ao Painel
                         </button>
                         <div className="flex items-center gap-6">
-                            <div className="bg-[#064e3b] p-5 rounded-[2rem] text-white shadow-2xl rotate-3"><Building className="h-10 w-10" /></div>
+                            <div className="bg-[#064e3b] p-5 rounded-[2rem] text-white shadow-2xl rotate-3">
+                                {activeSection === 'escolas' && <Building className="h-10 w-10" />}
+                                {activeSection === 'profissionais' && <Briefcase className="h-10 w-10" />}
+                                {activeSection === 'projetos' && <FolderOpen className="h-10 w-10" />}
+                            </div>
                             <div>
-                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">Rede <br/><span className="text-emerald-600">Municipal.</span></h1>
+                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+                                    {activeSection === 'escolas' && <>Rede <br/><span className="text-emerald-600">Municipal.</span></>}
+                                    {activeSection === 'profissionais' && <>Corpo <br/><span className="text-emerald-600">Docente.</span></>}
+                                    {activeSection === 'projetos' && <>Projetos <br/><span className="text-emerald-600">Ativos.</span></>}
+                                </h1>
                             </div>
                         </div>
                     </div>
@@ -175,42 +194,104 @@ export const AdminSchoolsManagement: React.FC = () => {
                             <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
                             <input 
                                 type="text" 
-                                placeholder="Buscar Unidade Escolar..." 
+                                placeholder={`Buscar ${activeSection}...`} 
                                 value={searchTerm} 
                                 onChange={e => setSearchTerm(e.target.value)} 
                                 className="input-premium pl-16 !h-16 !text-[12px] !bg-white" 
                             />
                         </div>
-                        <button onClick={handleCreateSchool} className="btn-primary !h-16 !px-8 !text-[10px] !bg-slate-900 shrink-0">
-                            <Plus className="h-5 w-5" /> Nova Unidade
-                        </button>
+                        {activeSection === 'escolas' && (
+                            <button onClick={handleCreateSchool} className="btn-primary !h-16 !px-8 !text-[10px] !bg-slate-900 shrink-0">
+                                <Plus className="h-5 w-5" /> Nova Unidade
+                            </button>
+                        )}
+                        {/* Botões de adicionar para outros tipos podem ser implementados aqui futuramente */}
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    {schools.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map(school => (
-                        <div key={school.id} className="card-requinte group flex flex-col h-full hover:-translate-y-2 cursor-pointer" onClick={() => handleOpenSchool(school)}>
-                            <div className="h-40 relative overflow-hidden border-b border-slate-100">
-                                <img src={school.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt={school.name} />
-                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-sm">INEP: {school.inep}</div>
-                            </div>
-                            <div className="p-8 flex flex-col flex-1">
-                                <h3 className="text-lg font-black text-slate-900 uppercase leading-tight group-hover:text-emerald-600 transition-colors mb-4 underline decoration-transparent underline-offset-4 group-hover:decoration-emerald-500">
-                                    {school.name}
-                                </h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-6 flex items-center gap-2">
-                                    <MapPin className="h-3 w-3 text-emerald-500" /> {school.address}
-                                </p>
-                                <div className="mt-auto pt-6 border-t border-slate-50 flex justify-between items-center">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{school.types[0]}</span>
-                                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm">
-                                        <ArrowRight className="h-4 w-4" />
+                {/* LISTA DE ESCOLAS */}
+                {activeSection === 'escolas' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        {filteredSchools.map(school => (
+                            <div key={school.id} className="card-requinte group flex flex-col h-full hover:-translate-y-2 cursor-pointer" onClick={() => handleOpenSchool(school)}>
+                                <div className="h-40 relative overflow-hidden border-b border-slate-100">
+                                    <img src={school.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt={school.name} />
+                                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-sm">INEP: {school.inep}</div>
+                                </div>
+                                <div className="p-8 flex flex-col flex-1">
+                                    <h3 className="text-lg font-black text-slate-900 uppercase leading-tight group-hover:text-emerald-600 transition-colors mb-4 underline decoration-transparent underline-offset-4 group-hover:decoration-emerald-500">
+                                        {school.name}
+                                    </h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-6 flex items-center gap-2">
+                                        <MapPin className="h-3 w-3 text-emerald-500" /> {school.address}
+                                    </p>
+                                    <div className="mt-auto pt-6 border-t border-slate-50 flex justify-between items-center">
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{school.types[0]}</span>
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm">
+                                            <ArrowRight className="h-4 w-4" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* LISTA DE PROFISSIONAIS (GLOBAL) */}
+                {activeSection === 'profissionais' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredProfessionals.map(prof => (
+                            <div key={prof.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-lg transition-all group flex items-start gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-lg border border-blue-100">
+                                    {prof.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-black text-slate-900 text-xs uppercase leading-tight truncate">{prof.name}</h4>
+                                    <p className="text-[9px] text-emerald-600 font-black uppercase mt-1">{prof.role}</p>
+                                    <p className="text-[8px] text-slate-400 font-bold uppercase mt-2 flex items-center gap-1">
+                                        <Building className="h-3 w-3" /> {prof.schoolName || 'Não Alocado'}
+                                    </p>
+                                    <div className="flex gap-2 mt-3 justify-end">
+                                        <button className="text-[9px] font-black uppercase text-slate-400 hover:text-blue-600 transition-colors">Detalhes</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {filteredProfessionals.length === 0 && <p className="text-slate-400 col-span-full text-center">Nenhum profissional localizado.</p>}
+                    </div>
+                )}
+
+                {/* LISTA DE PROJETOS (GLOBAL) */}
+                {activeSection === 'projetos' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {filteredProjects.map(proj => {
+                            const participants = getProjectParticipants(proj.id);
+                            return (
+                                <div key={proj.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-luxury flex flex-col gap-6 relative overflow-hidden group">
+                                    <div className="flex gap-8 items-start">
+                                        <div className="w-24 h-24 rounded-[2rem] bg-slate-100 flex-shrink-0 overflow-hidden">
+                                            {proj.image ? <img src={proj.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Project" /> : <Star className="h-10 w-10 text-slate-300 m-auto" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase tracking-widest mb-3 inline-block">{proj.category}</span>
+                                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">{proj.name}</h3>
+                                            <p className="text-[10px] font-medium text-slate-400 leading-relaxed max-w-sm line-clamp-2">{proj.description}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 pt-4 border-t border-slate-50 flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-emerald-600" /> {participants.length} Participantes
+                                        </span>
+                                        <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${proj.status === 'Ativo' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                                            {proj.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {filteredProjects.length === 0 && <p className="text-slate-400 col-span-full text-center">Nenhum projeto localizado.</p>}
+                    </div>
+                )}
             </div>
 
             {/* MODAL DE CRIAÇÃO/EDIÇÃO DE ESCOLA */}
@@ -226,7 +307,6 @@ export const AdminSchoolsManagement: React.FC = () => {
                         </div>
                         
                         <form onSubmit={handleSchoolSubmit} className="space-y-8">
-                            {/* ... FORM CONTENT ... */}
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Instituição</label>
                                 <input type="text" required value={schoolFormData.name} onChange={e => setSchoolFormData({...schoolFormData, name: e.target.value.toUpperCase()})} className="input-premium" placeholder="EX: ESCOLA MUNICIPAL..." />
@@ -370,7 +450,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                         <Briefcase className="h-8 w-8 text-blue-600" />
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Corpo Docente</p>
-                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{schoolProfessionals.length}</p>
+                            <p className="text-4xl font-black text-slate-900 tracking-tighter">{filteredProfessionals.length}</p>
                         </div>
                      </div>
                      <div className="card-requinte !p-10 flex flex-col justify-between h-48 border-l-[8px] border-amber-500">
@@ -449,7 +529,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                         </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {schoolProjects.map(proj => {
+                        {filteredProjects.map(proj => {
                             const participants = getProjectParticipants(proj.id);
                             return (
                                 <div key={proj.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-luxury flex flex-col gap-6 relative overflow-hidden group">
@@ -519,7 +599,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                     </div>
                     
                     <form onSubmit={handleFormSubmit} className="space-y-6">
-                        {viewParam === 'projects' && (
+                        {(viewParam === 'projects' || activeSection === 'projetos') && (
                              <>
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Projeto</label>

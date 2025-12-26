@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from '../router';
 import { 
   GraduationCap, Menu, X, CloudOff, LogOut, 
   Building, Map, FileText, LayoutDashboard, 
-  Users, BarChart3, Database
+  Users, BarChart3, Database, Briefcase, FolderOpen
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { UserRole } from '../types';
@@ -43,7 +43,6 @@ export const Navbar: React.FC = () => {
 
   const isActive = (path: string) => {
     const currentPath = location.pathname;
-    // Verifica correspondência exata ou parcial para sub-rotas
     const isActiveLink = currentPath === path || (path !== '/' && currentPath.startsWith(path));
 
     return isActiveLink
@@ -91,7 +90,13 @@ export const Navbar: React.FC = () => {
                     <LayoutDashboard className="h-4 w-4" /> Painel
                   </Link>
                   <Link to="/admin/escolas" className={isActive('/admin/escolas')}>
-                    <Building className="h-4 w-4" /> Gestão Escolar
+                    <Building className="h-4 w-4" /> Escolas
+                  </Link>
+                  <Link to="/admin/profissionais" className={isActive('/admin/profissionais')}>
+                    <Briefcase className="h-4 w-4" /> Profissionais
+                  </Link>
+                  <Link to="/admin/projetos" className={isActive('/admin/projetos')}>
+                    <FolderOpen className="h-4 w-4" /> Projetos
                   </Link>
                   <Link to="/admin/map" className={isActive('/admin/map')}>
                     <Map className="h-4 w-4" /> Mapa Geo
@@ -111,7 +116,6 @@ export const Navbar: React.FC = () => {
                   <Link to="/status" className={isActive('/status')}>Protocolo</Link>
                   </>
               ) : null}
-              {/* Professores e Alunos têm navegação simplificada ou focada */}
             </div>
           </div>
 
@@ -170,7 +174,9 @@ export const Navbar: React.FC = () => {
                     ) : (role === UserRole.ADMIN_SME || role === UserRole.DIRECTOR) ? (
                       <>
                          <MobileLink to="/dashboard" icon={LayoutDashboard}>Painel de Controle</MobileLink>
-                         <MobileLink to="/admin/escolas" icon={Building}>Gestão Escolar</MobileLink>
+                         <MobileLink to="/admin/escolas" icon={Building}>Gestão de Escolas</MobileLink>
+                         <MobileLink to="/admin/profissionais" icon={Briefcase}>Profissionais</MobileLink>
+                         <MobileLink to="/admin/projetos" icon={FolderOpen}>Projetos</MobileLink>
                          <MobileLink to="/admin/map" icon={Map}>Mapa Territorial</MobileLink>
                          <MobileLink to="/admin/data" icon={Database}>Censo Nominal</MobileLink>
                          <MobileLink to="/reports" icon={BarChart3}>Relatórios BI</MobileLink>

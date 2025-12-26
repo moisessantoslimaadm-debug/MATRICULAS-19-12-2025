@@ -77,6 +77,8 @@ const AppContent: React.FC = () => {
             <Route path="/admin/data" element={<AdminData />} />
             <Route path="/admin/map" element={<MapAnalysis />} />
             <Route path="/admin/escolas" element={<AdminSchoolsManagement />} />
+            <Route path="/admin/profissionais" element={<AdminSchoolsManagement />} />
+            <Route path="/admin/projetos" element={<AdminSchoolsManagement />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/performance" element={<PerformanceIndicators />} />
             <Route path="/student/monitoring" element={<StudentMonitoring />} />

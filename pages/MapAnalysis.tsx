@@ -25,34 +25,66 @@ export const MapAnalysis: React.FC = () => {
   const schoolMarkerMap = useRef<Map<string, any>>(new Map());
 
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
-  const [mapStyle, setMapStyle] = useState<'voyager' | 'satellite' | 'dark'>('voyager');
+  const [mapStyle, setMapStyle] = useState<'streets' | 'clean' | 'satellite'>('streets');
   const [isMapReady, setIsMapReady] = useState(false);
   const [searchStreet, setSearchStreet] = useState('');
   const [isLocating, setIsLocating] = useState(false);
 
+  // Helper de Validação Robusta de Coordenadas
+  const isValidCoordinate = (lat: any, lng: any): boolean => {
+    return (
+        typeof lat === 'number' && 
+        !isNaN(lat) && 
+        lat !== 0 && // Ignora coordenadas default 0,0 se necessário
+        typeof lng === 'number' && 
+        !isNaN(lng) && 
+        lng !== 0
+    );
+  };
+
   const tileProviders = {
-    voyager: {
+    streets: { // OpenStreetMap Standard - Melhor para nomes de ruas
+      base: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      labels: null // Labels já embutidos
+    },
+    clean: { // CartoDB Voyager - Melhor para visualização de dados (limpo)
       base: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
       labels: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png'
     },
-    satellite: {
+    satellite: { // Esri World Imagery + Stamen Labels (Alto Contraste)
       base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      labels: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-    },
-    dark: {
-      base: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-      labels: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png'
+      labels: 'https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png' // Requires API key usually, using fallback or Carto dark labels as backup
     }
   };
 
+  // Fallback seguro para labels de satélite se Stamen falhar (usando Carto Dark)
+  const satelliteLabelsFallback = 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+
   const updateMapTiles = (style: keyof typeof tileProviders) => {
     if (!mapRef.current) return;
+    
+    // Remove camadas de tile existentes
     mapRef.current.eachLayer((layer: any) => {
       if (layer instanceof L.TileLayer) mapRef.current.removeLayer(layer);
     });
     
-    L.tileLayer(tileProviders[style].base, { maxZoom: 20 }).addTo(mapRef.current);
-    L.tileLayer(tileProviders[style].labels, { pane: 'shadowPane', zIndex: 1000 }).addTo(mapRef.current);
+    // Adiciona Base
+    L.tileLayer(tileProviders[style].base, { 
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(mapRef.current);
+
+    // Adiciona Labels se existirem separadamente
+    let labelUrl = tileProviders[style].labels;
+    if (style === 'satellite' && !labelUrl) labelUrl = satelliteLabelsFallback;
+
+    if (labelUrl) {
+        L.tileLayer(labelUrl, { 
+            pane: 'shadowPane', 
+            zIndex: 600,
+            opacity: style === 'satellite' ? 0.9 : 1
+        }).addTo(mapRef.current);
+    }
   };
 
   useEffect(() => {
@@ -65,7 +97,10 @@ export const MapAnalysis: React.FC = () => {
         }).setView([-12.5253, -40.2917], 15);
 
         mapRef.current = map;
-        updateMapTiles('voyager');
+        
+        // Define 'streets' como padrão inicial para garantir nomes de ruas visíveis
+        updateMapTiles('streets');
+        
         schoolMarkersRef.current = L.layerGroup().addTo(map);
         studentMarkersRef.current = L.layerGroup().addTo(map);
         
@@ -91,13 +126,15 @@ export const MapAnalysis: React.FC = () => {
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     const shieldIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
 
-    // Plotagem de Unidades Escolares
+    // Plotagem de Unidades Escolares com Validação Robusta
     if (Array.isArray(schools)) {
       schools.forEach(school => {
-          const isValidLat = typeof school.lat === 'number' && !isNaN(school.lat);
-          const isValidLng = typeof school.lng === 'number' && !isNaN(school.lng);
-
-          if (!school || typeof school !== 'object' || !isValidLat || !isValidLng) return;
+          // Validação estrita antes de plotar
+          if (!school || typeof school !== 'object') return;
+          if (!isValidCoordinate(school.lat, school.lng)) {
+              console.warn(`Escola ignorada por coordenadas inválidas: ${school.name}`, school);
+              return;
+          }
 
           const icon = L.divIcon({
               html: `<div class="marker-container">
@@ -129,9 +166,7 @@ export const MapAnalysis: React.FC = () => {
     // Plotagem de Alunos / Mapa de Calor
     if (activeLayer === 'heat') {
         const heatData = (students || [])
-            .filter(s => s && typeof s === 'object' && 
-                         typeof s.lat === 'number' && !isNaN(s.lat) && 
-                         typeof s.lng === 'number' && !isNaN(s.lng))
+            .filter(s => s && typeof s === 'object' && isValidCoordinate(s.lat, s.lng))
             .map(s => [s.lat, s.lng, 1.0]); 
             
         if (typeof L.heatLayer === 'function' && heatData.length > 0) {
@@ -143,10 +178,8 @@ export const MapAnalysis: React.FC = () => {
     } else {
         if (Array.isArray(students)) {
           students.forEach(s => {
-              const isValidLat = typeof s.lat === 'number' && !isNaN(s.lat);
-              const isValidLng = typeof s.lng === 'number' && !isNaN(s.lng);
-
-              if (!s || typeof s !== 'object' || !isValidLat || !isValidLng) return;
+              if (!s || typeof s !== 'object') return;
+              if (!isValidCoordinate(s.lat, s.lng)) return; // Pula silenciosamente alunos sem geo
 
               const marker = L.circleMarker([s.lat, s.lng], {
                   radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
@@ -176,7 +209,8 @@ export const MapAnalysis: React.FC = () => {
     );
 
     if (schoolMatch) {
-       if (typeof schoolMatch.lat === 'number' && !isNaN(schoolMatch.lat) && typeof schoolMatch.lng === 'number' && !isNaN(schoolMatch.lng)) {
+       // Verifica se a escola encontrada tem coordenadas válidas antes de voar
+       if (isValidCoordinate(schoolMatch.lat, schoolMatch.lng)) {
             mapRef.current.flyTo([schoolMatch.lat, schoolMatch.lng], 18, { 
                 duration: 1.5,
                 easeLinearity: 0.25
@@ -189,6 +223,9 @@ export const MapAnalysis: React.FC = () => {
                 setTimeout(() => marker.openPopup(), 1600); // Aguarda o flyTo terminar
             }
             return;
+       } else {
+           addToast(`Unidade encontrada: ${schoolMatch.name}, mas sem coordenadas geográficas válidas no sistema.`, "warning");
+           return;
        }
     }
 
@@ -202,7 +239,7 @@ export const MapAnalysis: React.FC = () => {
     );
 
     if (match) {
-        if (typeof match.lat === 'number' && !isNaN(match.lat) && typeof match.lng === 'number' && !isNaN(match.lng)) {
+        if (isValidCoordinate(match.lat, match.lng)) {
             mapRef.current.flyTo([match.lat, match.lng], 19, { 
                 duration: 1.8,
                 easeLinearity: 0.15
@@ -271,7 +308,7 @@ export const MapAnalysis: React.FC = () => {
       <div className="w-[400px] bg-white border-r border-slate-100 z-20 flex flex-col shrink-0">
         <div className="p-10 border-b border-slate-50 bg-slate-50/30">
             <button onClick={() => navigate('/dashboard')} className="mb-8 text-slate-400 hover:text-emerald-600 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition group">
-                <ArrowLeft size={16} className="group-hover:-translate-x-2 transition-transform" /> Dashboard SME
+                <ArrowLeft size={16} className="group-hover:-translate-x-2 transition-transform" /> Voltar
             </button>
             <div className="flex items-center gap-5">
                 <div className="bg-[#0F172A] p-3 rounded-2xl text-emerald-400 shadow-xl"><Compass size={28} className="animate-spin-slow" /></div>
@@ -309,9 +346,9 @@ export const MapAnalysis: React.FC = () => {
             <section className="space-y-6">
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Globe size={16} className="text-blue-500" /> Modo de Exibição</h3>
                 <div className="flex bg-slate-50 p-2 rounded-2xl border border-slate-100 gap-2">
-                    {(['voyager', 'satellite', 'dark'] as const).map(style => (
+                    {(['streets', 'clean', 'satellite'] as const).map(style => (
                         <button key={style} onClick={() => { setMapStyle(style); updateMapTiles(style); }} className={`flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${mapStyle === style ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400'}`}>
-                            {style === 'voyager' ? 'Ruas' : style === 'satellite' ? 'Satélite' : 'Dark'}
+                            {style === 'streets' ? 'Ruas' : style === 'clean' ? 'Limpo' : 'Satélite'}
                         </button>
                     ))}
                 </div>
