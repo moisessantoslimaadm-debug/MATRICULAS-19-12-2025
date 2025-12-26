@@ -34,6 +34,7 @@ export const MapAnalysis: React.FC = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
+  // Validação robusta de coordenadas geográficas
   const isValidCoordinate = (lat: any, lng: any): boolean => {
     const latNum = Number(lat);
     const lngNum = Number(lng);
@@ -44,7 +45,7 @@ export const MapAnalysis: React.FC = () => {
         !isNaN(lngNum) && 
         isFinite(latNum) &&
         isFinite(lngNum) &&
-        latNum !== 0 &&
+        latNum !== 0 && // Evita coordenadas 0,0 (Null Island)
         lngNum !== 0 &&
         latNum >= -90 && latNum <= 90 &&
         lngNum >= -180 && lngNum <= 180
@@ -151,6 +152,7 @@ export const MapAnalysis: React.FC = () => {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
+          // Validação GeoAudit solicitada
           if (!isValidCoordinate(school.lat, school.lng)) {
               addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name}`, 'warning', `ID: ${school.id}, Lat: ${school.lat}, Lng: ${school.lng}`);
               return;
@@ -447,6 +449,24 @@ export const MapAnalysis: React.FC = () => {
 
         {/* Floating Controls (Bottom Right) */}
         <div className="absolute bottom-8 right-8 z-[300] flex flex-col gap-3">
+            {/* Layer Toggle */}
+            <div className="bg-white p-2 rounded-3xl shadow-luxury border border-slate-100 flex flex-col gap-2 mb-2">
+                <button
+                    onClick={() => setActiveLayer('points')}
+                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                    title="Alunos (Pontos)"
+                >
+                    <Users size={20} />
+                </button>
+                <button
+                    onClick={() => setActiveLayer('heat')}
+                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'heat' ? 'bg-emerald-50 text-emerald-600 shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                    title="Mapa de Calor (Densidade)"
+                >
+                    <Activity size={20} />
+                </button>
+            </div>
+
             <button onClick={() => { mapRef.current.flyTo([-12.5253, -40.2917], 15, { duration: 1.5 }); mapRef.current.invalidateSize(); }} className="p-4 bg-white rounded-2xl shadow-luxury text-slate-600 hover:text-emerald-600 transition-all border border-white hover:border-slate-100" title="Centralizar Rede"><Maximize size={20} /></button>
             <button 
                 onClick={handleLocateMe} 
