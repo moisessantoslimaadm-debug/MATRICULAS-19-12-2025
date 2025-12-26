@@ -8,12 +8,14 @@ import {
   AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { useLog } from '../contexts/LogContext';
 
 declare const L: any;
 
 export const MapAnalysis: React.FC = () => {
   const { schools, students } = useData();
   const { addToast } = useToast();
+  const { addLog } = useLog();
   const navigate = useNavigate();
   
   const mapRef = useRef<any>(null);
@@ -27,7 +29,7 @@ export const MapAnalysis: React.FC = () => {
   const schoolMarkerMap = useRef<Map<string, any>>(new Map());
 
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
-  const [mapStyle, setMapStyle] = useState<'streets' | 'clean' | 'satellite'>('streets');
+  const [mapStyle, setMapStyle] = useState<'streets' | 'clean' | 'satellite'>('clean'); // Default para Clean (Voyager) para melhor leitura
   const [isMapReady, setIsMapReady] = useState(false);
   const [searchStreet, setSearchStreet] = useState('');
   const [isLocating, setIsLocating] = useState(false);
@@ -38,6 +40,7 @@ export const MapAnalysis: React.FC = () => {
     const latNum = Number(lat);
     const lngNum = Number(lng);
     
+    // Verifica se é número, se não é NaN, se é finito e se está dentro dos limites geográficos
     return (
         typeof latNum === 'number' &&
         typeof lngNum === 'number' &&
@@ -45,7 +48,7 @@ export const MapAnalysis: React.FC = () => {
         !isNaN(lngNum) && 
         isFinite(latNum) &&
         isFinite(lngNum) &&
-        latNum !== 0 && 
+        latNum !== 0 && // Ignora 0,0 (Null Island/Default muitas vezes usado como placeholder)
         lngNum !== 0 &&
         latNum >= -90 && latNum <= 90 &&
         lngNum >= -180 && lngNum <= 180
@@ -68,7 +71,8 @@ export const MapAnalysis: React.FC = () => {
         if (!response.ok) return null;
         
         const data = await response.json();
-        if (data && data.length > 0) {
+        // Verificação defensiva extra para garantir que data[0] existe antes de acessar propriedades
+        if (data && Array.isArray(data) && data.length > 0 && data[0]) {
             return {
                 lat: parseFloat(data[0].lat),
                 lng: parseFloat(data[0].lon),
@@ -84,22 +88,19 @@ export const MapAnalysis: React.FC = () => {
   };
 
   const tileProviders = {
-    streets: { // OpenStreetMap Standard - Melhor para nomes de ruas
+    streets: { // OpenStreetMap Standard - Clássico, colorido
       base: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      labels: null // Labels já embutidos
+      labels: null 
     },
-    clean: { // CartoDB Voyager - Melhor para visualização de dados (limpo)
-      base: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-      labels: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png'
+    clean: { // CartoDB Voyager - Otimizado para visualização de dados + Nomes de ruas claros
+      base: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      labels: null // Labels já inclusos na base Voyager para garantir sincronia e contraste
     },
-    satellite: { // Esri World Imagery + Stamen Labels (Alto Contraste)
+    satellite: { // Esri World Imagery + Carto Voyager Labels (Melhor leitura que Stamen)
       base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      labels: 'https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png' // Requires API key usually, using fallback or Carto dark labels as backup
+      labels: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png' 
     }
   };
-
-  // Fallback seguro para labels de satélite se Stamen falhar (usando Carto Dark)
-  const satelliteLabelsFallback = 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
 
   const updateMapTiles = (style: keyof typeof tileProviders) => {
     if (!mapRef.current) return;
@@ -112,18 +113,15 @@ export const MapAnalysis: React.FC = () => {
     // Adiciona Base
     L.tileLayer(tileProviders[style].base, { 
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }).addTo(mapRef.current);
 
     // Adiciona Labels se existirem separadamente
-    let labelUrl = tileProviders[style].labels;
-    if (style === 'satellite' && !labelUrl) labelUrl = satelliteLabelsFallback;
-
-    if (labelUrl) {
-        L.tileLayer(labelUrl, { 
+    if (tileProviders[style].labels) {
+        L.tileLayer(tileProviders[style].labels, { 
             pane: 'shadowPane', 
             zIndex: 600,
-            opacity: style === 'satellite' ? 0.9 : 1
+            opacity: style === 'satellite' ? 1 : 0.8
         }).addTo(mapRef.current);
     }
   };
@@ -134,13 +132,13 @@ export const MapAnalysis: React.FC = () => {
             attributionControl: false,
             zoomControl: false,
             maxZoom: 20,
-            minZoom: 12
+            minZoom: 14 // Zoom mínimo aumentado para garantir que nomes de ruas locais apareçam
         }).setView([-12.5253, -40.2917], 15);
 
         mapRef.current = map;
         
-        // Define 'streets' como padrão inicial para garantir nomes de ruas visíveis
-        updateMapTiles('streets');
+        // Define 'clean' (Voyager) como padrão inicial para melhor legibilidade
+        updateMapTiles('clean');
         
         schoolMarkersRef.current = L.layerGroup().addTo(map);
         studentMarkersRef.current = L.layerGroup().addTo(map);
@@ -170,13 +168,18 @@ export const MapAnalysis: React.FC = () => {
     // Plotagem de Unidades Escolares com Validação Robusta
     if (Array.isArray(schools)) {
       schools.forEach(school => {
-          // Validação estrita antes de plotar
+          // Validação estrita antes de plotar: Garante que 'school' não é null antes de ler propriedades
           if (!school || typeof school !== 'object') return;
           
-          // CHECKPOINT: Garante que só plotamos se a coordenada for válida
+          // CHECKPOINT: Validação Robusta de Coordenadas
+          // Garante que só plotamos se a coordenada for um número válido dentro dos limites geográficos
           if (!isValidCoordinate(school.lat, school.lng)) {
-              console.warn(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name} (${school.lat}, ${school.lng})`, school);
-              return;
+              addLog(
+                  `[GeoAudit] Escola ignorada: Coordenadas inválidas para ${school.name}`, 
+                  'warning', 
+                  `ID: ${school.id}, Lat: ${school.lat}, Lng: ${school.lng}`
+              );
+              return; // Ignora esta iteração para não quebrar o mapa
           }
 
           const icon = L.divIcon({
@@ -190,6 +193,7 @@ export const MapAnalysis: React.FC = () => {
               iconSize: [44, 44]
           });
 
+          // Criação segura do marcador, pois coordenadas já foram validadas
           const marker = L.marker([school.lat, school.lng], { icon })
             .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
                           <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
@@ -201,7 +205,7 @@ export const MapAnalysis: React.FC = () => {
                         </div>`)
             .on('click', () => {
                 // Zoom suave e centralização ao clicar no marcador
-                // Dupla verificação para segurança no callback
+                // Revalidação defensiva (embora redundante aqui, garante segurança em runtime)
                 if (isValidCoordinate(school.lat, school.lng)) {
                     mapRef.current.flyTo([school.lat, school.lng], 18, { 
                         duration: 1.5,
@@ -265,9 +269,12 @@ export const MapAnalysis: React.FC = () => {
     }
 
     // 1. Prioridade: Buscar Unidades Escolares (Base Local)
+    // Verificação defensiva: s && s.name para evitar crash em objetos mal formados
     const schoolMatch = schools.find(s => 
-      s.name.toLowerCase().includes(term) || 
-      s.address.toLowerCase().includes(term)
+      s && typeof s === 'object' && (
+        (s.name && s.name.toLowerCase().includes(term)) || 
+        (s.address && s.address.toLowerCase().includes(term))
+      )
     );
 
     if (schoolMatch) {

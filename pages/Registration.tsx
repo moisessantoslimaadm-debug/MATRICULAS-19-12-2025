@@ -68,9 +68,49 @@ export const Registration: React.FC = () => {
     );
   };
 
+  const validateCurrentStep = () => {
+    if (formState.step === 1) {
+        if (!formState.student.fullName.trim() || !formState.student.birthDate || !formState.student.cpf.trim()) {
+            addToast("Por favor, preencha os dados obrigatórios do aluno (Nome, Nascimento, CPF).", "warning");
+            return false;
+        }
+    }
+    if (formState.step === 2) {
+        if (!formState.guardian.fullName.trim() || !formState.guardian.phone.trim()) {
+            addToast("Dados do responsável (Nome, Telefone) são obrigatórios.", "warning");
+            return false;
+        }
+    }
+    if (formState.step === 3) {
+        const { street, number, neighborhood, zipCode } = formState.address;
+        
+        if (!street.trim()) {
+            addToast("Informe o logradouro (Rua/Avenida).", "warning");
+            return false;
+        }
+        if (!number.trim()) {
+            addToast("Informe o número da residência (ou 'S/N' se não houver).", "warning");
+            return false;
+        }
+        if (!neighborhood.trim()) {
+            addToast("Informe o bairro de residência.", "warning");
+            return false;
+        }
+        
+        const cleanCep = zipCode.replace(/\D/g, '');
+        if (cleanCep.length !== 8) {
+            addToast("O CEP deve conter 8 dígitos numéricos válidos.", "warning");
+            return false;
+        }
+    }
+    return true;
+  };
+
   const nextStep = () => {
-    setFormState(prev => ({ ...prev, step: prev.step + 1 }));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (validateCurrentStep()) {
+        setFormState(prev => ({ ...prev, step: prev.step + 1 }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -234,26 +274,32 @@ export const Registration: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="grid md:grid-cols-2 gap-10">
-                          <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Endereço Residencial</label>
-                              <input type="text" required value={formState.address.street} onChange={e => handleInputChange('address', 'street', e.target.value)} className="input-premium" placeholder="Rua, Número..." />
+                      <div className="grid md:grid-cols-4 gap-6">
+                          <div className="md:col-span-3 space-y-4">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Logradouro</label>
+                              <input type="text" required value={formState.address.street} onChange={e => handleInputChange('address', 'street', e.target.value)} className="input-premium" placeholder="Rua, Avenida, Travessa..." />
                           </div>
                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cidade</label>
-                              <input type="text" readOnly value={formState.address.city} className="input-premium !bg-slate-50 text-slate-500 cursor-not-allowed" />
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Número</label>
+                              <input type="text" required value={formState.address.number} onChange={e => handleInputChange('address', 'number', e.target.value)} className="input-premium" placeholder="123" />
                           </div>
                       </div>
-                      <div className="grid md:grid-cols-2 gap-10">
+                      
+                      <div className="grid md:grid-cols-3 gap-6">
                           <div className="space-y-4">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Bairro</label>
                               <input type="text" required value={formState.address.neighborhood} onChange={e => handleInputChange('address', 'neighborhood', e.target.value)} className="input-premium" />
                           </div>
                           <div className="space-y-4">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">CEP</label>
-                              <input type="text" required value={formState.address.zipCode} onChange={e => handleInputChange('address', 'zipCode', e.target.value)} className="input-premium" />
+                              <input type="text" required value={formState.address.zipCode} onChange={e => handleInputChange('address', 'zipCode', e.target.value)} className="input-premium" placeholder="XXXXX-XXX" />
+                          </div>
+                          <div className="space-y-4">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cidade</label>
+                              <input type="text" readOnly value={formState.address.city} className="input-premium !bg-slate-50 text-slate-500 cursor-not-allowed" />
                           </div>
                       </div>
+
                       <label className="flex items-center gap-6 p-8 bg-blue-50/50 rounded-[2.5rem] border border-blue-100 cursor-pointer group hover:bg-white hover:shadow-luxury transition-all">
                           <input type="checkbox" className="w-8 h-8 rounded-xl text-blue-600 focus:ring-8 focus:ring-blue-50 border-blue-200" checked={formState.student.needsTransport} onChange={e => handleInputChange('student', 'needsTransport', e.target.checked)} />
                           <div className="flex items-center gap-5">
