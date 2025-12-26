@@ -152,6 +152,11 @@ export const AdminSchoolsManagement: React.FC = () => {
       }
   };
 
+  // Helper para buscar participantes do projeto
+  const getProjectParticipants = (projectId: string) => {
+      return students.filter(s => s.projects && s.projects.includes(projectId));
+  };
+
   // --------------------------------------------------------------------------------
   // VIEW 1: LISTA DE ESCOLAS (ROOT)
   // --------------------------------------------------------------------------------
@@ -441,22 +446,58 @@ export const AdminSchoolsManagement: React.FC = () => {
                         </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {schoolProjects.map(proj => (
-                            <div key={proj.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-luxury flex gap-8 items-center relative overflow-hidden group">
-                                <div className="w-32 h-32 rounded-[2rem] bg-slate-100 flex-shrink-0 overflow-hidden">
-                                    {proj.image ? <img src={proj.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Project" /> : <Star className="h-10 w-10 text-slate-300 m-auto" />}
-                                </div>
-                                <div>
-                                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase tracking-widest mb-3 inline-block">{proj.category}</span>
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">{proj.name}</h3>
-                                    <p className="text-[10px] font-medium text-slate-400 leading-relaxed max-w-sm">{proj.description}</p>
-                                    <div className="mt-4 flex items-center gap-4">
+                        {schoolProjects.map(proj => {
+                            const participants = getProjectParticipants(proj.id);
+                            return (
+                                <div key={proj.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-luxury flex flex-col gap-6 relative overflow-hidden group">
+                                    <div className="flex gap-8 items-start">
+                                        <div className="w-32 h-32 rounded-[2rem] bg-slate-100 flex-shrink-0 overflow-hidden">
+                                            {proj.image ? <img src={proj.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Project" /> : <Star className="h-10 w-10 text-slate-300 m-auto" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase tracking-widest mb-3 inline-block">{proj.category}</span>
+                                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">{proj.name}</h3>
+                                            <p className="text-[10px] font-medium text-slate-400 leading-relaxed max-w-sm line-clamp-3">{proj.description}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* LISTA DE PARTICIPANTES NOMINAIS */}
+                                    <div className="mt-4 pt-4 border-t border-slate-50 w-full">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Users className="h-4 w-4 text-emerald-600" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                Participantes ({participants.length})
+                                            </span>
+                                        </div>
+                                        
+                                        {participants.length > 0 ? (
+                                            <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                                                {participants.map(p => (
+                                                    <div key={p.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[10px] font-black text-emerald-600 border border-slate-200 shrink-0">
+                                                            {p.name.charAt(0)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[10px] font-bold text-slate-700 leading-tight truncate">{p.name}</p>
+                                                            <p className="text-[8px] font-bold text-slate-400 uppercase flex items-center gap-1 mt-0.5">
+                                                                <Building2 className="h-2 w-2" /> {p.school || 'Unidade não alocada'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] text-slate-400 italic pl-1">Nenhum aluno vinculado.</p>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 flex items-center gap-4 justify-end">
                                         <button onClick={() => handleOpenEdit(proj)} className="text-[10px] font-black uppercase text-slate-400 hover:text-emerald-600 transition-colors">Gerenciar</button>
                                         <button onClick={() => removeProject(proj.id)} className="text-[10px] font-black uppercase text-slate-400 hover:text-red-600 transition-colors">Arquivar</button>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
