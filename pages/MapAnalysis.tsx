@@ -36,20 +36,25 @@ export const MapAnalysis: React.FC = () => {
 
   // Validação robusta de coordenadas geográficas
   const isValidCoordinate = (lat: any, lng: any): boolean => {
-    const latNum = Number(lat);
-    const lngNum = Number(lng);
-    return (
-        typeof latNum === 'number' &&
-        typeof lngNum === 'number' &&
-        !isNaN(latNum) && 
-        !isNaN(lngNum) && 
-        isFinite(latNum) &&
-        isFinite(lngNum) &&
-        latNum !== 0 && // Evita coordenadas 0,0 (Null Island) ou não inicializadas
-        lngNum !== 0 &&
-        latNum >= -90 && latNum <= 90 &&
-        lngNum >= -180 && lngNum <= 180
-    );
+    try {
+        if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
+        const latNum = Number(lat);
+        const lngNum = Number(lng);
+        return (
+            typeof latNum === 'number' &&
+            typeof lngNum === 'number' &&
+            !isNaN(latNum) && 
+            !isNaN(lngNum) && 
+            isFinite(latNum) &&
+            isFinite(lngNum) &&
+            latNum !== 0 && 
+            lngNum !== 0 &&
+            latNum >= -90 && latNum <= 90 &&
+            lngNum >= -180 && lngNum <= 180
+        );
+    } catch (e) {
+        return false;
+    }
   };
 
   const geocodeAddress = async (query: string) => {
@@ -152,9 +157,8 @@ export const MapAnalysis: React.FC = () => {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
-          // Validação GeoAudit solicitada
           if (!isValidCoordinate(school.lat, school.lng)) {
-              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas ou fora dos limites: ${school.name}`, 'warning', `ID: ${school.id}, Lat: ${school.lat}, Lng: ${school.lng}`);
+              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name || 'Sem Nome'}`, 'warning');
               return;
           }
 
@@ -179,6 +183,7 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .on('click', () => {
+                // Implementação do Zoom Suave (FlyTo) ao clicar
                 if (isValidCoordinate(school.lat, school.lng)) {
                     mapRef.current.flyTo([school.lat, school.lng], 18, { 
                         duration: 1.5,
