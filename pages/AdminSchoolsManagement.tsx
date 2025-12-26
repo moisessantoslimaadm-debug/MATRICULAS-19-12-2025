@@ -5,7 +5,7 @@ import {
   Building, Users, Layers, Star, Plus, Search, 
   Trash2, Briefcase, X, Save, MapPin, Building2, 
   ArrowRight, ArrowLeft, GraduationCap, UserCheck, 
-  Stethoscope, PaintBucket, Lock, Edit3
+  Edit3, LayoutDashboard, Home
 } from 'lucide-react';
 import { Professional, Project, School, SchoolType } from '../types';
 
@@ -27,7 +27,7 @@ export const AdminSchoolsManagement: React.FC = () => {
     professionals, projects, students, schools, 
     addProfessional, updateProfessional, removeProfessional,
     addProject, updateProject, removeProject, 
-    addSchool, updateSchool, // Usando updateSchool
+    addSchool, updateSchool, 
     removeStudent
   } = useData();
   
@@ -42,7 +42,7 @@ export const AdminSchoolsManagement: React.FC = () => {
   // Modais
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
-  const [isEditSchoolMode, setIsEditSchoolMode] = useState(false); // Flag para edição de escola
+  const [isEditSchoolMode, setIsEditSchoolMode] = useState(false); 
   
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({ status: 'Ativo' });
@@ -54,7 +54,6 @@ export const AdminSchoolsManagement: React.FC = () => {
   [schools, schoolIdParam]);
 
   // --- FILTROS DE DADOS DA ESCOLA SELECIONADA ---
-
   const schoolStudents = useMemo(() => {
     if (!selectedSchool) return [];
     return students.filter(s => 
@@ -74,7 +73,6 @@ export const AdminSchoolsManagement: React.FC = () => {
   }, [projects, searchTerm]);
 
   // --- AÇÕES ---
-
   const handleOpenSchool = (school: School) => {
     navigate(`/admin/escolas?schoolId=${school.id}&view=overview`);
     setSearchTerm('');
@@ -85,7 +83,10 @@ export const AdminSchoolsManagement: React.FC = () => {
     setSearchTerm('');
   };
 
-  // Submit Genérico (Projetos)
+  const handleGoToDashboard = () => {
+      navigate('/dashboard');
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSchool) return;
@@ -97,7 +98,6 @@ export const AdminSchoolsManagement: React.FC = () => {
     setIsFormModalOpen(false);
   };
 
-  // Submit Escola (Criação ou Edição)
   const handleSchoolSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (isEditSchoolMode && selectedSchool) {
@@ -113,17 +113,13 @@ export const AdminSchoolsManagement: React.FC = () => {
       setIsEditSchoolMode(false);
   };
 
-  // Prepara modal para EDIÇÃO de escola
   const handleEditSchool = () => {
       if (!selectedSchool) return;
-      setSchoolFormData({
-          ...selectedSchool
-      });
+      setSchoolFormData({ ...selectedSchool });
       setIsEditSchoolMode(true);
       setIsSchoolModalOpen(true);
   };
 
-  // Prepara modal para CRIAÇÃO de escola
   const handleCreateSchool = () => {
       setSchoolFormData(INITIAL_SCHOOL_FORM);
       setIsEditSchoolMode(false);
@@ -142,7 +138,6 @@ export const AdminSchoolsManagement: React.FC = () => {
     setIsFormModalOpen(true);
   };
 
-  // Manipulação de Tipos de Escola
   const toggleSchoolType = (type: SchoolType) => {
       const currentTypes = schoolFormData.types || [];
       if (currentTypes.includes(type)) {
@@ -152,7 +147,6 @@ export const AdminSchoolsManagement: React.FC = () => {
       }
   };
 
-  // Helper para buscar participantes do projeto
   const getProjectParticipants = (projectId: string) => {
       return students.filter(s => s.projects && s.projects.includes(projectId));
   };
@@ -162,10 +156,13 @@ export const AdminSchoolsManagement: React.FC = () => {
   // --------------------------------------------------------------------------------
   if (!selectedSchool) {
     return (
-        <div className="min-h-screen bg-[#f8fafc] py-20 px-12 page-transition">
+        <div className="min-h-screen bg-[#f8fafc] py-20 px-8 lg:px-12 page-transition">
             <div className="max-w-[1600px] mx-auto space-y-12">
                 <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-12 border-b border-slate-200 pb-16 no-print">
                     <div className="space-y-6">
+                        <button onClick={handleGoToDashboard} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group w-fit mb-4">
+                            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Voltar ao Painel
+                        </button>
                         <div className="flex items-center gap-6">
                             <div className="bg-[#064e3b] p-5 rounded-[2rem] text-white shadow-2xl rotate-3"><Building className="h-10 w-10" /></div>
                             <div>
@@ -229,6 +226,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                         </div>
                         
                         <form onSubmit={handleSchoolSubmit} className="space-y-8">
+                            {/* ... FORM CONTENT ... */}
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Instituição</label>
                                 <input type="text" required value={schoolFormData.name} onChange={e => setSchoolFormData({...schoolFormData, name: e.target.value.toUpperCase()})} className="input-premium" placeholder="EX: ESCOLA MUNICIPAL..." />
@@ -316,9 +314,14 @@ export const AdminSchoolsManagement: React.FC = () => {
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-50 rounded-full blur-[120px] -mr-64 -mt-64 opacity-60"></div>
                 <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start gap-10">
                     <div className="flex flex-col gap-6">
-                         <button onClick={handleBackToUnits} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group w-fit">
-                            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Voltar para Rede
-                        </button>
+                         <div className="flex items-center gap-3">
+                             <button onClick={handleGoToDashboard} className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 hover:bg-emerald-50 transition">
+                                <LayoutDashboard className="h-3.5 w-3.5" /> Painel
+                             </button>
+                             <button onClick={handleBackToUnits} className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 hover:bg-emerald-50 transition">
+                                <ArrowLeft className="h-3.5 w-3.5" /> Voltar à Rede
+                             </button>
+                         </div>
                         <div className="flex items-center gap-8">
                             <div className="w-24 h-24 rounded-[2rem] bg-slate-900 border-[6px] border-white shadow-2xl overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform duration-700">
                                 <img src={selectedSchool.image} className="w-full h-full object-cover" alt="School" />

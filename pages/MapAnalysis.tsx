@@ -276,7 +276,7 @@ export const MapAnalysis: React.FC = () => {
             <div className="flex items-center gap-5">
                 <div className="bg-[#0F172A] p-3 rounded-2xl text-emerald-400 shadow-xl"><Compass size={28} className="animate-spin-slow" /></div>
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">GeoBI.</h1>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Geolocalização <br/>do Aluno.</h1>
                     <p className="text-[10px] text-slate-400 mt-2 uppercase font-black tracking-ultra">Inteligência Territorial</p>
                 </div>
             </div>

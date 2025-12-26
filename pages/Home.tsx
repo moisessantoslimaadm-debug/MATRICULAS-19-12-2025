@@ -72,7 +72,7 @@ export const Home: React.FC = () => {
               
               <div className="space-y-8">
                 <h1 className="text-8xl md:text-[100px] font-black text-slate-900 tracking-tighter uppercase leading-[0.8] text-display">
-                  Itaberaba <br/>
+                  SME <br/>
                   <span className="text-emerald-600">Digital.</span>
                 </h1>
                 <p className="text-xl text-slate-500 max-w-xl leading-relaxed font-medium">

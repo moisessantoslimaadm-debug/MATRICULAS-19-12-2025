@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
   Search, Trash2, ChevronLeft, ChevronRight, 
-  Edit3, Download, Database, X, Save, ShieldCheck
+  Edit3, Download, Database, X, Save, ShieldCheck, Upload
 } from 'lucide-react';
-import { RegistryStudent } from '../types';
+import { RegistryStudent, School } from '../types';
 
 export const AdminData: React.FC = () => {
-  const { students, updateStudent, removeStudent } = useData();
+  const { students, updateStudent, removeStudent, addStudent, addSchool } = useData();
   const { addToast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingStudent, setEditingStudent] = useState<RegistryStudent | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = students.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -70,6 +71,104 @@ export const AdminData: React.FC = () => {
     addToast("Arquivo CSV gerado com sucesso.", "success");
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        const text = event.target?.result as string;
+        if (!text) return;
+
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) {
+            addToast("Arquivo vazio ou sem dados.", "warning");
+            return;
+        }
+
+        // Detect separator based on first line
+        const firstLine = lines[0];
+        const separator = firstLine.includes(';') ? ';' : ',';
+        const headers = firstLine.split(separator).map(h => h.trim().toUpperCase().replace(/"/g, ''));
+
+        let importedCount = 0;
+        let type = 'unknown';
+
+        // Heuristic detection based on headers
+        if (headers.includes('NOME_COMPLETO') || headers.includes('ALUNO') || headers.includes('CPF')) {
+            type = 'student';
+        } else if (headers.includes('NOME_ESCOLA') || headers.includes('ESCOLA') || headers.includes('INEP')) {
+            type = 'school';
+        }
+
+        if (type === 'unknown') {
+            addToast("Formato não reconhecido. Use cabeçalhos padrão (ex: NOME_COMPLETO, CPF).", "error");
+            return;
+        }
+
+        addToast(`Iniciando importação de ${lines.length - 1} registros de ${type === 'student' ? 'Alunos' : 'Escolas'}...`, "info");
+
+        try {
+            for (let i = 1; i < lines.length; i++) {
+                const rowValues = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
+                if (rowValues.length < 2) continue; // Skip empty lines
+
+                const row: any = {};
+                headers.forEach((h, idx) => {
+                    row[h] = rowValues[idx];
+                });
+
+                if (type === 'student') {
+                    const newStudent: RegistryStudent = {
+                        id: row['ID_SISTEMA'] || `imp-std-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+                        name: (row['NOME_COMPLETO'] || row['NOME'] || 'ALUNO IMPORTADO').toUpperCase(),
+                        cpf: row['CPF'] || '',
+                        birthDate: row['DATA_NASCIMENTO'] || '',
+                        enrollmentId: row['MATRICULA_RA'] || `MAT-${Math.floor(Math.random() * 900000) + 100000}`,
+                        inepId: row['INEP_ID'] || '',
+                        school: row['ESCOLA_ATUAL'] || row['ESCOLA'] || 'Não Alocado',
+                        status: (row['STATUS_MATRICULA'] || 'Pendente') as any,
+                        className: row['TURMA'] || '',
+                        classSchedule: row['TURNO'] || '',
+                        specialNeeds: row['AEE_DEFICIENCIA'] === 'SIM' || row['AEE_DEFICIENCIA'] === 'TRUE',
+                        transportRequest: row['TRANSPORTE_PUBLICO'] === 'SIM' || row['TRANSPORTE_PUBLICO'] === 'TRUE',
+                        residenceZone: (row['ZONA_RESIDENCIAL'] || 'Urbana') as any,
+                        lat: -12.52, // Coordenada padrão
+                        lng: -40.29
+                    };
+                    await addStudent(newStudent);
+                } else if (type === 'school') {
+                    const newSchool: School = {
+                        id: row['ID'] || `imp-sch-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+                        name: (row['NOME_ESCOLA'] || row['ESCOLA'] || 'NOVA ESCOLA').toUpperCase(),
+                        inep: row['INEP'] || '',
+                        address: row['ENDERECO'] || 'Endereço não informado',
+                        availableSlots: parseInt(row['VAGAS'] || '0') || 400,
+                        lat: parseFloat(row['LAT'] || '-12.5265'),
+                        lng: parseFloat(row['LNG'] || '-40.2925'),
+                        types: [],
+                        hasAEE: row['TEM_AEE'] === 'SIM',
+                        image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&q=80',
+                        rating: 5
+                    };
+                    await addSchool(newSchool);
+                }
+                importedCount++;
+            }
+            addToast(`Processamento concluído: ${importedCount} registros importados.`, "success");
+        } catch (error) {
+            console.error(error);
+            addToast("Erro crítico ao processar arquivo CSV.", "error");
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-6 page-transition">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -78,9 +177,21 @@ export const AdminData: React.FC = () => {
             <h1 className="text-xl font-bold text-slate-900 uppercase">Censo <span className="text-emerald-600">Nominal</span></h1>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base de dados síncrona SME</p>
           </div>
-          <button onClick={handleExportCSV} className="btn-primary !h-8 !text-[9px] hover:!bg-emerald-700">
-            <Download className="h-3 w-3" /> Exportar CSV
-          </button>
+          <div className="flex gap-2">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                accept=".csv" 
+                className="hidden" 
+            />
+            <button onClick={handleImportClick} className="btn-secondary !h-8 !text-[9px] hover:border-emerald-300">
+                <Upload className="h-3 w-3" /> Importar CSV
+            </button>
+            <button onClick={handleExportCSV} className="btn-primary !h-8 !text-[9px] hover:!bg-emerald-700">
+                <Download className="h-3 w-3" /> Exportar CSV
+            </button>
+          </div>
         </header>
 
         <div className="card-requinte overflow-hidden">

@@ -7,14 +7,11 @@ import {
   ChevronRight, Zap, Sparkles, Mail, Key, Fingerprint
 } from 'lucide-react';
 import { UserRole } from '../types';
-import { MOCK_STUDENT_REGISTRY } from '../constants';
-import { useData } from '../contexts/DataContext'; // Importando para acesso aos alunos
+import { useData } from '../contexts/DataContext';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
-  // Acesso direto aos dados para validar login de aluno (mock/local)
-  // Em produção, isso seria uma query no backend
   const { students } = useData(); 
   
   const [email, setEmail] = useState('');
@@ -27,32 +24,33 @@ export const Login: React.FC = () => {
 
     const inputUser = email.trim().toUpperCase();
     const inputPass = password.trim();
-    const cleanInputUser = inputUser.replace(/\D/g, ''); // Apenas números para CPF/Matrícula
+    const cleanInputUser = inputUser.replace(/\D/g, ''); 
 
     let mockUser = null;
-    let redirectPath = '/dashboard';
+    let redirectPath = '/dashboard'; // Default para Admin/SME
 
     // --- LÓGICA DE LOGIN POR IDENTIFICADOR (ALUNO) ---
     // Verifica se o input corresponde a um CPF ou Matrícula de aluno existente
-    const studentMatch = students.find(s => {
-        const sCpf = s.cpf.replace(/\D/g, '');
-        const sMat = s.enrollmentId ? s.enrollmentId.replace(/\D/g, '') : '';
-        return sCpf === cleanInputUser || sMat === cleanInputUser;
-    });
+    // FIX: Só busca aluno se houver números digitados, evitando que "SME" (que vira "") dê match
+    let studentMatch = null;
+    if (cleanInputUser.length > 3) {
+        studentMatch = students.find(s => {
+            const sCpf = s.cpf.replace(/\D/g, '');
+            const sMat = s.enrollmentId ? s.enrollmentId.replace(/\D/g, '') : '';
+            return sCpf === cleanInputUser || sMat === cleanInputUser;
+        });
+    }
 
     if (studentMatch) {
-        // Validação Simplificada para Aluno:
-        // Se encontrou o aluno, verifica se a senha é o próprio CPF (para facilitar o teste conforme pedido)
-        // Ou se a senha é uma data de nascimento (formato simples)
         const sCpf = studentMatch.cpf.replace(/\D/g, '');
         
-        // Regra: Senha pode ser o CPF ou '1234' (default demo)
+        // Regra: Senha pode ser o CPF ou '1234'
         if (inputPass === sCpf || inputPass === '1234') {
             mockUser = {
                 id: studentMatch.id,
                 name: studentMatch.name,
                 role: UserRole.STUDENT,
-                email: 'aluno@rede.ba.gov.br', // Placeholder
+                email: 'aluno@rede.ba.gov.br',
                 photo: studentMatch.photo
             };
             redirectPath = `/student/monitoring?id=${studentMatch.id}`;
@@ -71,6 +69,7 @@ export const Login: React.FC = () => {
                 role: UserRole.ADMIN_SME,
                 email: 'sme@itaberaba.ba.gov.br'
             };
+            redirectPath = '/dashboard'; // Garante Dashboard
         }
         else if (inputUser === 'DIRETOR' && inputPass === '1234') {
             mockUser = {
@@ -81,6 +80,7 @@ export const Login: React.FC = () => {
                 schoolName: 'CENTRO MUNICIPAL DE EDUCACAO BASICA',
                 email: 'direcao@itaberaba.ba.gov.br'
             };
+            redirectPath = '/dashboard'; // Garante Dashboard
         }
         else if (inputUser === 'PROFESSOR' && inputPass === '1234') {
             mockUser = {
@@ -106,7 +106,6 @@ export const Login: React.FC = () => {
     }
 
     // --- FALBACK: AUTENTICAÇÃO REAL (SUPABASE) ---
-    // Se não for aluno nem usuário demo, tenta Supabase
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.includes('@') ? email : `${email}@itaberaba.ba.gov.br`,

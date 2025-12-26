@@ -3,7 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
   Save, Search, Loader2, ClipboardCheck, MessageSquare, 
-  CheckCircle, XCircle, ChevronLeft, Calendar, Edit3, User
+  CheckCircle, XCircle, ChevronLeft, Calendar, Edit3, User, Home
 } from 'lucide-react';
 import { useNavigate } from '../router';
 import { TeacherNote } from '../types';
@@ -119,14 +119,23 @@ export const TeacherJournal: React.FC = () => {
       navigate(-1);
   };
 
+  const handleHome = () => {
+      navigate('/journal'); // Ou Dashboard se for o caso
+  };
+
   return (
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-8 page-transition">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-16 gap-10">
           <div className="space-y-8">
-            <button onClick={handleBack} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
-                <ChevronLeft className="h-4 w-4 group-hover:-translate-x-2 transition-transform" /> Voltar
-            </button>
+            <div className="flex gap-4">
+                <button onClick={handleBack} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
+                    <ChevronLeft className="h-4 w-4 group-hover:-translate-x-2 transition-transform" /> Voltar
+                </button>
+                 <button onClick={handleHome} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
+                    <Home className="h-4 w-4" /> Início
+                </button>
+            </div>
             <div>
                 <div className="flex items-center gap-4 mb-5">
                   <ClipboardCheck className="h-7 w-7 text-emerald-600" />
