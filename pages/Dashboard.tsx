@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { MUNICIPALITY_NAME } from '../constants';
 
-const MetricCard = ({ title, value, icon: Icon, colorClass, trend, sub }: any) => (
+// Otimização: React.memo evita re-render se as props não mudarem
+const MetricCard = React.memo(({ title, value, icon: Icon, colorClass, trend, sub }: any) => (
     <div className="card-requinte p-10 flex flex-col justify-between h-48 border-l-[12px]" style={{ borderLeftColor: 'currentColor' }}>
         <div className="flex justify-between items-start">
             <div className={`p-4 rounded-[1.5rem] ${colorClass} text-white shadow-2xl`}><Icon className="h-6 w-6" /></div>
@@ -28,7 +29,7 @@ const MetricCard = ({ title, value, icon: Icon, colorClass, trend, sub }: any) =
             </div>
         </div>
     </div>
-);
+));
 
 export const Dashboard: React.FC = () => {
   const { students, schools, isLoading } = useData();

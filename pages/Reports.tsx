@@ -8,7 +8,8 @@ import {
   Building
 } from 'lucide-react';
 
-const CustomPieChart = ({ data }: { data: { label: string; value: number; color: string }[] }) => {
+// Otimização: Gráfico memoizado para evitar recalculo visual desnecessário
+const CustomPieChart = React.memo(({ data }: { data: { label: string; value: number; color: string }[] }) => {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
   let cumulativePercent = 0;
 
@@ -66,9 +67,10 @@ const CustomPieChart = ({ data }: { data: { label: string; value: number; color:
       </div>
     </div>
   );
-};
+});
 
-const HighDensityStat = ({ title, value, icon: Icon, colorClass, sub }: any) => (
+// Otimização: Componente estático memoizado
+const HighDensityStat = React.memo(({ title, value, icon: Icon, colorClass, sub }: any) => (
     <div className="card-requinte !p-12 flex flex-col justify-between group h-64">
         <div className="flex justify-between items-start">
             <div className={`p-5 rounded-[2rem] ${colorClass} text-white shadow-2xl transition-all group-hover:rotate-12 group-hover:scale-110 duration-700`}>
@@ -84,7 +86,7 @@ const HighDensityStat = ({ title, value, icon: Icon, colorClass, sub }: any) => 
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{sub}</p>
         </div>
     </div>
-);
+));
 
 export const Reports: React.FC = () => {
     const { schools, students } = useData();

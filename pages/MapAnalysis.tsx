@@ -91,8 +91,12 @@ export const MapAnalysis: React.FC = () => {
     // Plotagem de Unidades Escolares com verificação robusta
     if (Array.isArray(schools)) {
       schools.forEach(school => {
-          // Check for null/undefined object AND valid numeric coordinates
-          if (!school || typeof school !== 'object' || typeof school.lat !== 'number' || typeof school.lng !== 'number') {
+          // Validação Robusta: Garante que é objeto, e que lat/lng são números e NÃO SÃO NaN
+          const isValidLat = typeof school.lat === 'number' && !isNaN(school.lat);
+          const isValidLng = typeof school.lng === 'number' && !isNaN(school.lng);
+
+          if (!school || typeof school !== 'object' || !isValidLat || !isValidLng) {
+            console.warn(`[MapAnalysis] Escola ignorada por coordenadas inválidas: ${school?.name}`);
             return;
           }
 
@@ -123,7 +127,9 @@ export const MapAnalysis: React.FC = () => {
     // Plotagem de Alunos / Mapa de Calor com verificação robusta
     if (activeLayer === 'heat') {
         const heatData = (students || [])
-            .filter(s => s && typeof s === 'object' && typeof s.lat === 'number' && typeof s.lng === 'number')
+            .filter(s => s && typeof s === 'object' && 
+                         typeof s.lat === 'number' && !isNaN(s.lat) && 
+                         typeof s.lng === 'number' && !isNaN(s.lng))
             .map(s => [s.lat, s.lng, 1.0]); 
             
         if (typeof L.heatLayer === 'function' && heatData.length > 0) {
@@ -135,7 +141,10 @@ export const MapAnalysis: React.FC = () => {
     } else {
         if (Array.isArray(students)) {
           students.forEach(s => {
-              if (!s || typeof s !== 'object' || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
+              const isValidLat = typeof s.lat === 'number' && !isNaN(s.lat);
+              const isValidLng = typeof s.lng === 'number' && !isNaN(s.lng);
+
+              if (!s || typeof s !== 'object' || !isValidLat || !isValidLng) return;
 
               const marker = L.circleMarker([s.lat, s.lng], {
                   radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
@@ -158,7 +167,7 @@ export const MapAnalysis: React.FC = () => {
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // Busca nominal profunda com verificação de coordenadas
+    // Busca nominal profunda
     const match = students.find(s => 
         s && typeof s === 'object' && (
             (s.name && s.name.toLowerCase().includes(term)) || 
@@ -167,12 +176,17 @@ export const MapAnalysis: React.FC = () => {
         )
     ) || schools.find(s => s && typeof s === 'object' && s.name && s.name.toLowerCase().includes(term));
 
-    if (match && typeof match.lat === 'number' && typeof match.lng === 'number') {
-        mapRef.current.flyTo([match.lat, match.lng], 18, { 
-            duration: 1.8,
-            easeLinearity: 0.15
-        });
-        addToast(`Visualizando: ${match.name}`, 'info');
+    if (match) {
+        // Validação no momento da busca
+        if (typeof match.lat === 'number' && !isNaN(match.lat) && typeof match.lng === 'number' && !isNaN(match.lng)) {
+            mapRef.current.flyTo([match.lat, match.lng], 18, { 
+                duration: 1.8,
+                easeLinearity: 0.15
+            });
+            addToast(`Visualizando: ${match.name}`, 'info');
+        } else {
+            addToast(`Registro encontrado: ${match.name}, mas sem coordenadas válidas no barramento.`, "warning");
+        }
     } else {
         addToast("Critério nominal não localizado no barramento.", "warning");
     }

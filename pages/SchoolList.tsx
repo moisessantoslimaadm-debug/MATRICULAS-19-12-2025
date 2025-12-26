@@ -152,6 +152,9 @@ export const SchoolList: React.FC = () => {
 
         {activeTab === 'students' && (
           <div className="card-requinte !p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Censo Nominal de Alunos por Inep</h2>
+            </div>
             <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b border-slate-100">
