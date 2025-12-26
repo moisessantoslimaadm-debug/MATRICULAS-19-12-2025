@@ -4,7 +4,7 @@ import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, MapPin, Layers, 
   Search, Compass, Navigation2, Navigation, Globe,
-  ShieldCheck, Loader2, Users
+  ShieldCheck, Loader2, Users, School as SchoolIcon
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -20,6 +20,9 @@ export const MapAnalysis: React.FC = () => {
   const schoolMarkersRef = useRef<any>(null);
   const studentMarkersRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+  
+  // Referência para armazenar marcadores de escola individualmente para acesso programático
+  const schoolMarkerMap = useRef<Map<string, any>>(new Map());
 
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
   const [mapStyle, setMapStyle] = useState<'voyager' | 'satellite' | 'dark'>('voyager');
@@ -83,22 +86,18 @@ export const MapAnalysis: React.FC = () => {
     if (heatLayerRef.current) mapRef.current.removeLayer(heatLayerRef.current);
     schoolMarkersRef.current.clearLayers();
     studentMarkersRef.current.clearLayers();
+    schoolMarkerMap.current.clear(); // Limpa mapa de referência
 
-    // Ícone SVG estático para o popup
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     const shieldIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
 
-    // Plotagem de Unidades Escolares com verificação robusta
+    // Plotagem de Unidades Escolares
     if (Array.isArray(schools)) {
       schools.forEach(school => {
-          // Validação Robusta: Garante que é objeto, e que lat/lng são números e NÃO SÃO NaN
           const isValidLat = typeof school.lat === 'number' && !isNaN(school.lat);
           const isValidLng = typeof school.lng === 'number' && !isNaN(school.lng);
 
-          if (!school || typeof school !== 'object' || !isValidLat || !isValidLng) {
-            console.warn(`[MapAnalysis] Escola ignorada por coordenadas inválidas: ${school?.name}`);
-            return;
-          }
+          if (!school || typeof school !== 'object' || !isValidLat || !isValidLng) return;
 
           const icon = L.divIcon({
               html: `<div class="marker-container">
@@ -111,7 +110,7 @@ export const MapAnalysis: React.FC = () => {
               iconSize: [44, 44]
           });
 
-          L.marker([school.lat, school.lng], { icon })
+          const marker = L.marker([school.lat, school.lng], { icon })
             .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
                           <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
                           <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
@@ -121,10 +120,13 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .addTo(schoolMarkersRef.current);
+          
+          // Armazena referência para busca
+          schoolMarkerMap.current.set(school.id, marker);
       });
     }
 
-    // Plotagem de Alunos / Mapa de Calor com verificação robusta
+    // Plotagem de Alunos / Mapa de Calor
     if (activeLayer === 'heat') {
         const heatData = (students || [])
             .filter(s => s && typeof s === 'object' && 
@@ -167,19 +169,41 @@ export const MapAnalysis: React.FC = () => {
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // Busca nominal profunda
+    // 1. Prioridade: Buscar Unidades Escolares
+    const schoolMatch = schools.find(s => 
+      s.name.toLowerCase().includes(term) || 
+      s.address.toLowerCase().includes(term)
+    );
+
+    if (schoolMatch) {
+       if (typeof schoolMatch.lat === 'number' && !isNaN(schoolMatch.lat) && typeof schoolMatch.lng === 'number' && !isNaN(schoolMatch.lng)) {
+            mapRef.current.flyTo([schoolMatch.lat, schoolMatch.lng], 18, { 
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+            addToast(`Unidade Localizada: ${schoolMatch.name}`, 'success');
+
+            // Abre o popup automaticamente
+            const marker = schoolMarkerMap.current.get(schoolMatch.id);
+            if (marker) {
+                setTimeout(() => marker.openPopup(), 1600); // Aguarda o flyTo terminar
+            }
+            return;
+       }
+    }
+
+    // 2. Secundário: Buscar Alunos Nominalmente
     const match = students.find(s => 
         s && typeof s === 'object' && (
             (s.name && s.name.toLowerCase().includes(term)) || 
             (s.cpf && s.cpf.includes(term)) ||
             (s.address && s.address.street && s.address.street.toLowerCase().includes(term))
         )
-    ) || schools.find(s => s && typeof s === 'object' && s.name && s.name.toLowerCase().includes(term));
+    );
 
     if (match) {
-        // Validação no momento da busca
         if (typeof match.lat === 'number' && !isNaN(match.lat) && typeof match.lng === 'number' && !isNaN(match.lng)) {
-            mapRef.current.flyTo([match.lat, match.lng], 18, { 
+            mapRef.current.flyTo([match.lat, match.lng], 19, { 
                 duration: 1.8,
                 easeLinearity: 0.15
             });
@@ -188,7 +212,7 @@ export const MapAnalysis: React.FC = () => {
             addToast(`Registro encontrado: ${match.name}, mas sem coordenadas válidas no barramento.`, "warning");
         }
     } else {
-        addToast("Critério nominal não localizado no barramento.", "warning");
+        addToast("Critério não localizado (Escola ou Aluno).", "warning");
     }
   };
 
@@ -207,7 +231,6 @@ export const MapAnalysis: React.FC = () => {
             const { latitude, longitude } = pos.coords;
             
             if (mapRef.current) {
-                // Remove marcador anterior do usuário se existir
                 if (userMarkerRef.current) {
                     mapRef.current.removeLayer(userMarkerRef.current);
                 }
@@ -217,7 +240,6 @@ export const MapAnalysis: React.FC = () => {
                     easeLinearity: 0.25 
                 });
 
-                // Cria ícone pulsante personalizado
                 const userIcon = L.divIcon({
                     className: 'bg-transparent',
                     html: `<div class="relative">
@@ -262,11 +284,12 @@ export const MapAnalysis: React.FC = () => {
 
         <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
             <form onSubmit={handleStreetSearch} className="space-y-4">
-                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Navigation2 size={16} className="text-blue-500" /> Localização Nominal</h3>
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Navigation2 size={16} className="text-blue-500" /> Busca Geográfica</h3>
                 <div className="relative group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                    <input type="text" value={searchStreet} onChange={e => setSearchStreet(e.target.value)} placeholder="Aluno, CPF ou Logradouro..." className="input-premium pl-16 !h-16 !text-sm !bg-slate-50" />
+                    <input type="text" value={searchStreet} onChange={e => setSearchStreet(e.target.value)} placeholder="Escola, Aluno ou Endereço..." className="input-premium pl-16 !h-16 !text-sm !bg-slate-50" />
                 </div>
+                <p className="text-[9px] text-slate-400 font-bold px-2">Dica: Busque por nome de escola para visualização rápida.</p>
             </form>
 
             <section className="space-y-6">
@@ -277,7 +300,7 @@ export const MapAnalysis: React.FC = () => {
                         <span className="text-[10px] font-black uppercase">Densidade</span>
                     </button>
                     <button onClick={() => setActiveLayer('points')} className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-4 ${activeLayer === 'points' ? 'bg-[#0F172A] border-[#0F172A] text-white shadow-xl' : 'bg-white border-slate-100 text-slate-400 hover:border-blue-100'}`}>
-                        <MapPin size={24} />
+                        <SchoolIcon size={24} />
                         <span className="text-[10px] font-black uppercase">Unidades</span>
                     </button>
                 </div>
@@ -316,7 +339,6 @@ export const MapAnalysis: React.FC = () => {
         </div>
 
         <div className="absolute bottom-10 right-10 z-[300] flex flex-col gap-4">
-            {/* Controle de Camadas no Mapa */}
             <div className="bg-white p-2 rounded-3xl shadow-luxury border border-slate-100 flex flex-col gap-2 mb-2">
                 <button
                     onClick={() => setActiveLayer('points')}
@@ -327,7 +349,7 @@ export const MapAnalysis: React.FC = () => {
                 </button>
                 <button
                     onClick={() => setActiveLayer('heat')}
-                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'heat' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'heat' ? 'bg-emerald-50 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
                     title="Mapa de Calor (Densidade)"
                 >
                     <Activity size={20} />
@@ -339,6 +361,7 @@ export const MapAnalysis: React.FC = () => {
                 onClick={handleLocateMe} 
                 disabled={isLocating}
                 className="p-5 bg-[#0F172A] rounded-3xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                title="Minha Localização Nominal"
             >
                 {isLocating ? <Loader2 size={24} className="animate-spin" /> : <Navigation size={24} />}
             </button>
