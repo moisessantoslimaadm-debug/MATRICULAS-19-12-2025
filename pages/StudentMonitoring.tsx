@@ -28,7 +28,7 @@ const ComparisonChart = ({ attendanceData, gradeData }: { attendanceData: number
 
     return (
         <div className="w-full h-full relative">
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                 {/* Grid Lines */}
                 {[0, 25, 50, 75, 100].map(p => (
                     <line key={p} x1={padding} y1={getY(p, 100)} x2={width - padding} y2={getY(p, 100)} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4" />
@@ -51,14 +51,14 @@ const ComparisonChart = ({ attendanceData, gradeData }: { attendanceData: number
                     <text key={l} x={getX(i)} y={height} textAnchor="middle" fontSize="10" fill="#94a3b8" fontWeight="bold">{l}</text>
                 ))}
             </svg>
-            <div className="flex justify-center gap-6 mt-4">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-4">
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Frequência (%)</span>
+                    <span className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Frequência (%)</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Desempenho (Conceito)</span>
+                    <span className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Desempenho (Conceito)</span>
                 </div>
             </div>
         </div>
@@ -267,129 +267,129 @@ export const StudentMonitoring: React.FC = () => {
     <PrintLayout student={student} stats={stats} />
 
     {/* Layout de Tela (Visível apenas na tela) */}
-    <div className="min-h-screen bg-[#fcfdfe] py-20 px-12 page-transition no-print">
-      <div className="max-w-7xl mx-auto space-y-12">
-        <div className="flex items-center justify-between">
-            <button onClick={handleBack} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-emerald-600 transition-all group">
-                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 group-hover:-translate-x-2 transition-transform">
-                    <ArrowLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-[#fcfdfe] py-10 px-6 md:py-20 md:px-12 page-transition no-print">
+      <div className="max-w-7xl mx-auto space-y-8 md:space-y-12">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <button onClick={handleBack} className="flex items-center gap-4 text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-emerald-600 transition-all group">
+                <div className="bg-white p-2 md:p-3 rounded-2xl shadow-sm border border-slate-100 group-hover:-translate-x-2 transition-transform">
+                    <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
                 </div> Voltar
             </button>
-            <div className="flex items-center gap-4 bg-emerald-50 px-6 py-2.5 rounded-2xl border border-emerald-100 shadow-sm">
+            <div className="flex items-center gap-4 bg-emerald-50 px-4 py-2 md:px-6 md:py-2.5 rounded-2xl border border-emerald-100 shadow-sm self-start md:self-auto">
                 <div className="h-2.5 w-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]"></div>
-                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-ultra">Pasta Digital Síncrona</span>
+                <span className="text-[9px] md:text-[10px] font-black text-emerald-800 uppercase tracking-ultra">Pasta Digital Síncrona</span>
             </div>
         </div>
 
-        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-12 bg-white p-16 rounded-[4rem] border border-slate-100 shadow-deep relative overflow-hidden group">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-14 relative z-10">
+        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 md:gap-12 bg-white p-8 md:p-16 rounded-[3rem] md:rounded-[4rem] border border-slate-100 shadow-deep relative overflow-hidden group">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-14 relative z-10 w-full">
             <div className="relative shrink-0">
-                <div className="w-40 h-40 rounded-[3.5rem] bg-slate-50 border-8 border-white shadow-2xl overflow-hidden ring-1 ring-slate-100 group-hover:scale-105 transition-transform duration-1000">
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] md:rounded-[3.5rem] bg-slate-50 border-8 border-white shadow-2xl overflow-hidden ring-1 ring-slate-100 group-hover:scale-105 transition-transform duration-1000">
                   <img src={student.photo || `https://ui-avatars.com/api/?name=${student.name}&size=250&background=064e3b&color=fff`} className="w-full h-full object-cover" alt={student.name} />
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-[#064e3b] p-4 rounded-[1.5rem] text-white shadow-2xl border-4 border-white animate-bounce">
-                    <ShieldCheck className="h-7 w-7" />
+                <div className="absolute -bottom-2 -right-2 bg-[#064e3b] p-3 md:p-4 rounded-[1.5rem] text-white shadow-2xl border-4 border-white animate-bounce">
+                    <ShieldCheck className="h-5 w-5 md:h-7 md:w-7" />
                 </div>
             </div>
             
-            <div className="space-y-8 text-center md:text-left flex-1 min-w-0">
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="bg-slate-900 px-6 py-2 rounded-xl text-white">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">ID MEC: {student.inepId || 'PENDENTE'}</span>
+            <div className="space-y-6 md:space-y-8 text-center md:text-left flex-1 min-w-0 w-full">
+              <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6">
+                <div className="bg-slate-900 px-4 py-2 md:px-6 rounded-xl text-white">
+                    <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">ID MEC: {student.inepId || 'PENDENTE'}</span>
                 </div>
                 <span className={`badge-status ${student.status === 'Matriculado' ? 'badge-emerald' : 'badge-amber'}`}>
-                    <Target className="h-4 w-4" />
+                    <Target className="h-3 w-3 md:h-4 md:w-4" />
                     {student.status}
                 </span>
               </div>
               {/* Nome do aluno com quebra de palavra e responsividade */}
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none break-words">{student.name}</h1>
-              <div className="flex flex-wrap justify-center md:justify-start items-center gap-10">
-                  <div className="flex items-center gap-4 text-slate-500 font-bold text-[12px] uppercase tracking-widest">
-                    <GraduationCap className="h-6 w-6 text-emerald-600" /> {student.grade || 'ENSINO REGULAR'}
+              <div className="flex flex-wrap justify-center md:justify-start items-center gap-6 md:gap-10">
+                  <div className="flex items-center gap-3 md:gap-4 text-slate-500 font-bold text-[10px] md:text-[12px] uppercase tracking-widest">
+                    <GraduationCap className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" /> {student.grade || 'ENSINO REGULAR'}
                   </div>
-                  <div className="flex items-center gap-4 text-slate-500 font-bold text-[12px] uppercase tracking-widest">
-                    <Building className="h-6 w-6 text-emerald-600" /> {student.school || 'AGUARDANDO ALOCAÇÃO'}
+                  <div className="flex items-center gap-3 md:gap-4 text-slate-500 font-bold text-[10px] md:text-[12px] uppercase tracking-widest">
+                    <Building className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" /> <span className="truncate max-w-[200px] md:max-w-none">{student.school || 'AGUARDANDO ALOCAÇÃO'}</span>
                   </div>
               </div>
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-6 relative z-10 w-full xl:w-auto">
-            <button onClick={() => window.print()} className="btn-primary !h-20 !px-12 !bg-white !text-slate-900 border border-slate-100 shadow-luxury hover:!bg-slate-50">
-                <Printer className="h-6 w-6" /> Exportar PDF
+          <div className="flex flex-col sm:flex-row gap-4 md:gap-6 relative z-10 w-full xl:w-auto mt-6 xl:mt-0">
+            <button onClick={() => window.print()} className="btn-primary !h-16 md:!h-20 !px-8 md:!px-12 !bg-white !text-slate-900 border border-slate-100 shadow-luxury hover:!bg-slate-50 flex-1 sm:flex-none">
+                <Printer className="h-5 w-5 md:h-6 md:w-6" /> Exportar PDF
             </button>
-            <button onClick={() => navigate('/performance?studentId=' + student.id)} className="btn-primary !h-20 !px-12 !bg-slate-900">
-                <Activity className="h-6 w-6" /> Boletim
+            <button onClick={() => navigate('/performance?studentId=' + student.id)} className="btn-primary !h-16 md:!h-20 !px-8 md:!px-12 !bg-slate-900 flex-1 sm:flex-none">
+                <Activity className="h-5 w-5 md:h-6 md:w-6" /> Boletim
             </button>
           </div>
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-[120px] opacity-40 -mr-32 -mt-32"></div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-10">
-          <div className="card-requinte p-10 flex flex-col justify-between h-44 border-l-[10px] border-emerald-600">
-            <UserCheck className="h-8 w-8 text-emerald-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-10">
+          <div className="card-requinte p-8 md:p-10 flex flex-col justify-between h-40 md:h-44 border-l-[8px] md:border-l-[10px] border-emerald-600">
+            <UserCheck className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Frequência Global</p>
-              <p className="text-4xl font-black text-slate-900 tracking-tighter">{stats.attendancePercent}%</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Frequência Global</p>
+              <p className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">{stats.attendancePercent}%</p>
             </div>
           </div>
           
-          <div className="card-requinte p-10 flex flex-col justify-between h-44 border-l-[10px] border-blue-600">
-            <Award className="h-8 w-8 text-blue-600" />
+          <div className="card-requinte p-8 md:p-10 flex flex-col justify-between h-40 md:h-44 border-l-[8px] md:border-l-[10px] border-blue-600">
+            <Award className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Desempenho Geral</p>
-              <p className="text-4xl font-black text-slate-900 tracking-tighter">{stats.gradeAverage}</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Desempenho Geral</p>
+              <p className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">{stats.gradeAverage}</p>
             </div>
           </div>
 
-          <div className="card-requinte p-10 flex flex-col justify-between h-44 border-l-[10px] border-pink-500">
-            <HeartPulse className={`h-8 w-8 ${student.specialNeeds ? 'text-pink-500' : 'text-slate-200'}`} />
+          <div className="card-requinte p-8 md:p-10 flex flex-col justify-between h-40 md:h-44 border-l-[8px] md:border-l-[10px] border-pink-500">
+            <HeartPulse className={`h-6 w-6 md:h-8 md:w-8 ${student.specialNeeds ? 'text-pink-500' : 'text-slate-200'}`} />
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">AEE</p>
-              <p className="text-[13px] font-black text-slate-900 uppercase truncate leading-none tracking-tight">{student.specialNeeds ? (student.disabilityType || 'MONITORADO') : 'NÃO REQUER'}</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">AEE</p>
+              <p className="text-[11px] md:text-[13px] font-black text-slate-900 uppercase truncate leading-none tracking-tight">{student.specialNeeds ? (student.disabilityType || 'MONITORADO') : 'NÃO REQUER'}</p>
             </div>
           </div>
 
-          <div className="bg-[#0F172A] p-10 rounded-[3rem] flex flex-col justify-between text-white h-44 shadow-deep border border-slate-800 group">
+          <div className="bg-[#0F172A] p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] flex flex-col justify-between text-white h-40 md:h-44 shadow-deep border border-slate-800 group">
             <div className="flex justify-between items-start">
-                <Database className="h-8 w-8 text-blue-400 group-hover:scale-110 transition-transform" />
-                <div className="bg-blue-500/10 px-4 py-1.5 rounded-full border border-blue-500/20 text-[10px] font-black text-blue-400 uppercase tracking-widest">Sync MEC</div>
+                <Database className="h-6 w-6 md:h-8 md:w-8 text-blue-400 group-hover:scale-110 transition-transform" />
+                <div className="bg-blue-500/10 px-3 py-1 md:px-4 md:py-1.5 rounded-full border border-blue-500/20 text-[9px] md:text-[10px] font-black text-blue-400 uppercase tracking-widest">Sync MEC</div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Status da Pasta</p>
-              <p className="text-2xl font-black uppercase tracking-tight leading-none text-emerald-400">Regular</p>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Status da Pasta</p>
+              <p className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none text-emerald-400">Regular</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-12">
-            <div className="col-span-12 xl:col-span-8 space-y-10">
+        <div className="grid grid-cols-12 gap-6 md:gap-12">
+            <div className="col-span-12 xl:col-span-8 space-y-6 md:space-y-10">
                 {/* GRÁFICO COMPARATIVO */}
-                <div className="card-requinte !p-12 shadow-luxury">
-                    <div className="flex justify-between items-center mb-8 border-b border-slate-50 pb-6">
-                        <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-4">
-                            <TrendingUp className="h-6 w-6 text-emerald-600" /> Evolução: Frequência x Notas
+                <div className="card-requinte !p-8 md:!p-12 shadow-luxury">
+                    <div className="flex justify-between items-center mb-6 md:mb-8 border-b border-slate-50 pb-4 md:pb-6">
+                        <h3 className="text-[10px] md:text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3 md:gap-4">
+                            <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" /> Evolução: Frequência x Notas
                         </h3>
                     </div>
-                    <div className="h-64 w-full">
+                    <div className="h-48 md:h-64 w-full">
                         <ComparisonChart attendanceData={chartData.attendance} gradeData={chartData.grades} />
                     </div>
                 </div>
 
                 {/* DIÁRIO DO PROFESSOR (FEED) */}
-                <div className="card-requinte !p-12 shadow-luxury">
-                    <div className="flex justify-between items-center mb-8 border-b border-slate-50 pb-6">
-                        <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-4">
-                            <ClipboardList className="h-6 w-6 text-blue-600" /> Diário de Classe (Observações)
+                <div className="card-requinte !p-8 md:!p-12 shadow-luxury">
+                    <div className="flex justify-between items-center mb-6 md:mb-8 border-b border-slate-50 pb-4 md:pb-6">
+                        <h3 className="text-[10px] md:text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3 md:gap-4">
+                            <ClipboardList className="h-5 w-5 md:h-6 md:w-6 text-blue-600" /> Diário de Classe (Observações)
                         </h3>
                     </div>
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                         {student.teacherNotes && student.teacherNotes.length > 0 ? (
                             student.teacherNotes.map(note => (
-                                <div key={note.id} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex gap-5 animate-in slide-in-from-left-4">
-                                    <div className="flex flex-col items-center gap-2 border-r border-slate-200 pr-5 min-w-[80px]">
-                                        <Calendar className="h-5 w-5 text-slate-400" />
+                                <div key={note.id} className="bg-slate-50 p-4 md:p-6 rounded-3xl border border-slate-100 flex flex-col md:flex-row gap-4 md:gap-5 animate-in slide-in-from-left-4">
+                                    <div className="flex flex-row md:flex-col items-center gap-2 border-b md:border-b-0 md:border-r border-slate-200 pb-2 md:pb-0 md:pr-5 min-w-[80px]">
+                                        <Calendar className="h-4 w-4 md:h-5 md:w-5 text-slate-400" />
                                         <span className="text-[10px] font-black text-slate-500 uppercase">{note.date.split('-').reverse().join('/')}</span>
                                     </div>
                                     <div>
@@ -411,34 +411,34 @@ export const StudentMonitoring: React.FC = () => {
                 </div>
             </div>
 
-            <div className="col-span-12 xl:col-span-4 space-y-10">
-                <div className="card-requinte !p-12 space-y-12 shadow-deep rounded-[3.5rem]">
-                    <div className="flex items-center justify-between border-b border-slate-50 pb-8">
-                        <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-[0.5em] flex items-center gap-5">
-                            <MapPin className="h-6 w-6 text-emerald-600" /> Territorialidade
+            <div className="col-span-12 xl:col-span-4 space-y-6 md:space-y-10">
+                <div className="card-requinte !p-8 md:!p-12 space-y-8 md:space-y-12 shadow-deep rounded-[3rem] md:rounded-[3.5rem]">
+                    <div className="flex items-center justify-between border-b border-slate-50 pb-6 md:pb-8">
+                        <h3 className="text-[11px] md:text-[13px] font-black text-slate-900 uppercase tracking-[0.5em] flex items-center gap-4 md:gap-5">
+                            <MapPin className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" /> Territorialidade
                         </h3>
-                        <ArrowUpRight className="h-5 w-5 text-slate-200" />
+                        <ArrowUpRight className="h-4 w-4 md:h-5 md:w-5 text-slate-200" />
                     </div>
-                    <div className="space-y-12">
-                        <div className="flex items-start gap-8 group">
-                            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0 group-hover:scale-110 transition-transform shadow-sm"><Globe className="h-7 w-7" /></div>
+                    <div className="space-y-8 md:space-y-12">
+                        <div className="flex items-start gap-6 md:gap-8 group">
+                            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0 group-hover:scale-110 transition-transform shadow-sm"><Globe className="h-6 w-6 md:h-7 md:w-7" /></div>
                             <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">ZONA RESIDENCIAL</p>
-                                <p className="text-lg font-black text-slate-900 uppercase tracking-tighter">{student.residenceZone || 'Zona Urbana'}</p>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase mt-2">{MUNICIPALITY_NAME} • Bahia</p>
+                                <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1 md:mb-2">ZONA RESIDENCIAL</p>
+                                <p className="text-base md:text-lg font-black text-slate-900 uppercase tracking-tighter">{student.residenceZone || 'Zona Urbana'}</p>
+                                <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase mt-2">{MUNICIPALITY_NAME} • Bahia</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-[#064e3b] p-16 rounded-[4rem] text-white shadow-deep relative overflow-hidden group border border-emerald-950">
-                    <BadgeCheck className="h-16 w-16 mb-12 text-emerald-400 group-hover:rotate-12 transition-transform duration-700" />
-                    <h3 className="text-3xl font-black tracking-tighter mb-6 leading-tight uppercase">Autenticidade <br/>Garantida.</h3>
-                    <p className="text-emerald-100/60 text-base leading-relaxed mb-12 font-medium">Esta pasta possui integridade nominal garantida via barramento municipal SME Itaberaba para fins de comprovação oficial em todo território nacional.</p>
-                    <div className="flex justify-between items-center pt-10 border-t border-emerald-800">
-                        <span className="text-[11px] font-black uppercase tracking-[0.6em] opacity-40">GOV DIGITAL 2025</span>
-                        <div className="p-3 bg-emerald-500 rounded-xl shadow-2xl shadow-emerald-950 animate-pulse">
-                            <Zap className="h-5 w-5 text-white" />
+                <div className="bg-[#064e3b] p-10 md:p-16 rounded-[3rem] md:rounded-[4rem] text-white shadow-deep relative overflow-hidden group border border-emerald-950">
+                    <BadgeCheck className="h-12 w-12 md:h-16 md:w-16 mb-8 md:mb-12 text-emerald-400 group-hover:rotate-12 transition-transform duration-700" />
+                    <h3 className="text-2xl md:text-3xl font-black tracking-tighter mb-4 md:mb-6 leading-tight uppercase">Autenticidade <br/>Garantida.</h3>
+                    <p className="text-emerald-100/60 text-sm md:text-base leading-relaxed mb-8 md:mb-12 font-medium">Esta pasta possui integridade nominal garantida via barramento municipal SME Itaberaba para fins de comprovação oficial em todo território nacional.</p>
+                    <div className="flex justify-between items-center pt-8 md:pt-10 border-t border-emerald-800">
+                        <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.6em] opacity-40">GOV DIGITAL 2025</span>
+                        <div className="p-2 md:p-3 bg-emerald-500 rounded-xl shadow-2xl shadow-emerald-950 animate-pulse">
+                            <Zap className="h-4 w-4 md:h-5 md:w-5 text-white" />
                         </div>
                     </div>
                     <div className="absolute -bottom-32 -right-32 h-64 w-64 bg-emerald-500/10 rounded-full blur-[100px] group-hover:scale-150 transition-transform duration-[4s]"></div>

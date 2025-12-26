@@ -13,9 +13,9 @@ import { School, RegistryStudent } from '../types';
 const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${active ? 'bg-[#0F172A] text-white shadow-xl scale-105' : 'bg-white text-slate-400 hover:text-slate-900 border border-slate-100'}`}
+    className={`flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap ${active ? 'bg-[#0F172A] text-white shadow-xl scale-105' : 'bg-white text-slate-400 hover:text-slate-900 border border-slate-100'}`}
   >
-    <Icon className={`h-4 w-4 ${active ? 'text-blue-400' : 'text-slate-300'}`} />
+    <Icon className={`h-3 w-3 md:h-4 md:w-4 ${active ? 'text-blue-400' : 'text-slate-300'}`} />
     {label}
   </button>
 );
@@ -23,16 +23,16 @@ const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
 const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     const navigate = useNavigate();
     return (
-        <div className="card-requinte group overflow-hidden flex flex-col h-full">
-            <div className="h-32 relative overflow-hidden">
+        <div className="card-requinte group overflow-hidden flex flex-col h-full hover:-translate-y-2 cursor-pointer">
+            <div className="h-32 md:h-40 relative overflow-hidden border-b border-slate-100">
                 <img src={school.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt={school.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
                 <div className="absolute bottom-3 left-4">
                     <span className="text-[8px] font-black text-white/70 uppercase tracking-widest">INEP: {school.inep || '---'}</span>
                 </div>
             </div>
-            <div className="p-6 flex flex-col flex-1">
-                <h3 className="font-black text-slate-900 text-sm uppercase tracking-tight mb-2 leading-tight">{school.name}</h3>
+            <div className="p-6 md:p-8 flex flex-col flex-1">
+                <h3 className="font-black text-slate-900 text-sm md:text-base uppercase tracking-tight mb-2 leading-tight">{school.name}</h3>
                 <div className="space-y-2 mb-6">
                     <p className="text-[9px] text-slate-400 flex items-center gap-2 font-bold uppercase truncate">
                         <MapPin className="h-3 w-3 text-blue-500 shrink-0" /> {school.address}
@@ -111,27 +111,27 @@ export const SchoolList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fcfdfe] py-16 px-8 page-transition">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="min-h-screen bg-[#fcfdfe] py-16 px-6 md:px-8 page-transition">
+      <div className="max-w-7xl mx-auto space-y-8 md:space-y-12">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-slate-100 pb-8">
           <div className="space-y-4">
             <div className="flex items-center gap-4">
                 <div className="bg-[#0F172A] p-3 rounded-2xl text-white shadow-xl"><Building className="h-6 w-6" /></div>
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Censo de <br/><span className="text-blue-600">Rede Nominal.</span></h1>
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Censo de <br/><span className="text-blue-600">Rede Nominal.</span></h1>
                 </div>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Itaberaba • SME • Educacenso 2025</p>
+            <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Itaberaba • SME • Educacenso 2025</p>
           </div>
           
-          <div className="flex flex-wrap gap-4">
+          <div className="flex gap-2 md:gap-4 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
             <TabButton active={activeTab === 'units'} label="Unidades" icon={Building} onClick={() => setActiveTab('units')} />
             <TabButton active={activeTab === 'students'} label="Alunos (Inep)" icon={Users} onClick={() => setActiveTab('students')} />
             <TabButton active={activeTab === 'classes'} label="Quadro de Turmas" icon={Layers} onClick={() => setActiveTab('classes')} />
           </div>
         </header>
 
-        <div className="relative group max-w-2xl">
+        <div className="relative group max-w-2xl w-full">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
           <input 
             type="text" 
@@ -143,7 +143,7 @@ export const SchoolList: React.FC = () => {
         </div>
 
         {activeTab === 'units' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {schools.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map(s => (
                 <SchoolCard key={s.id} school={s} />
             ))}
@@ -152,46 +152,47 @@ export const SchoolList: React.FC = () => {
 
         {activeTab === 'students' && (
           <div className="card-requinte !p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="p-8 border-b border-slate-100 bg-slate-50/30">
-                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Censo Nominal de Alunos por Inep</h2>
+            <div className="p-6 md:p-8 border-b border-slate-100 bg-slate-50/30">
+                <h2 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-tighter">Censo Nominal de Alunos por Inep</h2>
             </div>
             <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left">
+                <table className="w-full text-left min-w-[800px]">
                     <thead className="bg-slate-50 border-b border-slate-100">
                         <tr>
-                            <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-widest">Estudante (Educacenso)</th>
-                            <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-widest">Metadados Técnicos</th>
-                            <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-widest">Vínculo Escolar / Turma</th>
-                            <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Atributos SME</th>
-                            <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                            <th className="px-6 md:px-8 py-4 md:py-6 text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Estudante (Educacenso)</th>
+                            <th className="px-6 md:px-8 py-4 md:py-6 text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Metadados Técnicos</th>
+                            <th className="px-6 md:px-8 py-4 md:py-6 text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Vínculo Escolar / Turma</th>
+                            <th className="px-6 md:px-8 py-4 md:py-6 text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Atributos SME</th>
+                            <th className="px-6 md:px-8 py-4 md:py-6 text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                            <th className="px-6 md:px-8 py-4 md:py-6 text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {filteredStudents.map(s => (
                             <tr key={s.id} className="hover:bg-slate-50/50 transition-all group">
-                                <td className="px-8 py-6">
+                                <td className="px-6 md:px-8 py-4 md:py-6">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-blue-600 shadow-sm">{s.name.charAt(0)}</div>
+                                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-blue-600 shadow-sm">{s.name.charAt(0)}</div>
                                         <div>
-                                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{s.name}</p>
+                                            <p className="text-[10px] md:text-[11px] font-black text-slate-900 uppercase tracking-tight">{s.name}</p>
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">ID MEC: {s.inepId || '---'}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <p className="text-[10px] font-bold text-slate-700 font-mono tracking-tighter">{s.cpf}</p>
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{s.race} • {s.sex}</p>
+                                <td className="px-6 md:px-8 py-4 md:py-6">
+                                    <p className="text-[9px] md:text-[10px] font-bold text-slate-700 font-mono tracking-tighter">{s.cpf}</p>
+                                    <p className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">{s.race} • {s.sex}</p>
                                     <p className="text-[7px] text-slate-400 font-bold uppercase mt-0.5">Zona: {s.residenceZone || 'Urbana'}</p>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <p className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[200px]">{s.school}</p>
+                                <td className="px-6 md:px-8 py-4 md:py-6">
+                                    <p className="text-[9px] md:text-[10px] font-black text-slate-900 uppercase truncate max-w-[150px] md:max-w-[200px]">{s.school}</p>
                                     <div className="flex flex-col gap-0.5 mt-1">
-                                        <p className="text-[8px] font-black text-blue-600 uppercase tracking-widest">{s.className || 'Não Alocado'}</p>
+                                        <p className="text-[7px] md:text-[8px] font-black text-blue-600 uppercase tracking-widest">{s.className || 'Não Alocado'}</p>
                                         <p className="text-[7px] text-slate-400 uppercase font-black tracking-tighter">{s.classSchedule}</p>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <div className="flex justify-center gap-4">
+                                <td className="px-6 md:px-8 py-4 md:py-6">
+                                    <div className="flex justify-center gap-3 md:gap-4">
                                         <div className="flex flex-col items-center gap-1">
                                             <HeartPulse className={`h-4 w-4 ${s.specialNeeds ? 'text-pink-500' : 'text-slate-200'}`} />
                                             <span className="text-[6px] font-black text-slate-400 uppercase">AEE</span>
@@ -206,17 +207,17 @@ export const SchoolList: React.FC = () => {
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6 text-center">
-                                    <span className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                <td className="px-6 md:px-8 py-4 md:py-6 text-center">
+                                    <span className={`px-3 md:px-4 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest border ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                                         {s.status}
                                     </span>
                                 </td>
-                                <td className="px-8 py-6 text-right">
+                                <td className="px-6 md:px-8 py-4 md:py-6 text-right">
                                     <button 
                                         onClick={() => navigate(`/student/monitoring?id=${s.id}`)}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-500 rounded-xl transition-all text-[9px] font-black uppercase tracking-wide group/btn"
+                                        className="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-500 rounded-xl transition-all text-[8px] md:text-[9px] font-black uppercase tracking-wide group/btn"
                                     >
-                                        <FolderOpen className="h-3 w-3" /> Ver Pasta
+                                        <FolderOpen className="h-3 w-3" /> <span className="hidden md:inline">Ver Pasta</span>
                                     </button>
                                 </td>
                             </tr>
@@ -228,9 +229,9 @@ export const SchoolList: React.FC = () => {
         )}
 
         {activeTab === 'classes' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {classes.map((c: any) => (
-                    <div key={c.code || c.name} className="card-requinte !p-8 flex flex-col justify-between group">
+                    <div key={c.code || c.name} className="card-requinte !p-6 md:!p-8 flex flex-col justify-between group">
                         <div>
                             <div className="flex justify-between items-start mb-6">
                                 <div className="bg-slate-900 p-3 rounded-2xl text-white shadow-lg"><Layers className="h-5 w-5" /></div>
@@ -261,7 +262,7 @@ export const SchoolList: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="mt-10 pt-6 border-t border-slate-50 flex justify-between items-center">
+                        <div className="mt-8 md:mt-10 pt-6 border-t border-slate-50 flex justify-between items-center">
                             <div>
                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Censo Nominal</p>
                                 <p className="text-xl font-black text-slate-900 tracking-tighter">{c.count} Alunos</p>
@@ -275,18 +276,18 @@ export const SchoolList: React.FC = () => {
             </div>
         )}
 
-        <div className="mt-12 bg-[#0F172A] p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
+        <div className="mt-8 md:mt-12 bg-[#0F172A] p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                <div className="flex items-center gap-8">
-                    <div className="w-20 h-20 bg-blue-500/20 rounded-[2.5rem] flex items-center justify-center backdrop-blur-xl border border-white/10">
-                        <Database className="h-10 w-10 text-blue-400" />
+                <div className="flex items-center gap-6 md:gap-8">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-500/20 rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center backdrop-blur-xl border border-white/10">
+                        <Database className="h-8 w-8 md:h-10 md:w-10 text-blue-400" />
                     </div>
                     <div>
-                        <h3 className="text-2xl font-black tracking-tight uppercase">Base Síncrona MEC</h3>
+                        <h3 className="text-xl md:text-2xl font-black tracking-tight uppercase">Base Síncrona MEC</h3>
                         <p className="text-blue-200/60 text-xs font-medium mt-2">Dados auditados via Educacenso 2025 • Integração Nominal SME Itaberaba.</p>
                     </div>
                 </div>
-                <button onClick={handleExportPublicData} className="px-10 py-5 bg-white text-slate-900 rounded-[2rem] text-[10px] font-black uppercase tracking-ultra hover:bg-blue-50 transition-all shadow-xl">
+                <button onClick={handleExportPublicData} className="w-full md:w-auto px-8 md:px-10 py-4 md:py-5 bg-white text-slate-900 rounded-[2rem] text-[10px] font-black uppercase tracking-ultra hover:bg-blue-50 transition-all shadow-xl">
                     Exportar Base Nominal Inep
                 </button>
             </div>
