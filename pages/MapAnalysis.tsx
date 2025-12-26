@@ -4,7 +4,8 @@ import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, MapPin, Layers, 
   Search, Compass, Navigation2, Navigation, Globe,
-  ShieldCheck, Loader2, Users, School as SchoolIcon
+  ShieldCheck, Loader2, Users, School as SchoolIcon,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -31,14 +32,18 @@ export const MapAnalysis: React.FC = () => {
   const [isLocating, setIsLocating] = useState(false);
 
   // Helper de Validação Robusta de Coordenadas
+  // Garante que lat/lng sejam números finitos, não-nulos e dentro dos limites geográficos válidos
   const isValidCoordinate = (lat: any, lng: any): boolean => {
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    
     return (
-        typeof lat === 'number' && 
-        !isNaN(lat) && 
-        lat !== 0 && // Ignora coordenadas default 0,0 se necessário
-        typeof lng === 'number' && 
-        !isNaN(lng) && 
-        lng !== 0
+        !isNaN(latNum) && 
+        !isNaN(lngNum) && 
+        latNum !== 0 && 
+        lngNum !== 0 &&
+        latNum >= -90 && latNum <= 90 &&
+        lngNum >= -180 && lngNum <= 180
     );
   };
 
@@ -131,8 +136,9 @@ export const MapAnalysis: React.FC = () => {
       schools.forEach(school => {
           // Validação estrita antes de plotar
           if (!school || typeof school !== 'object') return;
+          
           if (!isValidCoordinate(school.lat, school.lng)) {
-              console.warn(`Escola ignorada por coordenadas inválidas: ${school.name}`, school);
+              console.warn(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name}`, school);
               return;
           }
 
@@ -224,7 +230,7 @@ export const MapAnalysis: React.FC = () => {
             }
             return;
        } else {
-           addToast(`Unidade encontrada: ${schoolMatch.name}, mas sem coordenadas geográficas válidas no sistema.`, "warning");
+           addToast(`Falha Geoespacial: A unidade "${schoolMatch.name}" possui coordenadas inválidas (Lat: ${schoolMatch.lat}, Lng: ${schoolMatch.lng}).`, "error");
            return;
        }
     }
@@ -246,10 +252,10 @@ export const MapAnalysis: React.FC = () => {
             });
             addToast(`Visualizando: ${match.name}`, 'info');
         } else {
-            addToast(`Registro encontrado: ${match.name}, mas sem coordenadas válidas no barramento.`, "warning");
+            addToast(`Registro "${match.name}" encontrado, mas sem geolocalização válida cadastrada.`, "warning");
         }
     } else {
-        addToast("Critério não localizado (Escola ou Aluno).", "warning");
+        addToast("Nenhum registro localizado para o critério informado.", "warning");
     }
   };
 
@@ -267,7 +273,7 @@ export const MapAnalysis: React.FC = () => {
         (pos) => {
             const { latitude, longitude } = pos.coords;
             
-            if (mapRef.current) {
+            if (isValidCoordinate(latitude, longitude) && mapRef.current) {
                 if (userMarkerRef.current) {
                     mapRef.current.removeLayer(userMarkerRef.current);
                 }
@@ -289,10 +295,13 @@ export const MapAnalysis: React.FC = () => {
                     .addTo(mapRef.current)
                     .bindPopup(`<div class="text-[10px] font-black uppercase tracking-widest text-slate-900 p-1">Sua Localização Nominal</div>`)
                     .openPopup();
+                
+                addToast("Localização nominal confirmada.", "success");
+            } else {
+                addToast("Sinal GPS inválido ou fora dos limites.", "error");
             }
             
             setIsLocating(false);
-            addToast("Localização nominal confirmada.", "success");
         },
         (err) => {
             console.error(err);
