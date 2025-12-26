@@ -50,13 +50,20 @@ export const Dashboard: React.FC = () => {
     setUserData(data);
   }, [navigate]);
 
-  const stats = useMemo(() => ({
-    total: students.length,
-    aee: students.filter(s => s.specialNeeds).length,
-    transport: students.filter(s => s.transportRequest).length,
-    unidades: schools.length,
-    avgDistance: students.reduce((acc, curr) => acc + (curr.geoDistance || 0), 0) / (students.length || 1)
-  }), [students, schools]);
+  const stats = useMemo(() => {
+    const totalCapacity = schools.reduce((acc, s) => acc + (s.availableSlots || 0), 0);
+    const totalStudents = students.length;
+    const occupancyRate = totalCapacity > 0 ? (totalStudents / totalCapacity) * 100 : 0;
+    
+    return {
+      total: totalStudents,
+      aee: students.filter(s => s.specialNeeds).length,
+      transport: students.filter(s => s.transportRequest).length,
+      unidades: schools.length,
+      avgDistance: students.reduce((acc, curr) => acc + (curr.geoDistance || 0), 0) / (students.length || 1),
+      occupancy: occupancyRate
+    };
+  }, [students, schools]);
 
   if (isLoading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-10">
@@ -196,10 +203,10 @@ export const Dashboard: React.FC = () => {
                         <div>
                             <div className="flex justify-between text-[11px] font-black uppercase mb-5 tracking-[0.2em]">
                                 <span className="text-slate-400">Ocupação Global</span>
-                                <span className="text-slate-900">82.4%</span>
+                                <span className="text-slate-900">{stats.occupancy.toFixed(1)}%</span>
                             </div>
                             <div className="h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                <div className="h-full bg-emerald-500 w-[82.4%] transition-all duration-[2s]"></div>
+                                <div className={`h-full transition-all duration-[2s] ${stats.occupancy > 90 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(stats.occupancy, 100)}%` }}></div>
                             </div>
                         </div>
                         <div>
@@ -208,7 +215,7 @@ export const Dashboard: React.FC = () => {
                                 <span className="text-emerald-600">Síncrona</span>
                             </div>
                             <div className="h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                <div className="h-full bg-blue-500 w-full"></div>
+                                <div className="h-full bg-blue-500 w-full animate-pulse"></div>
                             </div>
                         </div>
                     </div>

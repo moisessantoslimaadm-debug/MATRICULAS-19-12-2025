@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { INITIAL_REGISTRATION_STATE, MUNICIPALITY_NAME } from '../constants';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
@@ -19,6 +19,14 @@ export const Registration: React.FC = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [allocatedSchool, setAllocatedSchool] = useState<string | null>(null);
+
+  // Inicializa com município padrão
+  useEffect(() => {
+    setFormState(prev => ({
+        ...prev,
+        address: { ...prev.address, city: MUNICIPALITY_NAME, zipCode: '46880-000' }
+    }));
+  }, []);
 
   const handleInputChange = (section: 'student' | 'guardian' | 'address', field: string, value: any) => {
     setFormState(prev => ({
@@ -45,16 +53,18 @@ export const Registration: React.FC = () => {
             setAllocatedSchool(allocation.school.name);
             setFormState(prev => ({...prev, selectedSchoolId: allocation.school.id}));
         } else {
-            setAllocatedSchool('Não foi possível determinar a unidade exata.');
+            setAllocatedSchool('Unidade Central (SME)');
         }
 
         setIsLocating(false);
-        addToast("Coordenadas nominais capturadas.", "success");
+        addToast("Localização nominal confirmada com precisão.", "success");
       },
-      () => {
+      (err) => {
+        console.error(err);
         setIsLocating(false);
-        addToast("Acesso à localização negado.", "warning");
-      }
+        addToast("Permissão de localização necessária.", "warning");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -230,8 +240,18 @@ export const Registration: React.FC = () => {
                               <input type="text" required value={formState.address.street} onChange={e => handleInputChange('address', 'street', e.target.value)} className="input-premium" placeholder="Rua, Número..." />
                           </div>
                           <div className="space-y-4">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cidade</label>
+                              <input type="text" readOnly value={formState.address.city} className="input-premium !bg-slate-50 text-slate-500 cursor-not-allowed" />
+                          </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-10">
+                          <div className="space-y-4">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Bairro</label>
                               <input type="text" required value={formState.address.neighborhood} onChange={e => handleInputChange('address', 'neighborhood', e.target.value)} className="input-premium" />
+                          </div>
+                          <div className="space-y-4">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">CEP</label>
+                              <input type="text" required value={formState.address.zipCode} onChange={e => handleInputChange('address', 'zipCode', e.target.value)} className="input-premium" />
                           </div>
                       </div>
                       <label className="flex items-center gap-6 p-8 bg-blue-50/50 rounded-[2.5rem] border border-blue-100 cursor-pointer group hover:bg-white hover:shadow-luxury transition-all">

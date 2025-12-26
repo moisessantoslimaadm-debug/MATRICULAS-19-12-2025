@@ -1,26 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from '../router';
+import { useData } from '../contexts/DataContext';
 import { 
-  ShieldCheck, Sparkles, Globe, ChevronRight, 
-  Users, ArrowRight, Zap, Database, Building2, 
+  ShieldCheck, Sparkles, Globe, 
+  Users, ArrowRight, Zap, Building2, 
   Map as MapIcon, BarChart3, Fingerprint
 } from 'lucide-react';
-import { MUNICIPALITY_NAME } from '../constants';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  // Estado de carregamento removido para navegação instantânea
-  const [count, setCount] = useState(0);
+  const { schools, students } = useData();
+  
+  // Estados para animação dos números
+  const [schoolCount, setSchoolCount] = useState(0);
+  const [studentCount, setStudentCount] = useState(0);
 
+  // Efeito para animar contadores baseados nos dados reais
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCount(prev => (prev < 42 ? prev + 1 : 42));
-    }, 50);
-    return () => clearInterval(timer);
-  }, []);
+    const targetSchools = schools.length || 1; // Fallback visual inicial
+    const targetStudents = students.length || 1;
+
+    // Animação Escolas
+    const timerSchools = setInterval(() => {
+      setSchoolCount(prev => {
+        if (prev >= targetSchools) {
+          clearInterval(timerSchools);
+          return targetSchools;
+        }
+        return prev + Math.ceil(targetSchools / 50);
+      });
+    }, 30);
+
+    // Animação Alunos (incremento maior por ser número maior)
+    const timerStudents = setInterval(() => {
+        setStudentCount(prev => {
+          if (prev >= targetStudents) {
+            clearInterval(timerStudents);
+            return targetStudents;
+          }
+          return prev + Math.ceil(targetStudents / 40);
+        });
+      }, 20);
+
+    return () => {
+        clearInterval(timerSchools);
+        clearInterval(timerStudents);
+    };
+  }, [schools.length, students.length]);
 
   const startRegistration = () => {
-    // Navegação imediata sem delay artificial
     navigate('/registration');
   };
 
@@ -67,12 +95,12 @@ export const Home: React.FC = () => {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-10 pt-16 border-t border-slate-100">
                  <div className="space-y-2">
-                    <p className="text-4xl font-black text-slate-900 tracking-tighter">{count}+</p>
+                    <p className="text-4xl font-black text-slate-900 tracking-tighter">{schoolCount}</p>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Escolas Ativas</p>
                  </div>
                  <div className="space-y-2 border-l border-slate-100 pl-10">
-                    <p className="text-4xl font-black text-slate-900 tracking-tighter">100%</p>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Auditado MEC</p>
+                    <p className="text-4xl font-black text-slate-900 tracking-tighter">{studentCount}</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Alunos na Rede</p>
                  </div>
                  <div className="space-y-2 border-l border-slate-100 pl-10 hidden sm:block">
                     <p className="text-4xl font-black text-slate-900 tracking-tighter">Sync</p>
@@ -85,7 +113,7 @@ export const Home: React.FC = () => {
               <div className="relative z-10 rounded-[5rem] overflow-hidden shadow-deep border-[16px] border-white bg-white group ring-1 ring-slate-100">
                 <img 
                   src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&q=80" 
-                  className="w-full h-[650px] object-cover group-hover:scale-110 transition-transform duration-[3s]"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3s]"
                   alt="Educação Municipal Itaberaba"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-60"></div>

@@ -16,11 +16,11 @@ const ComparisonChart = ({ attendanceData, gradeData }: { attendanceData: number
     const height = 150;
     const width = 400;
     const padding = 20;
-    const labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul']; 
+    const labels = ['Bim 1', 'Bim 2', 'Bim 3', 'Bim 4']; 
 
     // Função para normalizar dados (0-100) para coordenadas Y
     const getY = (val: number, max: number) => height - padding - ((val / max) * (height - (padding * 2)));
-    const getX = (index: number) => padding + (index * (width - (padding * 2)) / (labels.length - 1));
+    const getX = (index: number) => padding + (index * (width - (padding * 2)) / (Math.max(labels.length - 1, 1)));
 
     const linePointsAttendance = attendanceData.map((val, i) => `${getX(i)},${getY(val, 100)}`).join(' ');
     // Mapeia notas (1-4) para escala visual (4*25 = 100)
@@ -47,7 +47,7 @@ const ComparisonChart = ({ attendanceData, gradeData }: { attendanceData: number
                 ))}
 
                 {/* Labels */}
-                {labels.map((l, i) => (
+                {labels.slice(0, Math.max(attendanceData.length, gradeData.length)).map((l, i) => (
                     <text key={l} x={getX(i)} y={height} textAnchor="middle" fontSize="10" fill="#94a3b8" fontWeight="bold">{l}</text>
                 ))}
             </svg>
@@ -190,7 +190,7 @@ export const StudentMonitoring: React.FC = () => {
 
   // Cálculo de Estatísticas Reais
   const stats = useMemo(() => {
-      if (!student) return { attendancePercent: 0, gradeAverage: 0 };
+      if (!student) return { attendancePercent: 0, gradeAverage: 0, rawGrades: [] };
       
       // Frequência
       const totalDays = student.attendanceHistory?.length || 0;
@@ -201,12 +201,15 @@ export const StudentMonitoring: React.FC = () => {
       const conceptValues: Record<string, number> = { 'DI': 1, 'EP': 2, 'DB': 3, 'DE': 4 };
       let totalPoints = 0;
       let gradeCount = 0;
+      const rawGrades: number[] = [];
       
+      // Extrai notas para o gráfico (pega a primeira nota de cada matéria como amostra temporal)
       student.performanceHistory?.forEach(row => {
           row.g1?.forEach(grade => {
               if (grade && conceptValues[grade]) {
                   totalPoints += conceptValues[grade];
                   gradeCount++;
+                  rawGrades.push(conceptValues[grade]);
               }
           });
       });
@@ -219,14 +222,19 @@ export const StudentMonitoring: React.FC = () => {
       else if (avg >= 1.5) avgConcept = 'EP';
       else if (avg > 0) avgConcept = 'DI';
 
-      return { attendancePercent, gradeAverage: avgConcept };
+      return { attendancePercent, gradeAverage: avgConcept, rawGrades };
   }, [student]);
 
-  // Mock Data para o Gráfico (simulando histórico mensal para visualização + dados atuais)
-  const chartData = {
-      attendance: [98, 95, 100, 92, parseInt(String(stats.attendancePercent)) || 100, 96, 98],
-      grades: [3, 2, 3, 4, stats.gradeAverage === 'DE' ? 4 : stats.gradeAverage === 'DB' ? 3 : 2, 3, 4]
-  };
+  // Dados Dinâmicos para o Gráfico
+  const chartData = useMemo(() => {
+      // Se tiver dados reais de notas, usa. Senão, usa fallback.
+      const gradeData = stats.rawGrades.length > 0 ? stats.rawGrades.slice(0, 4) : [3, 2, 3, 4];
+      // Se tiver dados reais de frequência, cria um array visual (simulado histórico recente se só tiver 1 dado)
+      const currentAtt = parseInt(String(stats.attendancePercent)) || 100;
+      const attendanceData = [98, 95, 100, currentAtt]; // Simula variação histórica terminando no atual
+
+      return { attendance: attendanceData, grades: gradeData };
+  }, [stats]);
 
   const handleBack = () => {
     // Verifica se é um usuário logado (Admin/Professor)

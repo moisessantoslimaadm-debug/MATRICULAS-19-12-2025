@@ -1,9 +1,41 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from '../router';
-import { CheckCircle, Search, UserCheck, AlertCircle, Clock, ShieldCheck, Zap, Printer, ArrowRight, FolderOpen, Fingerprint, Copy } from 'lucide-react';
+import { CheckCircle, Search, UserCheck, AlertCircle, Clock, ShieldCheck, Zap, Printer, ArrowRight, FolderOpen, Fingerprint, Copy, Check } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { RegistryStudent } from '../types';
+
+const StatusTimeline = ({ status }: { status: string }) => {
+    const steps = [
+        { label: 'Protocolado', match: ['Em Análise', 'Pendente', 'Matriculado'] },
+        { label: 'Em Análise', match: ['Em Análise', 'Pendente', 'Matriculado'] },
+        { label: 'Documentação', match: ['Pendente', 'Matriculado'] },
+        { label: 'Matriculado', match: ['Matriculado'] }
+    ];
+
+    const currentStepIndex = steps.findIndex(s => s.match.includes(status) && s.label === status) !== -1 
+        ? steps.findIndex(s => s.label === status) 
+        : (status === 'Matriculado' ? 3 : status === 'Pendente' ? 2 : 1);
+
+    return (
+        <div className="flex justify-between items-center w-full max-w-lg mx-auto mb-10 relative">
+            <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -z-10"></div>
+            <div className="absolute top-1/2 left-0 h-1 bg-emerald-500 -z-10 transition-all duration-1000" style={{ width: `${(currentStepIndex / 3) * 100}%` }}></div>
+            
+            {steps.map((step, i) => {
+                const isCompleted = i <= currentStepIndex;
+                return (
+                    <div key={i} className="flex flex-col items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${isCompleted ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-300'}`}>
+                            {isCompleted ? <Check className="h-4 w-4" /> : <div className="w-2 h-2 bg-slate-300 rounded-full"></div>}
+                        </div>
+                        <span className={`text-[8px] font-black uppercase tracking-widest ${isCompleted ? 'text-emerald-700' : 'text-slate-300'}`}>{step.label}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
 
 export const Status: React.FC = () => {
   const { students } = useData();
@@ -113,10 +145,10 @@ export const Status: React.FC = () => {
 
         <div className="space-y-6">
             {searchResults.map(s => (
-                <div key={s.id} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-8 group hover:shadow-deep hover:border-emerald-100 transition-all duration-500 relative overflow-hidden">
+                <div key={s.id} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 flex flex-col gap-8 group hover:shadow-deep hover:border-emerald-100 transition-all duration-500 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-50 transition-colors"></div>
                     
-                    <div className="flex flex-col md:flex-row items-center gap-8 relative z-10 text-center md:text-left">
+                    <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10 text-center md:text-left">
                         <div className="w-24 h-24 rounded-[2rem] bg-slate-50 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
                             {s.photo ? <img src={s.photo} className="w-full h-full object-cover" /> : <UserCheck className="h-10 w-10 text-slate-200" />}
                         </div>
@@ -135,18 +167,23 @@ export const Status: React.FC = () => {
                                 {s.school || 'Unidade em Alocação'}
                             </p>
                         </div>
+                        
+                        <div className="flex flex-col items-center md:items-end gap-4 relative z-10 w-full md:w-auto ml-auto">
+                            <span className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                Situação: {s.status}
+                            </span>
+                            <button 
+                                onClick={() => navigate(`/student/monitoring?id=${s.id}`)}
+                                className="btn-primary !h-14 !px-8 !text-[10px] !bg-slate-900 hover:!bg-emerald-600 w-full md:w-auto shadow-xl"
+                            >
+                                <FolderOpen className="h-4 w-4 mr-2" /> Abrir Pasta do Aluno
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col items-center md:items-end gap-6 relative z-10 w-full md:w-auto">
-                        <span className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm ${s.status === 'Matriculado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                            Situação: {s.status}
-                        </span>
-                        <button 
-                            onClick={() => navigate(`/student/monitoring?id=${s.id}`)}
-                            className="btn-primary !h-14 !px-8 !text-[10px] !bg-slate-900 hover:!bg-emerald-600 w-full md:w-auto shadow-xl"
-                        >
-                            <FolderOpen className="h-4 w-4 mr-2" /> Abrir Pasta do Aluno
-                        </button>
+                    {/* Linha do Tempo Visual */}
+                    <div className="border-t border-slate-50 pt-8 mt-2">
+                        <StatusTimeline status={s.status} />
                     </div>
                 </div>
             ))}

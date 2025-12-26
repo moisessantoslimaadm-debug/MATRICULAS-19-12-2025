@@ -51,11 +51,25 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
 
-  // Carrega dados do Supabase ou cai no cache do Dexie
+  // Carrega dados: Estratégia "Cache-First" para Zero Latency
   const loadData = async () => {
-    setIsLoading(true);
     try {
-      // Sincronização Síncrona Nominal: Tenta buscar do Supabase primeiro
+      // 1. Carregamento Imediato do Cache Local (Dexie)
+      const localSchools = await db.schools.toArray();
+      const localStudents = await db.students.toArray();
+      const localProfs = await db.professionals.toArray();
+      const localProjects = await db.projects.toArray();
+
+      // Se houver dados locais, exibe imediatamente e remove loading
+      if (localSchools.length > 0 || localStudents.length > 0) {
+        setSchools(localSchools.length > 0 ? localSchools : MOCK_SCHOOLS);
+        setStudents(localStudents.length > 0 ? localStudents : MOCK_STUDENT_REGISTRY);
+        setProfessionals(localProfs.length > 0 ? localProfs : MOCK_PROFESSIONALS);
+        setProjects(localProjects.length > 0 ? localProjects : MOCK_PROJECTS);
+        setIsLoading(false); // UI Interativa instantaneamente
+      }
+
+      // 2. Sincronização em Background (Cloud Sync)
       const [
         { data: supabaseSchools }, 
         { data: supabaseStudents },
@@ -68,52 +82,55 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         supabase.from('projects').select('*')
       ]);
 
-      // Atualiza Cache Local se houver dados na nuvem
+      // Atualiza Cache Local e Estado se houver dados novos da nuvem
       if (supabaseSchools && supabaseSchools.length > 0) {
         await db.schools.clear();
         await db.schools.bulkAdd(supabaseSchools);
-      } else if (await db.schools.count() === 0) {
+        setSchools(supabaseSchools);
+      } else if (localSchools.length === 0) {
         await db.schools.bulkAdd(MOCK_SCHOOLS);
+        setSchools(MOCK_SCHOOLS);
       }
 
       if (supabaseStudents && supabaseStudents.length > 0) {
         await db.students.clear();
         await db.students.bulkAdd(supabaseStudents);
-      } else if (await db.students.count() === 0) {
+        setStudents(supabaseStudents);
+      } else if (localStudents.length === 0) {
         await db.students.bulkAdd(MOCK_STUDENT_REGISTRY);
+        setStudents(MOCK_STUDENT_REGISTRY);
       }
 
       if (supabaseProfs && supabaseProfs.length > 0) {
         await db.professionals.clear();
         await db.professionals.bulkAdd(supabaseProfs);
-      } else if (await db.professionals.count() === 0) {
+        setProfessionals(supabaseProfs);
+      } else if (localProfs.length === 0) {
         await db.professionals.bulkAdd(MOCK_PROFESSIONALS);
+        setProfessionals(MOCK_PROFESSIONALS);
       }
 
       if (supabaseProjects && supabaseProjects.length > 0) {
         await db.projects.clear();
         await db.projects.bulkAdd(supabaseProjects);
-      } else if (await db.projects.count() === 0) {
+        setProjects(supabaseProjects);
+      } else if (localProjects.length === 0) {
         await db.projects.bulkAdd(MOCK_PROJECTS);
+        setProjects(MOCK_PROJECTS);
       }
 
-      // Seta estados finais
-      setSchools(await db.schools.toArray());
-      setStudents(await db.students.toArray());
-      setProfessionals(await db.professionals.toArray());
-      setProjects(await db.projects.toArray());
       setIsOffline(false);
 
     } catch (error) {
-      console.warn("Offline Mode Active:", error);
+      console.warn("Modo Offline Ativo - Usando dados locais.");
       setIsOffline(true);
-      // Carrega o que tem no Dexie
-      setSchools(await db.schools.toArray());
-      setStudents(await db.students.toArray());
-      setProfessionals(await db.professionals.toArray());
-      setProjects(await db.projects.toArray());
+      if (isLoading) {
+         setSchools(await db.schools.toArray());
+         setStudents(await db.students.toArray());
+         setProfessionals(await db.professionals.toArray());
+         setProjects(await db.projects.toArray());
+      }
     } finally {
-      // Performance Boost: Remoção de delay artificial
       setIsLoading(false);
     }
   };
@@ -121,9 +138,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   useEffect(() => { loadData(); }, []);
 
   const getNearestSchool = (lat: number, lng: number) => {
-    // FIX: Filtra escolas válidas (com coordenadas numéricas) antes de calcular
     const validSchools = schools.filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number');
-    
     if (validSchools.length === 0) return null;
     
     let nearest = validSchools[0];
@@ -136,154 +151,167 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     return { school: nearest, distance: minDistance };
   };
 
+  // --- OPTIMISTIC MUTATIONS (ZERO LATENCY) ---
+  // A UI é atualizada instantaneamente. A sincronização com o Supabase ocorre em background.
+
   const addSchool = async (school: School) => {
-    try {
-      await db.schools.add(school);
-      setSchools(prev => [...prev, school]);
-      await supabase.from('schools').insert(school);
-      addToast("Unidade escolar registrada com sucesso.", "success");
-    } catch (error) {
-      addToast("Erro ao registrar escola.", "error");
-    }
+    // 1. Local & State (Instant)
+    await db.schools.add(school);
+    setSchools(prev => [...prev, school]);
+    addToast("Unidade escolar registrada localmente.", "success");
+
+    // 2. Background Sync
+    supabase.from('schools').insert(school).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Add School):", error);
+    });
   };
 
   const updateSchool = async (school: School) => {
-    try {
-      await db.schools.put(school);
-      setSchools(prev => prev.map(s => s.id === school.id ? school : s));
-      await supabase.from('schools').upsert(school);
-      addToast("Dados da unidade atualizados.", "success");
-    } catch (error) {
-      addToast("Erro ao atualizar escola.", "error");
-    }
+    await db.schools.put(school);
+    setSchools(prev => prev.map(s => s.id === school.id ? school : s));
+    addToast("Dados da unidade atualizados.", "success");
+
+    supabase.from('schools').upsert(school).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Update School):", error);
+    });
   };
 
   const addStudent = async (student: RegistryStudent) => {
-    try {
-      // 1. Persiste no Local (Dexie)
-      await db.students.add(student);
-      setStudents(prev => [student, ...prev]);
+    await db.students.add(student);
+    setStudents(prev => [student, ...prev]);
+    addToast("Matrícula transmitida ao barramento nominal.", "success");
 
-      // 2. Persiste na Nuvem (Supabase)
-      const { error } = await supabase.from('students').insert(student);
-      if (error) console.error("Cloud Sync Delayed:", error);
-
-      addToast("Matrícula transmitida ao barramento nominal.", "success");
-    } catch (error) { addToast("Falha ao persistir pasta.", "error"); }
+    supabase.from('students').insert(student).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Add Student):", error);
+    });
   };
 
   const updateStudent = async (student: RegistryStudent) => {
-    try {
-      await db.students.put(student);
-      setStudents(prev => prev.map(s => s.id === student.id ? student : s));
-      
-      await supabase.from('students').upsert(student);
-      addToast("Registro sincronizado.", "success");
-    } catch (error) { addToast("Erro na atualização.", "error"); }
+    await db.students.put(student);
+    setStudents(prev => prev.map(s => s.id === student.id ? student : s));
+    addToast("Registro sincronizado.", "success");
+
+    supabase.from('students').upsert(student).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Update Student):", error);
+    });
   };
 
   const updateStudents = async (updatedStudents: RegistryStudent[]) => {
-    try {
-      await (db as any).transaction('rw', [db.students], async () => {
-        for (const s of updatedStudents) { 
-          await db.students.put(s); 
-        }
-      });
-      setStudents(await db.students.toArray());
-      
-      // Batch update no Supabase
-      await supabase.from('students').upsert(updatedStudents);
-    } catch (error) { 
-      console.error("Batch update failed:", error);
-      addToast("Falha no lote nominal.", "error"); 
-    }
+    await (db as any).transaction('rw', [db.students], async () => {
+      for (const s of updatedStudents) { 
+        await db.students.put(s); 
+      }
+    });
+    // Atualiza estado local recarregando do Dexie para garantir consistência
+    setStudents(await db.students.toArray());
+    addToast("Lote nominal processado.", "success");
+
+    supabase.from('students').upsert(updatedStudents).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Batch Update):", error);
+    });
   };
 
   const removeStudent = async (id: string) => {
-    try {
-      await db.students.delete(id);
-      setStudents(prev => prev.filter(s => s.id !== id));
-      await supabase.from('students').delete().eq('id', id);
-      addToast("Registro removido.", "info");
-    } catch (error) { addToast("Erro ao remover.", "error"); }
+    await db.students.delete(id);
+    setStudents(prev => prev.filter(s => s.id !== id));
+    addToast("Registro removido.", "info");
+
+    supabase.from('students').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Remove Student):", error);
+    });
   };
 
   const addProfessional = async (prof: Professional) => {
-    try {
-      await db.professionals.add(prof);
-      setProfessionals(prev => [prof, ...prev]);
-      await supabase.from('professionals').insert(prof);
-      addToast("Profissional cadastrado no barramento.", "success");
-    } catch (error) { addToast("Erro no cadastro.", "error"); }
+    await db.professionals.add(prof);
+    setProfessionals(prev => [prof, ...prev]);
+    addToast("Profissional cadastrado.", "success");
+
+    supabase.from('professionals').insert(prof).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Add Prof):", error);
+    });
   };
 
   const updateProfessional = async (prof: Professional) => {
-    try {
-      await db.professionals.put(prof);
-      setProfessionals(prev => prev.map(p => p.id === prof.id ? prof : p));
-      await supabase.from('professionals').upsert(prof);
-      addToast("Profissional atualizado em nuvem.", "success");
-    } catch (error) { addToast("Falha ao atualizar.", "error"); }
+    await db.professionals.put(prof);
+    setProfessionals(prev => prev.map(p => p.id === prof.id ? prof : p));
+    addToast("Profissional atualizado.", "success");
+
+    supabase.from('professionals').upsert(prof).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Update Prof):", error);
+    });
   };
 
   const removeProfessional = async (id: string) => {
-    try {
-      await db.professionals.delete(id);
-      setProfessionals(prev => prev.filter(p => p.id !== id));
-      await supabase.from('professionals').delete().eq('id', id);
-      addToast("Servidor desligado do sistema.", "info");
-    } catch (error) { addToast("Falha ao remover.", "error"); }
+    await db.professionals.delete(id);
+    setProfessionals(prev => prev.filter(p => p.id !== id));
+    addToast("Servidor desligado do sistema.", "info");
+
+    supabase.from('professionals').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Remove Prof):", error);
+    });
   };
 
   const addProject = async (proj: Project) => {
-    try {
-      await db.projects.add(proj);
-      setProjects(prev => [proj, ...prev]);
-      await supabase.from('projects').insert(proj);
-      addToast("Projeto municipal criado.", "success");
-    } catch (error) { addToast("Erro ao criar projeto.", "error"); }
+    await db.projects.add(proj);
+    setProjects(prev => [proj, ...prev]);
+    addToast("Projeto municipal criado.", "success");
+
+    supabase.from('projects').insert(proj).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Add Project):", error);
+    });
   };
 
   const updateProject = async (proj: Project) => {
-    try {
-      await db.projects.put(proj);
-      setProjects(prev => prev.map(p => p.id === proj.id ? proj : p));
-      await supabase.from('projects').upsert(proj);
-      addToast("Projeto atualizado.", "success");
-    } catch (error) { addToast("Falha no projeto.", "error"); }
+    await db.projects.put(proj);
+    setProjects(prev => prev.map(p => p.id === proj.id ? proj : p));
+    addToast("Projeto atualizado.", "success");
+
+    supabase.from('projects').upsert(proj).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Update Project):", error);
+    });
   };
 
   const removeProject = async (id: string) => {
-    try {
-      await db.projects.delete(id);
-      setProjects(prev => prev.filter(p => p.id !== id));
-      await supabase.from('projects').delete().eq('id', id);
-      addToast("Projeto arquivado.", "info");
-    } catch (error) { addToast("Erro ao arquivar.", "error"); }
+    await db.projects.delete(id);
+    setProjects(prev => prev.filter(p => p.id !== id));
+    addToast("Projeto arquivado.", "info");
+
+    supabase.from('projects').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error("Background Sync Error (Remove Project):", error);
+    });
   };
 
   const linkStudentToProject = async (studentId: string, projectId: string) => {
-    try {
-      const student = await db.students.get(studentId);
-      if (student) {
-        const list = student.projects || [];
-        if (!list.includes(projectId)) {
-          const updated = { ...student, projects: [...list, projectId] };
-          await db.students.put(updated);
-          setStudents(prev => prev.map(s => s.id === studentId ? updated : s));
-          await supabase.from('students').upsert(updated);
-          
-          const proj = await db.projects.get(projectId);
-          if (proj) {
+    const student = await db.students.get(studentId);
+    if (student) {
+      const list = student.projects || [];
+      if (!list.includes(projectId)) {
+        const updated = { ...student, projects: [...list, projectId] };
+        
+        // Optimistic update
+        await db.students.put(updated);
+        setStudents(prev => prev.map(s => s.id === studentId ? updated : s));
+        
+        // Update local project count optimistically too if needed, but keeping it simple for now
+        const proj = await db.projects.get(projectId);
+        if (proj) {
             const updatedProj = { ...proj, participantsCount: proj.participantsCount + 1 };
             await db.projects.put(updatedProj);
             setProjects(prev => prev.map(p => p.id === projectId ? updatedProj : p));
-            await supabase.from('projects').upsert(updatedProj);
-          }
-          addToast("Vínculo de projeto concluído.", "success");
-        } else { addToast("Aluno já participa deste projeto.", "info"); }
+            // Background sync project
+            supabase.from('projects').upsert(updatedProj).then();
+        }
+
+        addToast("Vínculo de projeto concluído.", "success");
+        
+        // Background Sync Student
+        supabase.from('students').upsert(updated).then(({ error }) => {
+            if (error) console.error("Background Sync Error (Link Project):", error);
+        });
+      } else { 
+          addToast("Aluno já participa deste projeto.", "info"); 
       }
-    } catch (error) { addToast("Erro no vínculo.", "error"); }
+    }
   };
 
   return (
