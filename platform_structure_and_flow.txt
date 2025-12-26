@@ -1,0 +1,155 @@
+================================================================================
+PLATAFORMA EDUCAMUNICÍPIO - ITABERABA DIGITAL (SME SÍNCRONA)
+Documentação Técnica e Funcional - Versão: 1.0 (Zero Latency)
+================================================================================
+
+1. VISÃO GERAL DA ARQUITETURA
+--------------------------------------------------------------------------------
+A plataforma é uma Single Page Application (SPA) construída com React e TypeScript, 
+focada em "Zero Latency" e "Optimistic UI". Ela utiliza uma estratégia "Local-First" 
+onde todas as operações de escrita ocorrem primeiro no banco de dados local do navegador 
+(IndexedDB via Dexie.js) e no estado da aplicação, atualizando a interface instantaneamente 
+antes de sincronizar com a nuvem (Supabase) em segundo plano.
+
+Principais Tecnologias:
+- Frontend: React 19, Vite, Tailwind CSS
+- Banco de Dados Local: Dexie.js (IndexedDB wrapper)
+- Backend/Sync: Supabase
+- IA: Google Gemini API (Assistente Virtual "Edu")
+- Mapas: Leaflet + Leaflet.heat
+- Roteamento: Custom Hash Router (leve e sem dependência de servidor)
+
+================================================================================
+2. ESTRUTURA DE ARQUIVOS E DIRETÓRIOS
+--------------------------------------------------------------------------------
+
+/ (Raiz)
+├── index.html                  # Ponto de entrada, contém o Splash Screen CSS/HTML
+├── index.tsx                   # Bootstrapping do React e Mount do App
+├── App.tsx                     # Componente Raiz, Configuração de Contextos e Rotas
+├── router.tsx                  # Sistema de roteamento personalizado (HashRouter)
+├── types.ts                    # Definições de Tipos TypeScript (Interfaces Globais)
+├── constants.ts                # Dados Mockados (Escolas, Alunos, Projetos) e Constantes
+├── vite.config.ts              # Configuração do Build e Variáveis de Ambiente
+├── tailwind.config.js          # Configuração de Estilos e Temas
+└── package.json                # Dependências do Projeto
+
+/components
+├── Navbar.tsx                  # Navegação responsiva baseada em papéis (Role-based)
+├── ChatAssistant.tsx           # Chatbot flutuante integrado ao Google Gemini
+├── ErrorBoundary.tsx           # Captura de erros globais com logs de diagnóstico
+└── LogViewer.tsx               # Terminal visual para depuração e logs do sistema
+
+/contexts
+├── DataContext.tsx             # [CORE] Gerencia estado global, Dexie e Sincronização
+├── ToastContext.tsx            # Sistema de notificações flutuantes
+└── LogContext.tsx              # Sistema de registro de eventos (Logs)
+
+/pages (Módulos)
+├── Home.tsx                    # Landing Page Pública (Contadores em tempo real)
+├── Login.tsx                   # Autenticação (Aluno, Professor, Gestor)
+├── NotFound.tsx                # Página 404
+├── Registration.tsx            # Wizard de Matrícula (4 Passos + Geolocalização)
+├── SchoolList.tsx              # Catálogo Público de Escolas e Turmas
+├── Status.tsx                  # Acompanhamento de Protocolo com Linha do Tempo
+│
+├── (Área do Aluno)
+├── StudentMonitoring.tsx       # "Pasta do Aluno" (Histórico, Diário, Documentos)
+├── PerformanceIndicators.tsx   # "Boletim" Visual e Matriz de Competências
+│
+├── (Área do Professor)
+├── TeacherJournal.tsx          # Diário de Classe (Chamada e Notas)
+│
+├── (Área Administrativa/SME)
+├── Dashboard.tsx               # Visão Geral, Gráficos de Ocupação, Terminal de Logs
+├── AdminData.tsx               # "Censo Nominal" (Tabela de dados brutos + Export CSV)
+├── AdminSchoolsManagement.tsx  # Gestão de Escolas, Alunos e Projetos (CRUD)
+├── MapAnalysis.tsx             # GeoBI (Mapas de Calor e Localização Nominal)
+├── Reports.tsx                 # Relatórios BI e Estatísticas de Rede
+└── ExternalApp.tsx             # Exemplo de integração via iFrame
+
+/services
+├── db.ts                       # Configuração do Schema do Dexie (IndexedDB)
+├── supabaseClient.ts           # Cliente de conexão com Supabase
+└── geminiService.ts            # Lógica de comunicação com a IA (Prompt Engineering)
+
+================================================================================
+3. FLUXO FUNCIONAL DETALHADO
+--------------------------------------------------------------------------------
+
+A. NÚCLEO DE DADOS (DataContext)
+   - Ao iniciar, carrega dados do Dexie (Cache Local) para exibição imediata.
+   - Em paralelo, busca atualizações no Supabase (Nuvem).
+   - "Optimistic Mutations": Ao criar/editar um aluno ou escola, a UI atualiza
+     instantaneamente e a requisição de rede é enviada em background ("Fire and Forget").
+
+B. FLUXO PÚBLICO (CIDADÃO)
+   1. Home Page:
+      - Exibe contadores animados de Escolas e Alunos conectados ao banco real.
+      - Botões de ação rápida para "Iniciar Matrícula" ou "Acompanhar Protocolo".
+   
+   2. Cadastro (Registration.tsx):
+      - Wizard de 4 passos: Estudante -> Responsável -> Localização -> Resumo.
+      - Passo 3 (Geo): Utiliza GPS do dispositivo para calcular lat/lng e sugere
+        a escola mais próxima automaticamente (lógica euclidiana no DataContext).
+      - Ao finalizar, gera um ID de Protocolo e salva localmente + nuvem.
+
+   3. Status (Status.tsx):
+      - Permite busca por Protocolo, CPF ou Nome.
+      - Exibe uma "Timeline Visual" mostrando o estágio da matrícula (Protocolado -> Em Análise -> Matriculado).
+
+   4. Lista de Escolas (SchoolList.tsx):
+      - Visualização em Cards das unidades.
+      - Abas para ver "Alunos (Inep)" e "Quadro de Turmas".
+      - Exportação da base pública em CSV.
+
+C. FLUXO DO ALUNO (PORTAL)
+   1. Acesso (Login ou Busca):
+      - O aluno entra com CPF (senha simplificada para demo).
+   2. Pasta Digital (StudentMonitoring.tsx):
+      - Exibe foto, dados cadastrais e status da matrícula.
+      - Gráficos comparativos (Frequência x Notas) usando dados reais.
+      - Visualização do Diário de Classe (observações feitas pelo professor).
+      - Botão "Voltar" inteligente (navegação histórica).
+      - Modo de Impressão (layout A4 limpo para PDF).
+   3. Boletim (PerformanceIndicators.tsx):
+      - Visualização gráfica do rendimento por unidade.
+      - Matriz de competências (Conceitos: DI, EP, DB, DE).
+
+D. FLUXO DO PROFESSOR
+   1. Diário de Classe (TeacherJournal.tsx):
+      - O professor seleciona a data.
+      - Lista de alunos com botões rápidos para Presença/Falta.
+      - Botão para alternar conceito (Nota) ciclicamente.
+      - Campo de observação pedagógica (integra com a Pasta do Aluno).
+      - Botão "Sincronizar Pasta" salva tudo atomicamente.
+
+E. FLUXO ADMINISTRATIVO (SME/GESTOR)
+   1. Dashboard (Dashboard.tsx):
+      - Cards métricos (Saúde da Rede, Ocupação).
+      - Terminal de Logs em tempo real (Barramento Síncrono).
+      - Atalhos para módulos estratégicos.
+
+   2. Gestão de Escolas (AdminSchoolsManagement.tsx):
+      - Navegação hierárquica: Lista de Escolas -> Visão da Escola.
+      - Dentro da Escola: Abas "Visão Geral", "Alunos", "Projetos".
+      - CRUD completo: Adicionar/Editar escolas, remover alunos, gerenciar projetos.
+      - Navegação fluida com botões "Voltar para Rede" e "Voltar à Visão Geral".
+
+   3. Inteligência Geográfica (MapAnalysis.tsx):
+      - Mapa interativo (Leaflet).
+      - Camadas: Pontos (Escolas/Alunos) e Mapa de Calor (Densidade).
+      - Busca por logradouro ou nome de aluno com "FlyTo" (animação de câmera).
+      - Botão de geolocalização do usuário.
+
+   4. Censo e Relatórios:
+      - AdminData: Tabela crua de dados para auditoria e exportação em massa.
+      - Reports: Gráficos de pizza (distribuição de status) e tabelas de lotação.
+
+F. ASSISTENTE VIRTUAL (ChatAssistant)
+   - Bot flutuante disponível em todas as telas.
+   - Utiliza o contexto atual (lista de escolas e estatísticas) para responder
+     perguntas via Google Gemini API (ex: "Qual a escola mais perto do centro?", "Quantos alunos temos?").
+   - Realiza "Grounding" (cita fontes) quando usa a busca do Google.
+
+================================================================================

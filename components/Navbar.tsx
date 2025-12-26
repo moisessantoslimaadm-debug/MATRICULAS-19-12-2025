@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from '../router';
-import { GraduationCap, Menu, X, CloudOff, LogOut, Building, Map, FileText } from 'lucide-react';
+import { GraduationCap, Menu, X, CloudOff, LogOut, Building, Map, FileText, ChevronDown, Users, Briefcase, Star } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { UserRole } from '../types';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { isOffline } = useData();
@@ -19,6 +20,7 @@ export const Navbar: React.FC = () => {
     setRole(savedRole);
     setUserName(userData.name || '');
     setIsOpen(false); // Fecha menu ao mudar de rota
+    setIsDropdownOpen(false);
   }, [location.pathname, location.search]);
 
   const handleLogout = () => {
@@ -28,8 +30,6 @@ export const Navbar: React.FC = () => {
 
   const isActive = (path: string) => {
     const currentPath = location.pathname;
-    
-    // Lógica aprimorada para sub-rotas e parâmetros
     const isActiveLink = currentPath === path || (path !== '/' && currentPath.startsWith(path));
 
     return isActiveLink
@@ -74,9 +74,37 @@ export const Navbar: React.FC = () => {
               {(role === UserRole.ADMIN_SME || role === UserRole.DIRECTOR) && (
                 <>
                   <Link to="/dashboard" className={isActive('/dashboard')}>Painel</Link>
-                  <Link to="/admin/escolas" className={isActive('/admin/escolas')}>
-                    <Building className="h-3.5 w-3.5" /> Gestão de Rede
-                  </Link>
+                  
+                  {/* Dropdown Gestão da Rede */}
+                  <div 
+                    className="relative group h-full flex items-center"
+                    onMouseEnter={() => setIsDropdownOpen(true)}
+                    onMouseLeave={() => setIsDropdownOpen(false)}
+                  >
+                    <button className={`flex items-center gap-2 outline-none ${isActive('/admin/escolas').replace('border-b-2 border-emerald-600', '')}`}>
+                        <Building className="h-3.5 w-3.5" /> 
+                        Gestão da Rede
+                        <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    <div className={`absolute top-full left-0 w-56 pt-2 transition-all duration-200 origin-top-left ${isDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
+                        <div className="bg-white rounded-2xl shadow-luxury border border-slate-100 p-2 overflow-hidden">
+                            <Link to="/admin/escolas" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-[10px] font-bold text-slate-500 hover:text-emerald-600 uppercase tracking-widest transition-colors group/item">
+                                <div className="bg-blue-50 p-1.5 rounded-lg group-hover/item:bg-emerald-100 text-blue-500 group-hover/item:text-emerald-600 transition-colors"><Building className="h-3.5 w-3.5" /></div>
+                                Unidades Escolares
+                            </Link>
+                            <Link to="/admin/escolas" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-[10px] font-bold text-slate-500 hover:text-emerald-600 uppercase tracking-widest transition-colors group/item">
+                                <div className="bg-amber-50 p-1.5 rounded-lg group-hover/item:bg-emerald-100 text-amber-500 group-hover/item:text-emerald-600 transition-colors"><Briefcase className="h-3.5 w-3.5" /></div>
+                                Profissionais
+                            </Link>
+                            <Link to="/admin/escolas" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-[10px] font-bold text-slate-500 hover:text-emerald-600 uppercase tracking-widest transition-colors group/item">
+                                <div className="bg-purple-50 p-1.5 rounded-lg group-hover/item:bg-emerald-100 text-purple-500 group-hover/item:text-emerald-600 transition-colors"><Star className="h-3.5 w-3.5" /></div>
+                                Projetos
+                            </Link>
+                        </div>
+                    </div>
+                  </div>
+
                   <Link to="/admin/map" className={isActive('/admin/map')}>
                     <Map className="h-3.5 w-3.5" /> Mapa Geo
                   </Link>
@@ -140,10 +168,15 @@ export const Navbar: React.FC = () => {
                       </>
                     ) : (
                       <>
-                         <MobileLink to="/dashboard">Painel de Controle</MobileLink>
-                         <MobileLink to="/admin/escolas">Gestão de Escolas</MobileLink>
-                         <MobileLink to="/admin/map">Mapa Territorial</MobileLink>
-                         <MobileLink to="/admin/data">Censo Nominal</MobileLink>
+                         <MobileLink to="/dashboard" icon={FileText}>Painel de Controle</MobileLink>
+                         <div className="pl-4 border-l-2 border-slate-100 ml-4 space-y-2 py-2">
+                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-2">Gestão da Rede</p>
+                            <MobileLink to="/admin/escolas" icon={Building}>Unidades Escolares</MobileLink>
+                            <MobileLink to="/admin/escolas" icon={Briefcase}>Profissionais</MobileLink>
+                            <MobileLink to="/admin/escolas" icon={Star}>Projetos</MobileLink>
+                         </div>
+                         <MobileLink to="/admin/map" icon={Map}>Mapa Territorial</MobileLink>
+                         <MobileLink to="/admin/data" icon={Users}>Censo Nominal</MobileLink>
                       </>
                     )}
                   </div>

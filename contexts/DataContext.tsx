@@ -138,7 +138,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   useEffect(() => { loadData(); }, []);
 
   const getNearestSchool = (lat: number, lng: number) => {
-    const validSchools = schools.filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number');
+    // Validação robusta de coordenadas antes do cálculo
+    const validSchools = schools.filter(s => 
+        s && 
+        typeof s === 'object' &&
+        typeof s.lat === 'number' && !isNaN(s.lat) &&
+        typeof s.lng === 'number' && !isNaN(s.lng)
+    );
+    
     if (validSchools.length === 0) return null;
     
     let nearest = validSchools[0];

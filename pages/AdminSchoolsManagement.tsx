@@ -388,15 +388,20 @@ export const AdminSchoolsManagement: React.FC = () => {
             {viewParam === 'students' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
                     <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <div className="relative group w-full max-w-md">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
-                            <input 
-                                type="text" 
-                                placeholder="Buscar aluno nesta escola..." 
-                                value={searchTerm} 
-                                onChange={e => setSearchTerm(e.target.value)} 
-                                className="input-premium pl-14 !h-14 !text-[11px] !bg-slate-50" 
-                            />
+                        <div className="flex items-center gap-4 w-full max-w-lg">
+                            <button onClick={() => navigate(`/admin/escolas?schoolId=${selectedSchool.id}&view=overview`)} className="p-3 bg-slate-50 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="Voltar à Visão Geral">
+                                <ArrowLeft className="h-5 w-5" />
+                            </button>
+                            <div className="relative group flex-1">
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar aluno nesta escola..." 
+                                    value={searchTerm} 
+                                    onChange={e => setSearchTerm(e.target.value)} 
+                                    className="input-premium pl-14 !h-14 !text-[11px] !bg-slate-50" 
+                                />
+                            </div>
                         </div>
                         <div className="text-right">
                             <span className="block text-2xl font-black text-slate-900">{schoolStudents.length}</span>
@@ -427,7 +432,10 @@ export const AdminSchoolsManagement: React.FC = () => {
             {/* ABA 3: PROJETOS */}
             {viewParam === 'projects' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-500">
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center">
+                        <button onClick={() => navigate(`/admin/escolas?schoolId=${selectedSchool.id}&view=overview`)} className="flex items-center gap-3 p-4 bg-white rounded-2xl text-slate-400 hover:text-emerald-600 hover:shadow-md transition-all text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                            <ArrowLeft className="h-4 w-4" /> Voltar à Visão Geral
+                        </button>
                         <button onClick={handleOpenAdd} className="btn-primary !h-14 !px-8 !text-[10px] !bg-emerald-600 shadow-emerald-200">
                             <Plus className="h-4 w-4" /> Novo Projeto
                         </button>

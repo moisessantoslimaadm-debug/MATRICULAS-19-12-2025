@@ -46,7 +46,7 @@ const ProgressionVisual = ({ data }: { data: PerformanceRow[] }) => {
                 <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-1">Rendimento Global</h4>
                 <p className="text-7xl font-black text-slate-900 mt-4 tracking-tighter leading-none">
                   {(scores.reduce((a,b)=>a+b,0)/3).toFixed(1)} 
-                  <span className="text-xs font-black text-emerald-500 ml-3 uppercase tracking-ultra">Score Nom.</span>
+                  <span className="text-xs font-black text-emerald-50 ml-3 uppercase tracking-ultra">Score Nom.</span>
                 </p>
             </div>
 
@@ -133,6 +133,10 @@ export const PerformanceIndicators: React.FC = () => {
       finally { setIsSaving(false); }
   };
 
+  const handleBack = () => {
+      navigate(-1);
+  };
+
   if (!currentStudent) return null;
 
   return (
@@ -140,10 +144,10 @@ export const PerformanceIndicators: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-24 gap-12">
             <div className="space-y-10">
-                <button onClick={() => navigate('/dashboard')} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group">
+                <button onClick={handleBack} className="flex items-center gap-4 text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition group">
                     <div className="bg-slate-100 p-3 rounded-2xl group-hover:bg-emerald-50 transition-colors">
                       <ArrowLeft className="h-5 w-5" />
-                    </div> Voltar ao Painel
+                    </div> Voltar
                 </button>
                 <h1 className="text-8xl font-black text-slate-900 tracking-tighter leading-none mb-6 text-display uppercase">
                   Monitor de <br/><span className="text-emerald-600">Aprendizado.</span>

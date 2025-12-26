@@ -4,7 +4,7 @@ import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, MapPin, Layers, 
   Search, Compass, Navigation2, Navigation, Globe,
-  ShieldCheck, Loader2
+  ShieldCheck, Loader2, Users
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -88,37 +88,42 @@ export const MapAnalysis: React.FC = () => {
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     const shieldIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
 
-    // Plotagem de Unidades Escolares
-    schools.forEach(school => {
-        if (!school || typeof school.lat !== 'number' || typeof school.lng !== 'number') return;
+    // Plotagem de Unidades Escolares com verificação robusta
+    if (Array.isArray(schools)) {
+      schools.forEach(school => {
+          // Check for null/undefined object AND valid numeric coordinates
+          if (!school || typeof school !== 'object' || typeof school.lat !== 'number' || typeof school.lng !== 'number') {
+            return;
+          }
 
-        const icon = L.divIcon({
-            html: `<div class="marker-container">
-                    <div class="marker-school shadow-deep">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                    </div>
-                    <div class="marker-label">${school.name}</div>
-                   </div>`,
-            className: 'custom-div-icon',
-            iconSize: [44, 44]
-        });
+          const icon = L.divIcon({
+              html: `<div class="marker-container">
+                      <div class="marker-school shadow-deep">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                      </div>
+                      <div class="marker-label">${school.name}</div>
+                    </div>`,
+              className: 'custom-div-icon',
+              iconSize: [44, 44]
+          });
 
-        L.marker([school.lat, school.lng], { icon })
-          .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
-                        <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
-                        <div class="pt-3 border-t border-slate-50 flex justify-between items-center">
-                            <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">${zapIconSvg} Base Ativa</span>
-                            <span class="text-[10px] font-black text-slate-900 uppercase">Vagas: ${school.availableSlots}</span>
-                        </div>
-                      </div>`)
-          .addTo(schoolMarkersRef.current);
-    });
+          L.marker([school.lat, school.lng], { icon })
+            .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
+                          <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
+                          <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
+                          <div class="pt-3 border-t border-slate-50 flex justify-between items-center">
+                              <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">${zapIconSvg} Base Ativa</span>
+                              <span class="text-[10px] font-black text-slate-900 uppercase">Vagas: ${school.availableSlots}</span>
+                          </div>
+                        </div>`)
+            .addTo(schoolMarkersRef.current);
+      });
+    }
 
-    // Plotagem de Alunos / Mapa de Calor
+    // Plotagem de Alunos / Mapa de Calor com verificação robusta
     if (activeLayer === 'heat') {
-        const heatData = students
-            .filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number')
+        const heatData = (students || [])
+            .filter(s => s && typeof s === 'object' && typeof s.lat === 'number' && typeof s.lng === 'number')
             .map(s => [s.lat, s.lng, 1.0]); 
             
         if (typeof L.heatLayer === 'function' && heatData.length > 0) {
@@ -128,21 +133,23 @@ export const MapAnalysis: React.FC = () => {
             }).addTo(mapRef.current);
         }
     } else {
-        students.forEach(s => {
-            if (!s || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
+        if (Array.isArray(students)) {
+          students.forEach(s => {
+              if (!s || typeof s !== 'object' || typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
 
-            const marker = L.circleMarker([s.lat, s.lng], {
-                radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
-            });
-            marker.bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-luxury">
-                <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">${shieldIconSvg} Aluno Nominal</p>
-                <h4 class="font-black text-slate-900 uppercase text-xs mb-3 leading-tight">${s.name}</h4>
-                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest">Escola: ${s.school || 'Geoprocessamento SME'}</p>
-                </div>
-            </div>`);
-            marker.addTo(studentMarkersRef.current);
-        });
+              const marker = L.circleMarker([s.lat, s.lng], {
+                  radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
+              });
+              marker.bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-luxury">
+                  <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">${shieldIconSvg} Aluno Nominal</p>
+                  <h4 class="font-black text-slate-900 uppercase text-xs mb-3 leading-tight">${s.name}</h4>
+                  <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest">Escola: ${s.school || 'Geoprocessamento SME'}</p>
+                  </div>
+              </div>`);
+              marker.addTo(studentMarkersRef.current);
+          });
+        }
     }
   }, [activeLayer, students, schools, isMapReady]);
 
@@ -151,14 +158,14 @@ export const MapAnalysis: React.FC = () => {
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // Busca nominal profunda
+    // Busca nominal profunda com verificação de coordenadas
     const match = students.find(s => 
-        s && (
+        s && typeof s === 'object' && (
             (s.name && s.name.toLowerCase().includes(term)) || 
             (s.cpf && s.cpf.includes(term)) ||
             (s.address && s.address.street && s.address.street.toLowerCase().includes(term))
         )
-    ) || schools.find(s => s && s.name && s.name.toLowerCase().includes(term));
+    ) || schools.find(s => s && typeof s === 'object' && s.name && s.name.toLowerCase().includes(term));
 
     if (match && typeof match.lat === 'number' && typeof match.lng === 'number') {
         mapRef.current.flyTo([match.lat, match.lng], 18, { 
@@ -295,11 +302,29 @@ export const MapAnalysis: React.FC = () => {
         </div>
 
         <div className="absolute bottom-10 right-10 z-[300] flex flex-col gap-4">
-            <button onClick={() => { mapRef.current.flyTo([-12.5253, -40.2917], 15, { duration: 1.5 }); mapRef.current.invalidateSize(); }} className="p-5 bg-white rounded-2xl shadow-luxury text-slate-900 hover:text-emerald-600 transition-all border border-slate-100"><Maximize size={24} /></button>
+            {/* Controle de Camadas no Mapa */}
+            <div className="bg-white p-2 rounded-3xl shadow-luxury border border-slate-100 flex flex-col gap-2 mb-2">
+                <button
+                    onClick={() => setActiveLayer('points')}
+                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                    title="Alunos (Pontos)"
+                >
+                    <Users size={20} />
+                </button>
+                <button
+                    onClick={() => setActiveLayer('heat')}
+                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'heat' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                    title="Mapa de Calor (Densidade)"
+                >
+                    <Activity size={20} />
+                </button>
+            </div>
+
+            <button onClick={() => { mapRef.current.flyTo([-12.5253, -40.2917], 15, { duration: 1.5 }); mapRef.current.invalidateSize(); }} className="p-5 bg-white rounded-3xl shadow-luxury text-slate-900 hover:text-emerald-600 transition-all border border-slate-100"><Maximize size={24} /></button>
             <button 
                 onClick={handleLocateMe} 
                 disabled={isLocating}
-                className="p-5 bg-[#0F172A] rounded-2xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                className="p-5 bg-[#0F172A] rounded-3xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 {isLocating ? <Loader2 size={24} className="animate-spin" /> : <Navigation size={24} />}
             </button>

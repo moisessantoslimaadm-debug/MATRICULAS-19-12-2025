@@ -115,13 +115,17 @@ export const TeacherJournal: React.FC = () => {
     setGrades({ ...grades, [studentId]: CONCEPTS[nextIdx] });
   };
 
+  const handleBack = () => {
+      navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-8 page-transition">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-16 gap-10">
           <div className="space-y-8">
-            <button onClick={() => navigate('/dashboard')} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
-                <ChevronLeft className="h-4 w-4 group-hover:-translate-x-2 transition-transform" /> Voltar ao Painel
+            <button onClick={handleBack} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
+                <ChevronLeft className="h-4 w-4 group-hover:-translate-x-2 transition-transform" /> Voltar
             </button>
             <div>
                 <div className="flex items-center gap-4 mb-5">

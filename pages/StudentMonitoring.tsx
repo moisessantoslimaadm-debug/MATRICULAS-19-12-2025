@@ -237,15 +237,17 @@ export const StudentMonitoring: React.FC = () => {
   }, [stats]);
 
   const handleBack = () => {
-    // Verifica se é um usuário logado (Admin/Professor)
-    const role = sessionStorage.getItem('user_role');
-    
-    if (role) {
-        // Se for admin, volta para o Dashboard principal
-        navigate('/dashboard');
+    // Tenta voltar no histórico para preservar o contexto (ex: veio da lista de alunos de uma escola específica)
+    // Se não houver histórico (acesso direto), redireciona baseado no papel
+    if (window.history.length > 1) {
+        navigate(-1);
     } else {
-        // Se for acesso público (via Portal do Aluno/Status), volta para a tela inicial
-        navigate('/');
+        const role = sessionStorage.getItem('user_role');
+        if (role) {
+            navigate('/dashboard');
+        } else {
+            navigate('/');
+        }
     }
   };
 
