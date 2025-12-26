@@ -64,6 +64,39 @@ export const sendMessageToGemini = async (message: string, currentSchools: Schoo
   return { text, urls };
 };
 
+export const generatePedagogicalReport = async (student: RegistryStudent, attendancePercent: number, grades: any) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const prompt = `
+    Gere um Relatório Pedagógico Individual formal para o aluno ${student.name}.
+    
+    Dados do Aluno:
+    - Frequência Atual: ${attendancePercent}%
+    - Avaliação Recente (Conceito): ${JSON.stringify(grades)}
+    - Necessidades Especiais (AEE): ${student.specialNeeds ? 'Sim' : 'Não'}
+    - Observações do Professor (Histórico): ${student.teacherNotes?.map(n => n.content).join('; ') || 'Sem observações registradas.'}
+
+    Estrutura do Relatório (Use linguagem formal, pedagógica e acolhedora, direcionada aos pais/responsáveis):
+    1. Introdução: Breve apresentação do desempenho geral.
+    2. Análise de Assiduidade: Comentário sobre a frequência.
+    3. Desenvolvimento Cognitivo e Conceitual: Análise baseada nos conceitos (DI, EP, DB, DE).
+    4. Recomendações: Sugestões práticas para a família apoiar o aluno.
+    5. Conclusão: Encerramento positivo.
+
+    Não use formatação Markdown (negrito, itálico) excessiva, prefira texto corrido e parágrafos claros para impressão oficial.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: prompt,
+    config: {
+      temperature: 0.4,
+    }
+  });
+
+  return response.text;
+};
+
 export const resetChat = () => {
   // Stateless implementation
 };

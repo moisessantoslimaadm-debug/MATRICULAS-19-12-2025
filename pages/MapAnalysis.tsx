@@ -45,7 +45,7 @@ export const MapAnalysis: React.FC = () => {
         !isNaN(lngNum) && 
         isFinite(latNum) &&
         isFinite(lngNum) &&
-        latNum !== 0 && // Evita coordenadas 0,0 (Null Island)
+        latNum !== 0 && // Evita coordenadas 0,0 (Null Island) ou não inicializadas
         lngNum !== 0 &&
         latNum >= -90 && latNum <= 90 &&
         lngNum >= -180 && lngNum <= 180
@@ -154,7 +154,7 @@ export const MapAnalysis: React.FC = () => {
           
           // Validação GeoAudit solicitada
           if (!isValidCoordinate(school.lat, school.lng)) {
-              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name}`, 'warning', `ID: ${school.id}, Lat: ${school.lat}, Lng: ${school.lng}`);
+              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas ou fora dos limites: ${school.name}`, 'warning', `ID: ${school.id}, Lat: ${school.lat}, Lng: ${school.lng}`);
               return;
           }
 

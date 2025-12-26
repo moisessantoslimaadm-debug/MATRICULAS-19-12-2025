@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
+import { generatePedagogicalReport } from '../services/geminiService';
 import { 
   Save, Search, Loader2, ClipboardCheck, MessageSquare, 
-  CheckCircle, XCircle, ChevronLeft, Calendar, Edit3, User, Home
+  CheckCircle, XCircle, ChevronLeft, Calendar, Home, Sparkles, Printer, X
 } from 'lucide-react';
 import { useNavigate } from '../router';
-import { TeacherNote } from '../types';
+import { TeacherNote, RegistryStudent } from '../types';
+import { MUNICIPALITY_NAME } from '../constants';
 
 const CONCEPTS = ['', 'DI', 'EP', 'DB', 'DE'];
 const CONCEPT_STYLE: Record<string, string> = {
@@ -30,6 +32,12 @@ export const TeacherJournal: React.FC = () => {
   const [grades, setGrades] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({}); // Novas notas para salvar
   const [openNoteId, setOpenNoteId] = useState<string | null>(null); // Qual aluno está com campo de obs aberto
+
+  // Estado para Relatório IA
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportContent, setReportContent] = useState('');
+  const [selectedStudentForReport, setSelectedStudentForReport] = useState<RegistryStudent | null>(null);
 
   const userData = JSON.parse(sessionStorage.getItem('user_data') || '{}');
   const filtered = students.filter(s => s.status === 'Matriculado' && s.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -60,7 +68,6 @@ export const TeacherJournal: React.FC = () => {
             // 1. Atualizar Frequência
             if (attendance[student.id] !== undefined) {
                 const currentHistory = student.attendanceHistory || [];
-                // Remove registro existente da mesma data para substituir
                 const cleanHistory = currentHistory.filter(r => r.date !== selectedDate);
                 cleanHistory.push({ date: selectedDate, present: attendance[student.id] });
                 updatedStudent.attendanceHistory = cleanHistory;
@@ -115,18 +122,37 @@ export const TeacherJournal: React.FC = () => {
     setGrades({ ...grades, [studentId]: CONCEPTS[nextIdx] });
   };
 
-  const handleBack = () => {
-      navigate(-1);
+  const handleGenerateReport = async (student: RegistryStudent) => {
+      setSelectedStudentForReport(student);
+      setIsGeneratingReport(true);
+      setReportModalOpen(true);
+      setReportContent("Analisando dados do aluno no barramento...");
+
+      try {
+          const totalDays = student.attendanceHistory?.length || 0;
+          const presentDays = student.attendanceHistory?.filter(r => r.present).length || 0;
+          const attPercent = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
+          
+          const studentGrades = {
+              'LÍNGUA PORTUGUESA': grades[student.id] || 'N/A'
+          };
+
+          const text = await generatePedagogicalReport(student, attPercent, studentGrades);
+          setReportContent(text || "Não foi possível gerar o relatório no momento.");
+      } catch (error) {
+          setReportContent("Erro ao conectar com o serviço de inteligência artificial.");
+      } finally {
+          setIsGeneratingReport(false);
+      }
   };
 
-  const handleHome = () => {
-      navigate('/journal'); // Ou Dashboard se for o caso
-  };
+  const handleBack = () => navigate(-1);
+  const handleHome = () => navigate('/journal');
 
   return (
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-8 page-transition">
       <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-16 gap-10">
+        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-16 gap-10 no-print">
           <div className="space-y-8">
             <div className="flex gap-4">
                 <button onClick={handleBack} className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition group">
@@ -164,7 +190,7 @@ export const TeacherJournal: React.FC = () => {
           </div>
         </header>
 
-        <div className="bg-white rounded-[4rem] shadow-luxury border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-[4rem] shadow-luxury border border-slate-100 overflow-hidden no-print">
           <div className="p-12 border-b border-slate-50 bg-slate-50/20 flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="relative w-full max-w-lg">
               <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300" />
@@ -195,7 +221,7 @@ export const TeacherJournal: React.FC = () => {
                   <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante</th>
                   <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Frequência ({selectedDate.split('-').reverse().join('/')})</th>
                   <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Avaliação (Português)</th>
-                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Relatório</th>
+                  <th className="px-12 py-10 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -249,12 +275,21 @@ export const TeacherJournal: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-12 py-8 text-right">
-                        <button 
-                            onClick={() => setOpenNoteId(openNoteId === s.id ? null : s.id)}
-                            className={`p-4 rounded-[1.2rem] border transition-all ${notes[s.id] ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-100 text-slate-300 hover:text-blue-500 hover:border-blue-200'}`}
-                        >
-                            <MessageSquare className="h-5 w-5" />
-                        </button>
+                        <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={() => handleGenerateReport(s)}
+                                className="p-4 rounded-[1.2rem] bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm group/ai"
+                                title="Gerar Relatório IA"
+                            >
+                                <Sparkles className="h-5 w-5" />
+                            </button>
+                            <button 
+                                onClick={() => setOpenNoteId(openNoteId === s.id ? null : s.id)}
+                                className={`p-4 rounded-[1.2rem] border transition-all ${notes[s.id] ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-100 text-slate-300 hover:text-blue-500 hover:border-blue-200'}`}
+                            >
+                                <MessageSquare className="h-5 w-5" />
+                            </button>
+                        </div>
                     </td>
                   </tr>
                 ))}
@@ -263,6 +298,102 @@ export const TeacherJournal: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Relatório IA / Impressão Profissional */}
+      {reportModalOpen && selectedStudentForReport && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:bg-white print:p-0 print:block print:relative">
+              <div className="bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh] print:shadow-none print:max-w-none print:max-h-none print:rounded-none print:h-full">
+                  
+                  {/* Header do Modal (Tela) */}
+                  <div className="flex justify-between items-center p-8 border-b border-slate-100 no-print">
+                      <div className="flex items-center gap-4">
+                          <div className="bg-indigo-100 p-3 rounded-xl text-indigo-600">
+                              <Sparkles className="h-6 w-6" />
+                          </div>
+                          <div>
+                              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Relatório Pedagógico IA</h3>
+                              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Aluno: {selectedStudentForReport.name}</p>
+                          </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                          <button onClick={() => window.print()} className="btn-secondary !h-12 !px-6 !text-[10px]">
+                              <Printer className="h-4 w-4" /> Imprimir
+                          </button>
+                          <button onClick={() => setReportModalOpen(false)} className="p-3 hover:bg-slate-100 rounded-full transition-colors">
+                              <X className="h-5 w-5 text-slate-400" />
+                          </button>
+                      </div>
+                  </div>
+
+                  {/* Conteúdo (Tela) */}
+                  <div className="p-10 overflow-y-auto no-print">
+                      {isGeneratingReport ? (
+                          <div className="flex flex-col items-center justify-center py-20 gap-6">
+                              <Loader2 className="h-12 w-12 text-indigo-600 animate-spin" />
+                              <p className="text-slate-400 font-black text-xs uppercase tracking-[0.3em] animate-pulse">Gerando Análise Pedagógica...</p>
+                          </div>
+                      ) : (
+                          <div className="prose prose-slate max-w-none">
+                              <div className="whitespace-pre-wrap font-medium text-slate-700 leading-relaxed text-justify">
+                                  {reportContent}
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
+                  {/* Layout de Impressão (A4 Profissional) */}
+                  <div className="hidden print:block p-10 bg-white text-black font-serif h-full">
+                      <div className="text-center border-b-2 border-black pb-6 mb-8">
+                          <div className="flex justify-center mb-4"><div className="w-24 h-24 bg-gray-200 rounded-full border border-gray-400 flex items-center justify-center text-4xl font-bold">BR</div></div>
+                          <h1 className="text-2xl font-bold uppercase tracking-wide mb-1">Prefeitura Municipal de {MUNICIPALITY_NAME}</h1>
+                          <h2 className="text-lg font-medium uppercase">Secretaria Municipal de Educação</h2>
+                          <p className="text-sm mt-2 italic">Relatório de Acompanhamento Pedagógico Individual - Ano Letivo 2025</p>
+                      </div>
+
+                      <div className="mb-8 border border-gray-300 p-4">
+                          <table className="w-full text-sm">
+                              <tbody>
+                                  <tr>
+                                      <td className="font-bold py-1 w-32">ALUNO(A):</td>
+                                      <td className="uppercase">{selectedStudentForReport.name}</td>
+                                      <td className="font-bold py-1 w-32">TURMA:</td>
+                                      <td className="uppercase">{selectedStudentForReport.className || 'N/A'}</td>
+                                  </tr>
+                                  <tr>
+                                      <td className="font-bold py-1">RA / MATRÍCULA:</td>
+                                      <td>{selectedStudentForReport.enrollmentId}</td>
+                                      <td className="font-bold py-1">DATA EMISSÃO:</td>
+                                      <td>{new Date().toLocaleDateString()}</td>
+                                  </tr>
+                                  <tr>
+                                      <td className="font-bold py-1">UNIDADE ESCOLAR:</td>
+                                      <td colSpan={3} className="uppercase">{selectedStudentForReport.school}</td>
+                                  </tr>
+                              </tbody>
+                          </table>
+                      </div>
+
+                      <div className="text-justify leading-loose text-base font-normal mb-12">
+                          {reportContent}
+                      </div>
+
+                      <div className="mt-20 pt-10 border-t border-black grid grid-cols-2 gap-20 text-center text-sm">
+                          <div>
+                              <p className="mb-12">_________________________________________________</p>
+                              <p className="font-bold uppercase">{userData.name}</p>
+                              <p>Professor(a) Responsável</p>
+                          </div>
+                          <div>
+                              <p className="mb-12">_________________________________________________</p>
+                              <p className="font-bold uppercase">Coordenação Pedagógica</p>
+                              <p>Visto</p>
+                          </div>
+                      </div>
+                  </div>
+
+              </div>
+          </div>
+      )}
     </div>
   );
 };

@@ -79,44 +79,71 @@ body {
 
 .skeleton-box { @apply bg-slate-200 animate-pulse rounded-xl; }
 
-/* --- ESTILOS DE IMPRESSÃO A4 --- */
+/* --- ESTILOS DE IMPRESSÃO A4 PROFISSIONAL --- */
 @media print {
   @page {
     size: A4;
-    margin: 0;
+    margin: 15mm;
   }
   
   body {
     background-color: white !important;
+    color: black !important;
+    font-size: 11pt !important;
     overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   /* Oculta tudo que não for de impressão */
-  .no-print, nav, .fixed, button, header, footer {
+  .no-print, nav, .fixed, button, header .btn-primary, footer, .floating-button, .chat-widget {
     display: none !important;
   }
 
-  /* Mostra o layout de impressão */
-  .print-only {
-    display: block !important;
-    width: 210mm;
-    min-height: 297mm;
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: white;
-    z-index: 9999;
-    padding: 15mm;
+  /* Reset de Cards para Estilo Flat/Texto */
+  .card-requinte, .bg-white, .bg-slate-50, .bg-slate-900, .bg-emerald-50, .bg-emerald-600 {
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    color: black !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  /* Reseta sombras e efeitos para papel */
+  .no-print-card-style {
+      border: 1px solid #ddd !important;
+      padding: 10px !important;
+      margin-bottom: 10px !important;
+      height: auto !important;
+  }
+
+  /* Exibe Layouts Específicos de Impressão */
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    z-index: 9999;
+  }
+
+  /* Ajustes Tipográficos para Papel */
+  h1, h2, h3, h4, h5, h6 {
+    color: black !important;
+    letter-spacing: normal !important;
+  }
+  
+  p, span, div {
+    color: black !important;
+  }
+
+  /* Reseta animações */
   * {
-    box-shadow: none !important;
-    text-shadow: none !important;
     animation: none !important;
     transition: none !important;
+    transform: none !important;
   }
 }
 

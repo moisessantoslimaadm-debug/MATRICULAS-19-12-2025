@@ -6,6 +6,7 @@ import {
   School as SchoolIcon, Users, HeartPulse, Bus, 
   TrendingUp, Database, ArrowRight, Layers, Target, ShieldCheck
 } from 'lucide-react';
+import { MUNICIPALITY_NAME } from '../constants';
 
 // Otimização: Gráfico memoizado para evitar recalculo visual desnecessário
 const CustomPieChart = React.memo(({ data }: { data: { label: string; value: number; color: string }[] }) => {
@@ -70,12 +71,12 @@ const CustomPieChart = React.memo(({ data }: { data: { label: string; value: num
 
 // Otimização: Componente estático memoizado
 const HighDensityStat = React.memo(({ title, value, icon: Icon, colorClass, sub }: any) => (
-    <div className="card-requinte !p-8 md:!p-12 flex flex-col justify-between group h-56 md:h-64">
+    <div className="card-requinte !p-8 md:!p-12 flex flex-col justify-between group h-56 md:h-64 no-print-card-style">
         <div className="flex justify-between items-start">
             <div className={`p-4 md:p-5 rounded-[1.5rem] md:rounded-[2rem] ${colorClass} text-white shadow-2xl transition-all group-hover:rotate-12 group-hover:scale-110 duration-700`}>
                 <Icon className="h-6 w-6 md:h-8 md:w-8" />
             </div>
-            <div className="bg-slate-50 px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-slate-50 px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity no-print">
                 <Target className="h-3 w-3 md:h-4 md:w-4 text-slate-400" />
             </div>
         </div>
@@ -147,6 +148,14 @@ export const Reports: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#fcfdfe] py-16 px-6 md:py-24 md:px-12 page-transition">
+            
+            {/* CABEÇALHO APENAS PARA IMPRESSÃO */}
+            <div className="hidden print:block mb-8 text-center border-b-2 border-black pb-4">
+                <h1 className="text-xl font-bold uppercase">Prefeitura Municipal de {MUNICIPALITY_NAME}</h1>
+                <h2 className="text-lg font-medium uppercase">Secretaria Municipal de Educação</h2>
+                <p className="text-sm mt-2 italic">Relatório Gerencial da Rede Municipal - {new Date().toLocaleDateString()}</p>
+            </div>
+
             <div className="max-w-[1600px] mx-auto space-y-16 md:space-y-24">
                 <header className="flex flex-col 2xl:flex-row justify-between items-start 2xl:items-end gap-10 md:gap-12 no-print">
                     <div className="space-y-6 md:space-y-10">
@@ -183,14 +192,16 @@ export const Reports: React.FC = () => {
 
                 {activeTab === 'overview' && (
                     <div className="space-y-12 md:space-y-20 animate-in fade-in duration-1000">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8 md:gap-12">
+                        {/* STATS CARDS */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8 md:gap-12 print:grid-cols-2 print:gap-4 print:text-sm">
                              <HighDensityStat title="Censo Total" value={students.length} icon={Users} colorClass="bg-slate-900" sub="Registros Auditados" />
                              <HighDensityStat title="Pastas AEE" value={students.filter(s => s.specialNeeds).length} icon={HeartPulse} colorClass="bg-pink-600" sub="Inclusão Ativa" />
                              <HighDensityStat title="Frotas Rurais" value={students.filter(s => s.transportRequest).length} icon={Bus} colorClass="bg-blue-600" sub="Itinerários Logísticos" />
                              <HighDensityStat title="Unidades" value={schools.length} icon={SchoolIcon} colorClass="bg-emerald-600" sub="Rede Municipal Ativa" />
                         </div>
 
-                        <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8 md:gap-12">
+                        {/* VISUALIZAÇÃO GRÁFICA (TELA) VS TABELA (IMPRESSÃO) */}
+                        <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8 md:gap-12 no-print">
                             <div className="card-requinte !p-8 md:!p-20 relative overflow-hidden group">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 md:mb-16 gap-4">
                                     <h3 className="text-[11px] md:text-[13px] font-black text-slate-400 uppercase tracking-[0.5em] flex items-center gap-4 md:gap-5">
@@ -234,7 +245,34 @@ export const Reports: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="card-requinte !p-8 md:!p-20 overflow-hidden">
+                        {/* TABELA DE IMPRESSÃO (SÓ APARECE NO MODO PRINT) */}
+                        <div className="hidden print:block mt-8">
+                            <h3 className="text-lg font-bold uppercase mb-4 border-b border-black pb-2">Lotação por Unidade Escolar</h3>
+                            <table className="w-full text-sm border-collapse border border-gray-400">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="border border-gray-400 px-2 py-1 text-left">Unidade Escolar</th>
+                                        <th className="border border-gray-400 px-2 py-1 text-center">Matriculados</th>
+                                        <th className="border border-gray-400 px-2 py-1 text-center">Capacidade</th>
+                                        <th className="border border-gray-400 px-2 py-1 text-center">Ocupação</th>
+                                        <th className="border border-gray-400 px-2 py-1 text-center">AEE</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {schoolComparison.map(s => (
+                                        <tr key={s.name}>
+                                            <td className="border border-gray-400 px-2 py-1">{s.name}</td>
+                                            <td className="border border-gray-400 px-2 py-1 text-center">{s.total}</td>
+                                            <td className="border border-gray-400 px-2 py-1 text-center">{s.capacity}</td>
+                                            <td className="border border-gray-400 px-2 py-1 text-center">{s.occupancy.toFixed(1)}%</td>
+                                            <td className="border border-gray-400 px-2 py-1 text-center">{s.aee}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="card-requinte !p-8 md:!p-20 overflow-hidden no-print">
                             <div className="flex flex-col md:flex-row justify-between items-center mb-10 md:mb-20 gap-8 md:gap-10">
                                 <div className="space-y-4 text-center md:text-left">
                                     <h3 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">Mapa de <br/><span className="text-blue-600">Lotação Síncrona.</span></h3>
