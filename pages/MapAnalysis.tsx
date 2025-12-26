@@ -3,9 +3,9 @@ import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, MapPin, Layers, 
-  Search, Compass, Navigation2, Navigation, Globe,
+  Search, Compass, Navigation2, LocateFixed, Globe,
   ShieldCheck, Loader2, Users, School as SchoolIcon,
-  AlertTriangle
+  AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -21,6 +21,7 @@ export const MapAnalysis: React.FC = () => {
   const schoolMarkersRef = useRef<any>(null);
   const studentMarkersRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+  const searchResultMarkerRef = useRef<any>(null);
   
   // Referência para armazenar marcadores de escola individualmente para acesso programático
   const schoolMarkerMap = useRef<Map<string, any>>(new Map());
@@ -30,9 +31,9 @@ export const MapAnalysis: React.FC = () => {
   const [isMapReady, setIsMapReady] = useState(false);
   const [searchStreet, setSearchStreet] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
   // Helper de Validação Robusta de Coordenadas
-  // Garante que lat/lng sejam números finitos, não-nulos e dentro dos limites geográficos válidos
   const isValidCoordinate = (lat: any, lng: any): boolean => {
     const latNum = Number(lat);
     const lngNum = Number(lng);
@@ -49,6 +50,37 @@ export const MapAnalysis: React.FC = () => {
         latNum >= -90 && latNum <= 90 &&
         lngNum >= -180 && lngNum <= 180
     );
+  };
+
+  // Serviço de Geocodificação (Nominatim / OpenStreetMap)
+  const geocodeAddress = async (query: string) => {
+    try {
+        // Contextualiza a busca para Itaberaba, Bahia para maior precisão
+        const contextualizedQuery = `${query}, Itaberaba, Bahia, Brasil`;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(contextualizedQuery)}&limit=1&addressdetails=1`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'EducaMunicipio-Platform/1.0 (Educational Project)'
+            }
+        });
+        
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon),
+                displayName: data[0].display_name,
+                type: data[0].type
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error("Geocoding error:", error);
+        return null;
+    }
   };
 
   const tileProviders = {
@@ -221,59 +253,82 @@ export const MapAnalysis: React.FC = () => {
     }
   }, [activeLayer, students, schools, isMapReady]);
 
-  const handleStreetSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchStreet || !mapRef.current) return;
     const term = searchStreet.toLowerCase();
     
-    // 1. Prioridade: Buscar Unidades Escolares
+    // Limpa marcador de busca anterior
+    if (searchResultMarkerRef.current) {
+        mapRef.current.removeLayer(searchResultMarkerRef.current);
+        searchResultMarkerRef.current = null;
+    }
+
+    // 1. Prioridade: Buscar Unidades Escolares (Base Local)
     const schoolMatch = schools.find(s => 
       s.name.toLowerCase().includes(term) || 
       s.address.toLowerCase().includes(term)
     );
 
     if (schoolMatch) {
-       // Verifica se a escola encontrada tem coordenadas válidas antes de voar
        if (isValidCoordinate(schoolMatch.lat, schoolMatch.lng)) {
-            mapRef.current.flyTo([schoolMatch.lat, schoolMatch.lng], 18, { 
-                duration: 1.5,
-                easeLinearity: 0.25
-            });
+            mapRef.current.flyTo([schoolMatch.lat, schoolMatch.lng], 18, { duration: 1.5, easeLinearity: 0.25 });
             addToast(`Unidade Localizada: ${schoolMatch.name}`, 'success');
-
-            // Abre o popup automaticamente
             const marker = schoolMarkerMap.current.get(schoolMatch.id);
-            if (marker) {
-                setTimeout(() => marker.openPopup(), 1600); // Aguarda o flyTo terminar
-            }
+            if (marker) setTimeout(() => marker.openPopup(), 1600);
             return;
-       } else {
-           addToast(`Falha Geoespacial: A unidade "${schoolMatch.name}" possui coordenadas inválidas ou não cadastradas.`, "error");
-           return;
        }
     }
 
-    // 2. Secundário: Buscar Alunos Nominalmente
-    const match = students.find(s => 
+    // 2. Secundário: Buscar Alunos Nominalmente (Base Local)
+    const studentMatch = students.find(s => 
         s && typeof s === 'object' && (
             (s.name && s.name.toLowerCase().includes(term)) || 
-            (s.cpf && s.cpf.includes(term)) ||
-            (s.address && s.address.street && s.address.street.toLowerCase().includes(term))
+            (s.cpf && s.cpf.includes(term))
         )
     );
 
-    if (match) {
-        if (isValidCoordinate(match.lat, match.lng)) {
-            mapRef.current.flyTo([match.lat, match.lng], 19, { 
-                duration: 1.8,
-                easeLinearity: 0.15
-            });
-            addToast(`Visualizando: ${match.name}`, 'info');
-        } else {
-            addToast(`Registro "${match.name}" encontrado, mas sem geolocalização válida cadastrada.`, "warning");
+    if (studentMatch) {
+        if (isValidCoordinate(studentMatch.lat, studentMatch.lng)) {
+            mapRef.current.flyTo([studentMatch.lat, studentMatch.lng], 19, { duration: 1.8, easeLinearity: 0.15 });
+            addToast(`Aluno Localizado: ${studentMatch.name}`, 'info');
+            return;
         }
+    }
+
+    // 3. Terciário: Busca Global de Endereços (Nominatim / OSM)
+    setIsSearchingExternal(true);
+    addToast("Buscando endereço na base geográfica...", "info");
+    
+    const geoResult = await geocodeAddress(searchStreet);
+    setIsSearchingExternal(false);
+
+    if (geoResult) {
+        mapRef.current.flyTo([geoResult.lat, geoResult.lng], 17, { duration: 2, easeLinearity: 0.25 });
+        
+        const searchIcon = L.divIcon({
+            className: 'bg-transparent',
+            html: `<div class="relative flex flex-col items-center">
+                     <div class="bg-violet-600 text-white p-3 rounded-full shadow-2xl border-4 border-white animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                     </div>
+                     <div class="mt-2 bg-white px-3 py-1 rounded-lg shadow-md text-[10px] font-black uppercase tracking-widest text-violet-700 whitespace-nowrap">Resultado da Busca</div>
+                   </div>`,
+            iconSize: [40, 60],
+            iconAnchor: [20, 60]
+        });
+
+        searchResultMarkerRef.current = L.marker([geoResult.lat, geoResult.lng], { icon: searchIcon })
+            .addTo(mapRef.current)
+            .bindPopup(`<div class="p-4 text-center max-w-[200px]">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Endereço Público</p>
+                            <p class="text-xs font-bold text-slate-800 leading-tight">${geoResult.displayName}</p>
+                        </div>`)
+            .openPopup();
+
+        addToast("Endereço localizado no mapa.", "success");
     } else {
-        addToast("Nenhum registro localizado para o critério informado.", "warning");
+        addToast("Nenhum registro localizado (Local ou Global).", "warning");
     }
   };
 
@@ -348,13 +403,22 @@ export const MapAnalysis: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
-            <form onSubmit={handleStreetSearch} className="space-y-4">
+            <form onSubmit={handleSearch} className="space-y-4">
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Navigation2 size={16} className="text-blue-500" /> Busca Geográfica</h3>
                 <div className="relative group">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                    <input type="text" value={searchStreet} onChange={e => setSearchStreet(e.target.value)} placeholder="Escola, Aluno ou Endereço..." className="input-premium pl-16 !h-16 !text-sm !bg-slate-50" />
+                    <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-600 transition-colors">
+                        {isSearchingExternal ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Search size={18} />}
+                    </div>
+                    <input 
+                        type="text" 
+                        value={searchStreet} 
+                        onChange={e => setSearchStreet(e.target.value)} 
+                        placeholder="Rua, Bairro, Escola ou Aluno..." 
+                        className="input-premium pl-16 !h-16 !text-sm !bg-slate-50" 
+                        disabled={isSearchingExternal}
+                    />
                 </div>
-                <p className="text-[9px] text-slate-400 font-bold px-2">Dica: Busque por nome de escola para visualização rápida.</p>
+                <p className="text-[9px] text-slate-400 font-bold px-2">Dica: O sistema buscará na base local e depois no mapa global (Ruas/Bairros).</p>
             </form>
 
             <section className="space-y-6">
@@ -428,7 +492,7 @@ export const MapAnalysis: React.FC = () => {
                 className="p-5 bg-[#0F172A] rounded-3xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 title="Minha Localização Nominal"
             >
-                {isLocating ? <Loader2 size={24} className="animate-spin" /> : <Navigation size={24} />}
+                {isLocating ? <Loader2 size={24} className="animate-spin" /> : <LocateFixed size={24} />}
             </button>
         </div>
       </div>
