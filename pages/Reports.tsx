@@ -2,10 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { 
-  PieChart as PieIcon, Printer, Download, 
+  Printer, Download, 
   School as SchoolIcon, Users, HeartPulse, Bus, 
-  TrendingUp, Activity, Database, ArrowRight, Layers, Target, ShieldCheck,
-  Building
+  TrendingUp, Database, ArrowRight, Layers, Target, ShieldCheck
 } from 'lucide-react';
 
 // Otimização: Gráfico memoizado para evitar recalculo visual desnecessário
@@ -250,3 +249,20 @@ export const Reports: React.FC = () => {
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12"></div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'audit' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4">
+                         <div className="card-requinte !p-12 md:!p-20 text-center">
+                            <ShieldCheck className="h-16 w-16 md:h-24 md:w-24 text-slate-200 mx-auto mb-6 md:mb-8" />
+                            <h3 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tight">Auditoria de Conformidade</h3>
+                            <p className="text-slate-400 mt-4 font-medium text-lg max-w-xl mx-auto">Os relatórios de auditoria nominal e compliance com o Educacenso estão sendo gerados pelo núcleo de processamento.</p>
+                         </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
