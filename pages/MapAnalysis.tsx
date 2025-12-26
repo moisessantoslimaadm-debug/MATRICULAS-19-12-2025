@@ -38,8 +38,12 @@ export const MapAnalysis: React.FC = () => {
     const lngNum = Number(lng);
     
     return (
+        typeof latNum === 'number' &&
+        typeof lngNum === 'number' &&
         !isNaN(latNum) && 
         !isNaN(lngNum) && 
+        isFinite(latNum) &&
+        isFinite(lngNum) &&
         latNum !== 0 && 
         lngNum !== 0 &&
         latNum >= -90 && latNum <= 90 &&
@@ -137,8 +141,9 @@ export const MapAnalysis: React.FC = () => {
           // Validação estrita antes de plotar
           if (!school || typeof school !== 'object') return;
           
+          // CHECKPOINT: Garante que só plotamos se a coordenada for válida
           if (!isValidCoordinate(school.lat, school.lng)) {
-              console.warn(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name}`, school);
+              console.warn(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name} (${school.lat}, ${school.lng})`, school);
               return;
           }
 
@@ -162,6 +167,18 @@ export const MapAnalysis: React.FC = () => {
                               <span class="text-[10px] font-black text-slate-900 uppercase">Vagas: ${school.availableSlots}</span>
                           </div>
                         </div>`)
+            .on('click', () => {
+                // Zoom suave e centralização ao clicar no marcador
+                // Dupla verificação para segurança no callback
+                if (isValidCoordinate(school.lat, school.lng)) {
+                    mapRef.current.flyTo([school.lat, school.lng], 18, { 
+                        duration: 1.5,
+                        easeLinearity: 0.25
+                    });
+                } else {
+                    addToast("Não foi possível centralizar nesta unidade.", "error");
+                }
+            })
             .addTo(schoolMarkersRef.current);
           
           // Armazena referência para busca
@@ -185,7 +202,8 @@ export const MapAnalysis: React.FC = () => {
         if (Array.isArray(students)) {
           students.forEach(s => {
               if (!s || typeof s !== 'object') return;
-              if (!isValidCoordinate(s.lat, s.lng)) return; // Pula silenciosamente alunos sem geo
+              // CHECKPOINT: Pula silenciosamente alunos sem geo para não poluir o mapa com erros
+              if (!isValidCoordinate(s.lat, s.lng)) return; 
 
               const marker = L.circleMarker([s.lat, s.lng], {
                   radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
@@ -230,7 +248,7 @@ export const MapAnalysis: React.FC = () => {
             }
             return;
        } else {
-           addToast(`Falha Geoespacial: A unidade "${schoolMatch.name}" possui coordenadas inválidas (Lat: ${schoolMatch.lat}, Lng: ${schoolMatch.lng}).`, "error");
+           addToast(`Falha Geoespacial: A unidade "${schoolMatch.name}" possui coordenadas inválidas ou não cadastradas.`, "error");
            return;
        }
     }
@@ -273,6 +291,7 @@ export const MapAnalysis: React.FC = () => {
         (pos) => {
             const { latitude, longitude } = pos.coords;
             
+            // Validação estrita do sinal GPS recebido
             if (isValidCoordinate(latitude, longitude) && mapRef.current) {
                 if (userMarkerRef.current) {
                     mapRef.current.removeLayer(userMarkerRef.current);
@@ -298,7 +317,7 @@ export const MapAnalysis: React.FC = () => {
                 
                 addToast("Localização nominal confirmada.", "success");
             } else {
-                addToast("Sinal GPS inválido ou fora dos limites.", "error");
+                addToast("Sinal GPS inválido ou fora dos limites territoriais.", "error");
             }
             
             setIsLocating(false);
@@ -320,9 +339,9 @@ export const MapAnalysis: React.FC = () => {
                 <ArrowLeft size={16} className="group-hover:-translate-x-2 transition-transform" /> Voltar
             </button>
             <div className="flex items-center gap-5">
-                <div className="bg-[#0F172A] p-3 rounded-2xl text-emerald-400 shadow-xl"><Compass size={28} className="animate-spin-slow" /></div>
+                <div className="bg-[#0F172A] p-3 rounded-2xl text-emerald-400 shadow-xl shrink-0"><Compass size={28} className="animate-spin-slow" /></div>
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Geolocalização <br/>do Aluno.</h1>
+                    <h1 className="text-2xl xl:text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none break-words">Geolocalização <br/>do Aluno.</h1>
                     <p className="text-[10px] text-slate-400 mt-2 uppercase font-black tracking-ultra">Inteligência Territorial</p>
                 </div>
             </div>
@@ -376,11 +395,11 @@ export const MapAnalysis: React.FC = () => {
       <div className="flex-1 relative bg-slate-100">
         <div id="analysis-map" className="w-full h-full z-10" />
         
-        <div className="absolute top-10 left-10 z-[300] bg-white/90 backdrop-blur-xl px-8 py-5 rounded-[2.5rem] shadow-luxury flex items-center gap-6 border border-white">
-            <div className="bg-[#0F172A] p-3 rounded-2xl text-emerald-400 shadow-xl"><Compass className="h-7 w-7 animate-spin-slow" /></div>
-            <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase block tracking-ultra mb-1">Barramento Geo-Síncrono Ativo</span>
-                <span className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none">Itaberaba • BA</span>
+        <div className="absolute top-10 left-10 z-[300] bg-white/90 backdrop-blur-xl px-6 py-4 md:px-8 md:py-5 rounded-[2.5rem] shadow-luxury flex items-center gap-4 md:gap-6 border border-white max-w-[calc(100%-80px)]">
+            <div className="bg-[#0F172A] p-2 md:p-3 rounded-2xl text-emerald-400 shadow-xl shrink-0"><Compass className="h-6 w-6 md:h-7 md:w-7 animate-spin-slow" /></div>
+            <div className="min-w-0">
+                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase block tracking-ultra mb-1 truncate">Barramento Geo-Síncrono Ativo</span>
+                <span className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none truncate block">Itaberaba • BA</span>
             </div>
         </div>
 

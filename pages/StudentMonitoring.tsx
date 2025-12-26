@@ -292,7 +292,7 @@ export const StudentMonitoring: React.FC = () => {
                 </div>
             </div>
             
-            <div className="space-y-8 text-center md:text-left">
+            <div className="space-y-8 text-center md:text-left flex-1 min-w-0">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="bg-slate-900 px-6 py-2 rounded-xl text-white">
                     <span className="text-[10px] font-black uppercase tracking-[0.4em]">ID MEC: {student.inepId || 'PENDENTE'}</span>
@@ -302,7 +302,8 @@ export const StudentMonitoring: React.FC = () => {
                     {student.status}
                 </span>
               </div>
-              <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">{student.name}</h1>
+              {/* Nome do aluno com quebra de palavra e responsividade */}
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none break-words">{student.name}</h1>
               <div className="flex flex-wrap justify-center md:justify-start items-center gap-10">
                   <div className="flex items-center gap-4 text-slate-500 font-bold text-[12px] uppercase tracking-widest">
                     <GraduationCap className="h-6 w-6 text-emerald-600" /> {student.grade || 'ENSINO REGULAR'}

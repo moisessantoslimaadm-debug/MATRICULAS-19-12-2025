@@ -155,7 +155,7 @@ export const Reports: React.FC = () => {
                             <div className="h-3 w-3 rounded-full bg-blue-600 animate-pulse shadow-[0_0_20px_rgba(37,99,235,0.6)]"></div>
                             <span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.5em]">Núcleo de Inteligência SME Itaberaba</span>
                         </div>
-                        <h1 className="text-8xl md:text-[120px] font-black text-slate-900 tracking-tighter uppercase leading-[0.8] text-display">BI de <br/><span className="text-blue-600">Rede.</span></h1>
+                        <h1 className="text-5xl md:text-7xl xl:text-8xl font-black text-slate-900 tracking-tighter uppercase leading-[0.9] text-display break-words">Informações <br/><span className="text-blue-600">Gerais.</span></h1>
                     </div>
                     <div className="flex flex-wrap gap-6">
                         <button onClick={() => window.print()} className="btn-primary !h-24 !px-16 !bg-white !text-slate-900 border border-slate-100 shadow-luxury hover:!bg-slate-50">
@@ -249,69 +249,3 @@ export const Reports: React.FC = () => {
                                     </div>
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12"></div>
                                 </div>
-                            </div>
-                            <div className="overflow-x-auto custom-scrollbar pb-10">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="border-b-2 border-slate-50">
-                                            <th className="px-12 py-10 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Unidade Escolar</th>
-                                            <th className="px-12 py-10 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">Nominal</th>
-                                            <th className="px-12 py-10 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">AEE</th>
-                                            <th className="px-12 py-10 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">Capacidade</th>
-                                            <th className="px-12 py-10 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Lotação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {schoolComparison.map(s => (
-                                            <tr key={s.name} className="group hover:bg-slate-50/50 transition-all duration-500">
-                                                <td className="px-12 py-12">
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
-                                                            <Building className="h-6 w-6" />
-                                                        </div>
-                                                        <p className="font-black text-slate-900 text-xl tracking-tighter uppercase leading-none">{s.name}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="px-12 py-12 text-center font-black text-slate-800 text-2xl tracking-tighter">{s.total}</td>
-                                                <td className="px-12 py-12 text-center">
-                                                    <span className="px-5 py-2 bg-pink-50 text-pink-600 rounded-2xl text-[10px] font-black uppercase border border-pink-100">{s.aee}</span>
-                                                </td>
-                                                <td className="px-12 py-12 text-center font-bold text-slate-400 text-lg tracking-widest">{s.capacity}</td>
-                                                <td className="px-12 py-12 min-w-[280px]">
-                                                    <div className="flex items-center gap-8">
-                                                        <div className="flex-1 bg-slate-100 h-3.5 rounded-full overflow-hidden shadow-inner">
-                                                            <div className={`h-full ${s.occupancy > 90 ? 'bg-red-500' : 'bg-blue-600'} transition-all duration-[2.5s]`} style={{ width: `${Math.min(s.occupancy, 100)}%` }}></div>
-                                                        </div>
-                                                        <span className="text-xl font-black text-slate-900 w-16">{s.occupancy.toFixed(0)}%</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="bg-[#0F172A] p-20 rounded-[5rem] text-white shadow-deep relative overflow-hidden group">
-                            <div className="relative z-10 flex flex-col xl:flex-row items-center justify-between gap-16">
-                                <div className="space-y-10 max-w-2xl">
-                                    <div className="w-24 h-24 bg-white/10 rounded-[2.5rem] flex items-center justify-center backdrop-blur-3xl border border-white/10 shadow-2xl">
-                                        <ShieldCheck className="h-12 w-12 text-emerald-400" />
-                                    </div>
-                                    <div className="space-y-6">
-                                        <h2 className="text-6xl font-black tracking-tighter uppercase leading-[0.85]">Certificação <br/><span className="text-emerald-400">Nominal SME.</span></h2>
-                                        <p className="text-slate-400 text-xl font-medium leading-relaxed">Dados auditados e validados via barramento municipal síncrono. Garantia de integridade para fins de estatísticas oficiais MEC/Inep.</p>
-                                    </div>
-                                </div>
-                                <button onClick={handleExportCSV} className="px-16 py-8 bg-white text-slate-900 rounded-[3rem] text-[13px] font-black uppercase tracking-[0.4em] hover:bg-emerald-50 transition-all shadow-deep active:scale-95">
-                                    Emitir Relatório Oficial
-                                </button>
-                            </div>
-                            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] -mr-80 -mt-80 group-hover:scale-150 transition-transform duration-[5s]"></div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};

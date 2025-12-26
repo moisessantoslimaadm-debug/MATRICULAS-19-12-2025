@@ -181,7 +181,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                                 {activeSection === 'projetos' && <FolderOpen className="h-10 w-10" />}
                             </div>
                             <div>
-                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none break-words">
                                     {activeSection === 'escolas' && <>Rede <br/><span className="text-emerald-600">Municipal.</span></>}
                                     {activeSection === 'profissionais' && <>Corpo <br/><span className="text-emerald-600">Docente.</span></>}
                                     {activeSection === 'projetos' && <>Projetos <br/><span className="text-emerald-600">Ativos.</span></>}
@@ -408,7 +408,7 @@ export const AdminSchoolsManagement: React.FC = () => {
                             </div>
                             <div>
                                 <div className="flex items-center gap-4 mb-2">
-                                    <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">{selectedSchool.name}</h1>
+                                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none break-words">{selectedSchool.name}</h1>
                                     <button onClick={handleEditSchool} className="p-2 bg-slate-50 rounded-full text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shadow-sm" title="Editar Escola">
                                         <Edit3 className="h-4 w-4" />
                                     </button>
