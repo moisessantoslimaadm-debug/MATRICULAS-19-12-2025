@@ -7,7 +7,7 @@ import {
   GraduationCap, HeartPulse, Bus, FileText,
   BadgeCheck, Zap, Info, ArrowLeft,
   Calendar, Globe, Building, Database, Award, Target,
-  TrendingUp, ClipboardList, UserCheck, ArrowUpRight
+  TrendingUp, ClipboardList, UserCheck, ArrowUpRight, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from '../router';
 
@@ -190,8 +190,19 @@ export const StudentMonitoring: React.FC = () => {
 
   // Cálculo de Estatísticas Reais
   const stats = useMemo(() => {
-      if (!student) return { attendancePercent: 0, gradeAverage: 0, rawGrades: [] };
+      if (!student) return { attendancePercent: 0, gradeAverage: 0, rawGrades: [], hasValidLocation: false };
       
+      // Validação Robusta de Coordenadas
+      const lat = parseFloat(String(student.lat));
+      const lng = parseFloat(String(student.lng));
+      const hasValidLocation = 
+          !isNaN(lat) && 
+          !isNaN(lng) && 
+          isFinite(lat) && 
+          isFinite(lng) && 
+          lat >= -90 && lat <= 90 && 
+          lng >= -180 && lng <= 180;
+
       // Frequência
       const totalDays = student.attendanceHistory?.length || 0;
       const presentDays = student.attendanceHistory?.filter(r => r.present).length || 0;
@@ -222,7 +233,7 @@ export const StudentMonitoring: React.FC = () => {
       else if (avg >= 1.5) avgConcept = 'EP';
       else if (avg > 0) avgConcept = 'DI';
 
-      return { attendancePercent, gradeAverage: avgConcept, rawGrades };
+      return { attendancePercent, gradeAverage: avgConcept, rawGrades, hasValidLocation };
   }, [student]);
 
   // Dados Dinâmicos para o Gráfico
@@ -420,14 +431,27 @@ export const StudentMonitoring: React.FC = () => {
                         <ArrowUpRight className="h-4 w-4 md:h-5 md:w-5 text-slate-200" />
                     </div>
                     <div className="space-y-8 md:space-y-12">
-                        <div className="flex items-start gap-6 md:gap-8 group">
-                            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0 group-hover:scale-110 transition-transform shadow-sm"><Globe className="h-6 w-6 md:h-7 md:w-7" /></div>
-                            <div>
-                                <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1 md:mb-2">ZONA RESIDENCIAL</p>
-                                <p className="text-base md:text-lg font-black text-slate-900 uppercase tracking-tighter">{student.residenceZone || 'Zona Urbana'}</p>
-                                <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase mt-2">{MUNICIPALITY_NAME} • Bahia</p>
+                        {stats.hasValidLocation ? (
+                            <div className="flex items-start gap-6 md:gap-8 group">
+                                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0 group-hover:scale-110 transition-transform shadow-sm"><Globe className="h-6 w-6 md:h-7 md:w-7" /></div>
+                                <div>
+                                    <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1 md:mb-2">ZONA RESIDENCIAL</p>
+                                    <p className="text-base md:text-lg font-black text-slate-900 uppercase tracking-tighter">{student.residenceZone || 'Zona Urbana'}</p>
+                                    <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase mt-2">{MUNICIPALITY_NAME} • Bahia</p>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="flex items-start gap-6 md:gap-8 group bg-amber-50 p-4 rounded-3xl border border-amber-100">
+                                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white flex items-center justify-center text-amber-500 border border-amber-100 shrink-0 shadow-sm">
+                                    <AlertTriangle className="h-6 w-6 md:h-7 md:w-7" />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] md:text-[10px] font-black text-amber-700 uppercase tracking-[0.2em] mb-1">Atenção</p>
+                                    <p className="text-xs font-bold text-slate-700 uppercase leading-tight">Georreferenciamento Pendente</p>
+                                    <p className="text-[9px] font-medium text-slate-500 mt-2">Atualize o endereço para habilitar o transporte.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

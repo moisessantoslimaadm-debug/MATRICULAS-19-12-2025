@@ -3,9 +3,8 @@ import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
   ArrowLeft, Activity, Maximize, Layers, 
-  Search, Compass, Navigation2, LocateFixed, Globe,
-  ShieldCheck, Loader2, Users, School as SchoolIcon,
-  MapPin
+  Search, Compass, LocateFixed, Globe,
+  ShieldCheck, Loader2, Users, School as SchoolIcon
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useLog } from '../contexts/LogContext';
@@ -34,23 +33,21 @@ export const MapAnalysis: React.FC = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
-  // Validação robusta de coordenadas geográficas
+  // Validação robusta de coordenadas geográficas (Lat: -90 a 90, Lng: -180 a 180)
   const isValidCoordinate = (lat: any, lng: any): boolean => {
     try {
         if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
+        
         const latNum = Number(lat);
         const lngNum = Number(lng);
+        
         return (
-            typeof latNum === 'number' &&
-            typeof lngNum === 'number' &&
             !isNaN(latNum) && 
             !isNaN(lngNum) && 
             isFinite(latNum) &&
             isFinite(lngNum) &&
-            latNum !== 0 && 
-            lngNum !== 0 &&
-            latNum >= -90 && latNum <= 90 &&
-            lngNum >= -180 && lngNum <= 180
+            Math.abs(latNum) <= 90 && 
+            Math.abs(lngNum) <= 180
         );
     } catch (e) {
         return false;
@@ -157,8 +154,9 @@ export const MapAnalysis: React.FC = () => {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
+          // VALIDAÇÃO ROBUSTA DE COORDENADAS
           if (!isValidCoordinate(school.lat, school.lng)) {
-              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name || 'Sem Nome'}`, 'warning');
+              addLog(`[GeoAudit] Unidade Escolar ignorada por coordenadas inválidas: ${school.name || 'ID ' + school.id} (Lat: ${school.lat}, Lng: ${school.lng})`, 'warning');
               return;
           }
 
@@ -183,7 +181,6 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .on('click', () => {
-                // Implementação do Zoom Suave (FlyTo) ao clicar
                 if (isValidCoordinate(school.lat, school.lng)) {
                     mapRef.current.flyTo([school.lat, school.lng], 18, { 
                         duration: 1.5,
@@ -256,6 +253,9 @@ export const MapAnalysis: React.FC = () => {
             const marker = schoolMarkerMap.current.get(schoolMatch.id);
             if (marker) setTimeout(() => marker.openPopup(), 1600);
             return;
+       } else {
+            addToast("Dados geográficos da escola inconsistentes.", "error");
+            addLog(`[Search] Falha ao localizar escola ${schoolMatch.name}: Coordenadas inválidas.`, 'error');
        }
     }
 

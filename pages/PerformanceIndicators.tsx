@@ -54,8 +54,8 @@ const ProgressionVisual = ({ data }: { data: PerformanceRow[] }) => {
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
                     <defs>
                         <linearGradient id="gradPath" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopColorOpacity="0.2" />
-                            <stop offset="100%" stopColor="#10b981" stopColorOpacity="0" />
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     <path d={`M ${padding} ${height - padding} L ${points} L ${width - padding} ${height - padding} Z`} fill="url(#gradPath)" />
