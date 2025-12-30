@@ -32,6 +32,19 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  // Validação robusta de coordenadas antes do cálculo matemático
+  const isValid = (n: number, limit: number) => 
+    typeof n === 'number' && !isNaN(n) && isFinite(n) && Math.abs(n) <= limit;
+
+  if (!isValid(lat1, 90) || !isValid(lat2, 90)) {
+    console.warn(`[GeoCalc] Latitudes inválidas: ${lat1}, ${lat2}`);
+    return Infinity;
+  }
+  if (!isValid(lng1, 180) || !isValid(lng2, 180)) {
+    console.warn(`[GeoCalc] Longitudes inválidas: ${lng1}, ${lng2}`);
+    return Infinity;
+  }
+
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lng2 - lng1) * Math.PI / 180;
@@ -138,12 +151,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   useEffect(() => { loadData(); }, []);
 
   const getNearestSchool = (lat: number, lng: number) => {
-    // Validação robusta de coordenadas antes do cálculo
+    // Validação robusta de coordenadas de origem antes do cálculo
+    if (
+        lat === null || lat === undefined || isNaN(lat) || Math.abs(lat) > 90 ||
+        lng === null || lng === undefined || isNaN(lng) || Math.abs(lng) > 180
+    ) {
+        return null;
+    }
+
     const validSchools = schools.filter(s => 
         s && 
         typeof s === 'object' &&
-        typeof s.lat === 'number' && !isNaN(s.lat) &&
-        typeof s.lng === 'number' && !isNaN(s.lng)
+        typeof s.lat === 'number' && !isNaN(s.lat) && isFinite(s.lat) && Math.abs(s.lat) <= 90 &&
+        typeof s.lng === 'number' && !isNaN(s.lng) && isFinite(s.lng) && Math.abs(s.lng) <= 180
     );
     
     if (validSchools.length === 0) return null;

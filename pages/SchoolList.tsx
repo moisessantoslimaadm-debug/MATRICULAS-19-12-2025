@@ -2,11 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { useToast } from '../contexts/ToastContext';
+import { useLog } from '../contexts/LogContext';
 import { 
   MapPin, Search, Building, Users, 
   Layers, ArrowRight, ShieldCheck, 
   Clock, HeartPulse, Bus, Database, Info, MoreVertical,
-  FolderOpen
+  FolderOpen, AlertTriangle
 } from 'lucide-react';
 import { School, RegistryStudent } from '../types';
 
@@ -22,6 +23,28 @@ const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
 
 const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     const navigate = useNavigate();
+    const { addToast } = useToast();
+    const { addLog } = useLog();
+
+    // Validação robusta de coordenadas para exibição
+    const hasValidGeo = 
+        typeof school.lat === 'number' && 
+        !isNaN(school.lat) && 
+        isFinite(school.lat) &&
+        Math.abs(school.lat) <= 90 &&
+        typeof school.lng === 'number' && 
+        !isNaN(school.lng) &&
+        isFinite(school.lng) &&
+        Math.abs(school.lng) <= 180;
+
+    const handleSolicitarVaga = () => {
+        if (!hasValidGeo) {
+            addLog(`[SchoolCard] Tentativa de matrícula em escola com geo inválida: ${school.name}`, 'warning');
+            // Não bloqueamos a matrícula, mas registramos o aviso
+        }
+        navigate('/registration');
+    };
+
     return (
         <div className="card-requinte group overflow-hidden flex flex-col h-full hover:-translate-y-2 cursor-pointer">
             <div className="h-32 md:h-40 relative overflow-hidden border-b border-slate-100">
@@ -35,7 +58,14 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                 <h3 className="font-black text-slate-900 text-sm md:text-base uppercase tracking-tight mb-2 leading-tight">{school.name}</h3>
                 <div className="space-y-2 mb-6">
                     <p className="text-[9px] text-slate-400 flex items-center gap-2 font-bold uppercase truncate">
-                        <MapPin className="h-3 w-3 text-blue-500 shrink-0" /> {school.address}
+                        {hasValidGeo ? (
+                            <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
+                        ) : (
+                            <span title="Localização não validada" className="shrink-0 flex items-center">
+                                <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            </span>
+                        )}
+                        {school.address}
                     </p>
                     <div className="flex flex-wrap gap-2">
                         {school.types.map(t => (
@@ -44,7 +74,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                     </div>
                 </div>
                 <button 
-                  onClick={() => navigate('/registration')}
+                  onClick={handleSolicitarVaga}
                   className="mt-auto w-full py-3 bg-slate-50 hover:bg-[#0F172A] hover:text-white text-slate-900 text-[9px] font-black uppercase tracking-ultra rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-100 hover:border-[#0F172A]"
                 >
                     Solicitar Vaga <ArrowRight className="h-3 w-3" />

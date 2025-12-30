@@ -36,19 +36,24 @@ export const MapAnalysis: React.FC = () => {
   // Validação robusta de coordenadas geográficas (Lat: -90 a 90, Lng: -180 a 180)
   const isValidCoordinate = (lat: any, lng: any): boolean => {
     try {
+        // Verifica existência básica
         if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
         
+        // Verifica se é string vazia ou apenas espaços (evita conversão incorreta para 0)
+        if (typeof lat === 'string' && lat.trim() === '') return false;
+        if (typeof lng === 'string' && lng.trim() === '') return false;
+        
+        // Converte para número
         const latNum = Number(lat);
         const lngNum = Number(lng);
         
-        return (
-            !isNaN(latNum) && 
-            !isNaN(lngNum) && 
-            isFinite(latNum) &&
-            isFinite(lngNum) &&
-            Math.abs(latNum) <= 90 && 
-            Math.abs(lngNum) <= 180
-        );
+        // Verifica se é um número válido e finito
+        if (isNaN(latNum) || isNaN(lngNum) || !isFinite(latNum) || !isFinite(lngNum)) return false;
+
+        // Verifica limites geográficos da Terra
+        if (Math.abs(latNum) > 90 || Math.abs(lngNum) > 180) return false;
+
+        return true;
     } catch (e) {
         return false;
     }
@@ -154,10 +159,12 @@ export const MapAnalysis: React.FC = () => {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
-          // VALIDAÇÃO ROBUSTA DE COORDENADAS
+          // --- VALIDAÇÃO ROBUSTA DE COORDENADAS ---
+          // Garante que lat/lng são números válidos, não nulos, e dentro dos limites do globo
+          // Esta validação previne erros no Leaflet e garante a integridade da plotagem
           if (!isValidCoordinate(school.lat, school.lng)) {
-              addLog(`[GeoAudit] Unidade Escolar ignorada por coordenadas inválidas: ${school.name || 'ID ' + school.id} (Lat: ${school.lat}, Lng: ${school.lng})`, 'warning');
-              return;
+              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name || 'ID ' + school.id} (Lat: ${school.lat}, Lng: ${school.lng})`, 'warning');
+              return; // Ignora esta escola no mapa
           }
 
           const icon = L.divIcon({
@@ -181,6 +188,7 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .on('click', () => {
+                // Implementação do Zoom Suave ao clicar
                 if (isValidCoordinate(school.lat, school.lng)) {
                     mapRef.current.flyTo([school.lat, school.lng], 18, { 
                         duration: 1.5,
@@ -227,7 +235,7 @@ export const MapAnalysis: React.FC = () => {
           });
         }
     }
-  }, [activeLayer, students, schools, isMapReady]);
+  }, [activeLayer, students, schools, isMapReady, addLog]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,7 +329,7 @@ export const MapAnalysis: React.FC = () => {
     
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-            const { latitude, longitude } = pos.coords;
+            const { latitude, longitude, accuracy } = pos.coords;
             
             if (isValidCoordinate(latitude, longitude) && mapRef.current) {
                 if (userMarkerRef.current) {
@@ -346,7 +354,10 @@ export const MapAnalysis: React.FC = () => {
 
                 userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon })
                     .addTo(mapRef.current)
-                    .bindPopup(`<div class="p-3 text-center"><p class="text-[10px] font-black uppercase text-slate-900">Sua Localização Atual</p></div>`);
+                    .bindPopup(`<div class="p-3 text-center">
+                                  <p class="text-[10px] font-black uppercase text-slate-900">Sua Localização</p>
+                                  <p class="text-[8px] text-slate-400 font-bold uppercase">Precisão: ~${Math.round(accuracy)}m</p>
+                                </div>`);
                 
                 setTimeout(() => userMarkerRef.current.openPopup(), 2500);
                 setTimeout(() => userMarkerRef.current.closePopup(), 5000);
@@ -389,15 +400,9 @@ export const MapAnalysis: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
             <section className="space-y-6">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Layers size={14} className="text-emerald-500" /> Camadas Ativas</h3>
-                <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setActiveLayer('heat')} className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${activeLayer === 'heat' ? 'bg-[#0F172A] border-[#0F172A] text-white shadow-xl' : 'bg-white border-slate-100 text-slate-400 hover:border-emerald-100'}`}>
-                        <Activity size={20} />
-                        <span className="text-[9px] font-black uppercase">Densidade</span>
-                    </button>
-                    <button onClick={() => setActiveLayer('points')} className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${activeLayer === 'points' ? 'bg-[#0F172A] border-[#0F172A] text-white shadow-xl' : 'bg-white border-slate-100 text-slate-400 hover:border-blue-100'}`}>
-                        <SchoolIcon size={20} />
-                        <span className="text-[9px] font-black uppercase">Unidades</span>
-                    </button>
+                {/* REMOVIDO: Botoes de camada duplicados na sidebar para limpar a UI */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Use os controles no mapa para alternar camadas.</p>
                 </div>
             </section>
 
@@ -454,21 +459,19 @@ export const MapAnalysis: React.FC = () => {
 
         {/* Floating Controls (Bottom Right) */}
         <div className="absolute bottom-8 right-8 z-[300] flex flex-col gap-3">
-            {/* Layer Toggle */}
-            <div className="bg-white p-2 rounded-3xl shadow-luxury border border-slate-100 flex flex-col gap-2 mb-2">
+            {/* Layer Switcher (Explicit Toggle) */}
+            <div className="bg-white p-1.5 rounded-2xl shadow-luxury border border-slate-100 flex items-center gap-1 mb-2">
                 <button
                     onClick={() => setActiveLayer('points')}
-                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-                    title="Alunos (Pontos)"
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
                 >
-                    <Users size={20} />
+                    <Users size={14} /> Pontos
                 </button>
                 <button
                     onClick={() => setActiveLayer('heat')}
-                    className={`p-3 rounded-2xl transition-all flex items-center justify-center ${activeLayer === 'heat' ? 'bg-emerald-50 text-emerald-600 shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-                    title="Mapa de Calor (Densidade)"
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeLayer === 'heat' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
                 >
-                    <Activity size={20} />
+                    <Activity size={14} /> Calor
                 </button>
             </div>
 
