@@ -39,7 +39,7 @@ export const MapAnalysis: React.FC = () => {
         // Verifica existência básica
         if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
         
-        // Verifica se é string vazia ou apenas espaços (evita conversão incorreta para 0)
+        // Verifica se é string vazia ou apenas espaços
         if (typeof lat === 'string' && lat.trim() === '') return false;
         if (typeof lng === 'string' && lng.trim() === '') return false;
         
@@ -104,6 +104,8 @@ export const MapAnalysis: React.FC = () => {
   const updateMapTiles = (style: keyof typeof tileProviders) => {
     if (!mapRef.current) return;
     
+    // Nenhuma validação de coordenadas necessária aqui pois lidamos com Tiles globais,
+    // mas garantimos que o mapa exista.
     mapRef.current.eachLayer((layer: any) => {
       if (layer instanceof L.TileLayer) mapRef.current.removeLayer(layer);
     });
@@ -160,11 +162,9 @@ export const MapAnalysis: React.FC = () => {
           if (!school || typeof school !== 'object') return;
           
           // --- VALIDAÇÃO ROBUSTA DE COORDENADAS ---
-          // Garante que lat/lng são números válidos, não nulos, e dentro dos limites do globo
-          // Esta validação previne erros no Leaflet e garante a integridade da plotagem
           if (!isValidCoordinate(school.lat, school.lng)) {
-              addLog(`[GeoAudit] Escola ignorada por coordenadas inválidas: ${school.name || 'ID ' + school.id} (Lat: ${school.lat}, Lng: ${school.lng})`, 'warning');
-              return; // Ignora esta escola no mapa
+              addLog(`[MapAnalysis] Escola ignorada (Coords Inválidas): ${school.name || school.id} [${school.lat}, ${school.lng}]`, 'warning');
+              return; 
           }
 
           const icon = L.divIcon({
@@ -188,7 +188,6 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .on('click', () => {
-                // Implementação do Zoom Suave ao clicar
                 if (isValidCoordinate(school.lat, school.lng)) {
                     mapRef.current.flyTo([school.lat, school.lng], 18, { 
                         duration: 1.5,
@@ -206,7 +205,13 @@ export const MapAnalysis: React.FC = () => {
 
     if (activeLayer === 'heat') {
         const heatData = (students || [])
-            .filter(s => s && typeof s === 'object' && isValidCoordinate(s.lat, s.lng))
+            .filter(s => {
+                const valid = s && typeof s === 'object' && isValidCoordinate(s.lat, s.lng);
+                if (s && !valid) {
+                    // Opcional: Logar alunos inválidos no heatmap (pode gerar spam, então omitido ou feito em lote)
+                }
+                return valid;
+            })
             .map(s => [s.lat, s.lng, 1.0]); 
             
         if (typeof L.heatLayer === 'function' && heatData.length > 0) {
@@ -219,7 +224,10 @@ export const MapAnalysis: React.FC = () => {
         if (Array.isArray(students)) {
           students.forEach(s => {
               if (!s || typeof s !== 'object') return;
-              if (!isValidCoordinate(s.lat, s.lng)) return; 
+              if (!isValidCoordinate(s.lat, s.lng)) {
+                  // Opcional: addLog(`[MapAnalysis] Aluno sem geo válida para plotagem: ${s.name}`, 'warning');
+                  return; 
+              }
 
               const marker = L.circleMarker([s.lat, s.lng], {
                   radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
@@ -279,6 +287,8 @@ export const MapAnalysis: React.FC = () => {
             mapRef.current.flyTo([studentMatch.lat, studentMatch.lng], 19, { duration: 1.8, easeLinearity: 0.15 });
             addToast(`Aluno Localizado: ${studentMatch.name}`, 'info');
             return;
+        } else {
+            addLog(`[Search] Falha ao localizar aluno ${studentMatch.name}: Coordenadas inválidas.`, 'warning');
         }
     }
 
@@ -365,6 +375,7 @@ export const MapAnalysis: React.FC = () => {
                 addToast("Localização encontrada.", "success");
             } else {
                 addToast("Sinal GPS inválido ou fora dos limites.", "error");
+                addLog(`[GPS] Localização inválida recebida: Lat ${latitude}, Lng ${longitude}`, 'warning');
             }
             
             setIsLocating(false);

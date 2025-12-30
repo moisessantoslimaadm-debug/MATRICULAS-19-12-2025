@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { useToast } from '../contexts/ToastContext';
@@ -28,19 +28,26 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
 
     // Validação robusta de coordenadas para exibição
     const hasValidGeo = 
-        typeof school.lat === 'number' && 
-        !isNaN(school.lat) && 
-        isFinite(school.lat) &&
-        Math.abs(school.lat) <= 90 &&
-        typeof school.lng === 'number' && 
-        !isNaN(school.lng) &&
-        isFinite(school.lng) &&
-        Math.abs(school.lng) <= 180;
+        school.lat !== null && school.lat !== undefined && 
+        school.lng !== null && school.lng !== undefined &&
+        !isNaN(Number(school.lat)) && 
+        !isNaN(Number(school.lng)) && 
+        isFinite(Number(school.lat)) && 
+        isFinite(Number(school.lng)) && 
+        Math.abs(Number(school.lat)) <= 90 && 
+        Math.abs(Number(school.lng)) <= 180;
+
+    // Efeito para logar apenas uma vez se a escola tiver dados inválidos
+    useEffect(() => {
+        if (!hasValidGeo) {
+            addLog(`[SchoolCard] Escola com coordenadas inválidas: ${school.name} (ID: ${school.id})`, 'warning');
+        }
+    }, [hasValidGeo, school.id, school.name, addLog]);
 
     const handleSolicitarVaga = () => {
         if (!hasValidGeo) {
-            addLog(`[SchoolCard] Tentativa de matrícula em escola com geo inválida: ${school.name}`, 'warning');
-            // Não bloqueamos a matrícula, mas registramos o aviso
+            // Opcional: Impedir navegação ou apenas alertar. Decidi apenas alertar e registrar.
+            addToast("Nota: Unidade sem geolocalização precisa para cálculo de rota.", "info");
         }
         navigate('/registration');
     };
@@ -61,7 +68,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                         {hasValidGeo ? (
                             <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
                         ) : (
-                            <span title="Localização não validada" className="shrink-0 flex items-center">
+                            <span title="Localização Pendente" className="shrink-0 flex items-center">
                                 <AlertTriangle className="h-3 w-3 text-amber-500" />
                             </span>
                         )}

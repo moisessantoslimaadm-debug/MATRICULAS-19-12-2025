@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useSearchParams } from '../router';
 import { useData } from '../contexts/DataContext';
+import { useLog } from '../contexts/LogContext';
 import { MUNICIPALITY_NAME } from '../constants';
 import { 
   MapPin, Printer, ShieldCheck, Activity, 
@@ -182,26 +183,31 @@ const PrintLayout = ({ student, stats }: any) => (
 
 export const StudentMonitoring: React.FC = () => {
   const { students } = useData();
+  const { addLog } = useLog();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const studentId = params.get('id');
 
   const student = students.find(s => s.id === studentId || s.enrollmentId === studentId || s.inepId === studentId);
 
-  // Cálculo de Estatísticas Reais
+  // Cálculo de Estatísticas Reais com Validação Robusta de Coordenadas
   const stats = useMemo(() => {
       if (!student) return { attendancePercent: 0, gradeAverage: 0, rawGrades: [], hasValidLocation: false };
       
       // Validação Robusta de Coordenadas
-      const lat = parseFloat(String(student.lat));
-      const lng = parseFloat(String(student.lng));
+      // Verifica se existe, se é número, se não é NaN, se não é infinito e se está dentro dos limites da Terra
+      const lat = student.lat;
+      const lng = student.lng;
+      
       const hasValidLocation = 
-          !isNaN(lat) && 
-          !isNaN(lng) && 
-          isFinite(lat) && 
-          isFinite(lng) && 
-          lat >= -90 && lat <= 90 && 
-          lng >= -180 && lng <= 180;
+          lat !== null && lat !== undefined && 
+          lng !== null && lng !== undefined &&
+          !isNaN(Number(lat)) && 
+          !isNaN(Number(lng)) && 
+          isFinite(Number(lat)) && 
+          isFinite(Number(lng)) && 
+          Math.abs(Number(lat)) <= 90 && 
+          Math.abs(Number(lng)) <= 180;
 
       // Frequência
       const totalDays = student.attendanceHistory?.length || 0;
@@ -235,6 +241,13 @@ export const StudentMonitoring: React.FC = () => {
 
       return { attendancePercent, gradeAverage: avgConcept, rawGrades, hasValidLocation };
   }, [student]);
+
+  // Efeito para logar inconsistências geográficas sem afetar a renderização
+  useEffect(() => {
+      if (student && !stats.hasValidLocation) {
+          addLog(`[StudentMonitoring] Aluno sem geo válida detectado: ${student.name} (RA: ${student.enrollmentId})`, 'warning');
+      }
+  }, [student, stats.hasValidLocation, addLog]);
 
   // Dados Dinâmicos para o Gráfico
   const chartData = useMemo(() => {
