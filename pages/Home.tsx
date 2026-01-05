@@ -62,8 +62,8 @@ export const Home: React.FC = () => {
 
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
-            <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-left-12 duration-1000">
-              <div className="inline-flex items-center gap-4 px-4 py-2 md:px-5 md:py-2.5 bg-white rounded-full border border-slate-100 shadow-luxury">
+            <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-left-12 duration-1000 text-center lg:text-left">
+              <div className="inline-flex items-center gap-4 px-4 py-2 md:px-5 md:py-2.5 bg-white rounded-full border border-slate-100 shadow-luxury mx-auto lg:mx-0">
                 <div className="bg-emerald-500 p-1.5 rounded-full animate-pulse">
                   <Zap className="h-3 w-3 md:h-3.5 md:w-3.5 text-white" />
                 </div>
@@ -71,17 +71,17 @@ export const Home: React.FC = () => {
               </div>
               
               <div className="space-y-4 md:space-y-8">
-                <h1 className="text-5xl md:text-8xl md:text-[100px] font-black text-slate-900 tracking-tighter uppercase leading-[0.9] md:leading-[0.8] text-display break-words">
-                  SME <br/>
-                  <span className="text-emerald-600">Digital.</span>
+                <h1 className="text-6xl md:text-8xl lg:text-[110px] font-black text-slate-900 tracking-tighter leading-[0.9] md:leading-[0.8] break-words drop-shadow-md">
+                  <span className="font-sans uppercase">SME</span> <br/>
+                  <span className="text-emerald-600 font-script font-bold tracking-normal">Digital.</span>
                 </h1>
-                <p className="text-base md:text-xl text-slate-500 max-w-xl leading-relaxed font-medium">
+                <p className="text-base md:text-xl text-slate-500 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0">
                   Bem-vindo à plataforma oficial da Secretaria Municipal de Educação. 
                   Inovação tecnológica para alocação inteligente e gestão nominal de rede.
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 pt-4 justify-center lg:justify-start">
                 <button
                   onClick={startRegistration}
                   className="btn-primary !h-16 md:!h-20 !px-8 md:!px-16 !text-[11px] md:!text-[13px] !bg-slate-900 hover:!bg-emerald-600 shadow-deep active:scale-95 transition-all group w-full sm:w-auto"
@@ -93,16 +93,16 @@ export const Home: React.FC = () => {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 md:gap-10 pt-10 md:pt-16 border-t border-slate-100">
-                 <div className="space-y-1 md:space-y-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 md:gap-10 pt-10 md:pt-16 border-t border-slate-100 text-left">
+                 <div className="space-y-1 md:space-y-2 text-center lg:text-left">
                     <p className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">{schoolCount}</p>
                     <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Escolas Ativas</p>
                  </div>
-                 <div className="space-y-1 md:space-y-2 border-l border-slate-100 pl-6 md:pl-10">
+                 <div className="space-y-1 md:space-y-2 border-l border-slate-100 pl-6 md:pl-10 text-center lg:text-left">
                     <p className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">{studentCount}</p>
                     <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Alunos na Rede</p>
                  </div>
-                 <div className="space-y-1 md:space-y-2 border-l border-slate-100 pl-6 md:pl-10 hidden sm:block">
+                 <div className="space-y-1 md:space-y-2 border-l border-slate-100 pl-6 md:pl-10 hidden sm:block text-center lg:text-left">
                     <p className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">Sync</p>
                     <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Tempo Real</p>
                  </div>

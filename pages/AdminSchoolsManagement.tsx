@@ -102,10 +102,33 @@ export const AdminSchoolsManagement: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Lógica para Projetos
     if (viewParam === 'projects' || activeSection === 'projetos') {
         if (editingItem) await updateProject(formData as Project);
         else await addProject({ ...formData, id: `proj-${Date.now()}` } as Project);
     }
+    
+    // Lógica para Profissionais
+    if (activeSection === 'profissionais') {
+        // Encontra o nome da escola baseado no ID selecionado para salvar o nome também
+        const targetSchool = schools.find(s => s.id === formData.schoolId);
+        
+        const professionalData = {
+            ...formData,
+            schoolName: targetSchool ? targetSchool.name : (formData.schoolName || 'Não Alocado')
+        };
+
+        if (editingItem) {
+            await updateProfessional(professionalData as Professional);
+        } else {
+            await addProfessional({ 
+                ...professionalData, 
+                id: `prof-${Date.now()}` 
+            } as Professional);
+        }
+    }
+
     setIsFormModalOpen(false);
   };
 
@@ -205,7 +228,16 @@ export const AdminSchoolsManagement: React.FC = () => {
                                 <Plus className="h-5 w-5" /> Nova Unidade
                             </button>
                         )}
-                        {/* Botões de adicionar para outros tipos podem ser implementados aqui futuramente */}
+                        {activeSection === 'profissionais' && (
+                            <button onClick={handleOpenAdd} className="btn-primary !h-16 !px-8 !text-[10px] !bg-emerald-600 shrink-0">
+                                <Plus className="h-5 w-5" /> Novo Profissional
+                            </button>
+                        )}
+                        {activeSection === 'projetos' && (
+                            <button onClick={handleOpenAdd} className="btn-primary !h-16 !px-8 !text-[10px] !bg-emerald-600 shrink-0">
+                                <Plus className="h-5 w-5" /> Novo Projeto
+                            </button>
+                        )}
                     </div>
                 </header>
 
@@ -251,8 +283,9 @@ export const AdminSchoolsManagement: React.FC = () => {
                                     <p className="text-[8px] text-slate-400 font-bold uppercase mt-2 flex items-center gap-1">
                                         <Building className="h-3 w-3" /> {prof.schoolName || 'Não Alocado'}
                                     </p>
-                                    <div className="flex gap-2 mt-3 justify-end">
-                                        <button className="text-[9px] font-black uppercase text-slate-400 hover:text-blue-600 transition-colors">Detalhes</button>
+                                    <div className="flex gap-2 mt-3 justify-end border-t border-slate-50 pt-2">
+                                        <button onClick={() => handleOpenEdit(prof)} className="text-[9px] font-black uppercase text-slate-400 hover:text-blue-600 transition-colors">Editar</button>
+                                        <button onClick={() => removeProfessional(prof.id)} className="text-[9px] font-black uppercase text-slate-400 hover:text-red-600 transition-colors">Remover</button>
                                     </div>
                                 </div>
                             </div>
@@ -285,6 +318,10 @@ export const AdminSchoolsManagement: React.FC = () => {
                                         <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${proj.status === 'Ativo' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                                             {proj.status}
                                         </span>
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-4 justify-end">
+                                        <button onClick={() => handleOpenEdit(proj)} className="text-[10px] font-black uppercase text-slate-400 hover:text-emerald-600 transition-colors">Gerenciar</button>
+                                        <button onClick={() => removeProject(proj.id)} className="text-[10px] font-black uppercase text-slate-400 hover:text-red-600 transition-colors">Arquivar</button>
                                     </div>
                                 </div>
                             );
@@ -590,7 +627,7 @@ export const AdminSchoolsManagement: React.FC = () => {
         {isFormModalOpen && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsFormModalOpen(false)}></div>
-                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg relative p-10 animate-in zoom-in-95 duration-200">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg relative p-10 animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] custom-scrollbar">
                     <div className="flex justify-between items-center mb-8">
                         <h3 className="font-black text-slate-900 uppercase text-lg tracking-tight">
                             {editingItem ? 'Editar Registro' : 'Novo Cadastro'}
@@ -599,6 +636,8 @@ export const AdminSchoolsManagement: React.FC = () => {
                     </div>
                     
                     <form onSubmit={handleFormSubmit} className="space-y-6">
+                        
+                        {/* FORMULÁRIO DE PROJETOS */}
                         {(viewParam === 'projects' || activeSection === 'projetos') && (
                              <>
                                 <div className="space-y-2">
@@ -618,6 +657,59 @@ export const AdminSchoolsManagement: React.FC = () => {
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Orçamento</label>
                                         <input type="text" value={formData.budget || ''} onChange={e => setFormData({...formData, budget: e.target.value})} className="input-premium" />
                                     </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* FORMULÁRIO DE PROFISSIONAIS */}
+                        {activeSection === 'profissionais' && (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="input-premium" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cargo / Função</label>
+                                    <input type="text" required value={formData.role || ''} onChange={e => setFormData({...formData, role: e.target.value})} className="input-premium" placeholder="Ex: Diretor, Professor, Coordenador" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF</label>
+                                        <input type="text" required value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} className="input-premium" placeholder="000.000.000-00" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
+                                        <input type="text" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} className="input-premium" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Institucional</label>
+                                    <input type="email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="input-premium" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Escola de Lotação</label>
+                                    <select 
+                                        value={formData.schoolId || ''} 
+                                        onChange={e => setFormData({...formData, schoolId: e.target.value})}
+                                        className="input-premium"
+                                    >
+                                        <option value="">Selecione uma unidade...</option>
+                                        {schools.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Status Funcional</label>
+                                    <select 
+                                        value={formData.status || 'Ativo'} 
+                                        onChange={e => setFormData({...formData, status: e.target.value})}
+                                        className="input-premium"
+                                    >
+                                        <option value="Ativo">Ativo</option>
+                                        <option value="Licença">Licença</option>
+                                        <option value="Desligado">Desligado</option>
+                                    </select>
                                 </div>
                             </>
                         )}

@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
-  ArrowLeft, Activity, Maximize, Layers, 
-  Search, Compass, LocateFixed, Globe,
-  ShieldCheck, Loader2, Users, School as SchoolIcon
+  ArrowLeft, Layers, Search, Compass, LocateFixed, Globe,
+  Loader2, Users, Flame, Map as MapIcon
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useLog } from '../contexts/LogContext';
@@ -26,6 +25,7 @@ export const MapAnalysis: React.FC = () => {
   
   const schoolMarkerMap = useRef<Map<string, any>>(new Map());
 
+  // Estado para alternar camadas: 'points' (marcadores individuais) ou 'heat' (mapa de calor)
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
   const [mapStyle, setMapStyle] = useState<'streets' | 'clean' | 'satellite'>('clean'); 
   const [isMapReady, setIsMapReady] = useState(false);
@@ -33,39 +33,17 @@ export const MapAnalysis: React.FC = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
-  // Validação robusta de coordenadas geográficas (Lat: -90 a 90, Lng: -180 a 180)
-  const isValidCoordinate = (lat: any, lng: any): boolean => {
-    try {
-        // Verifica existência básica
-        if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
-        
-        // Verifica se é string vazia ou apenas espaços
-        if (typeof lat === 'string' && lat.trim() === '') return false;
-        if (typeof lng === 'string' && lng.trim() === '') return false;
-        
-        // Converte para número
-        const latNum = Number(lat);
-        const lngNum = Number(lng);
-        
-        // Verifica se é um número válido e finito
-        if (isNaN(latNum) || isNaN(lngNum) || !isFinite(latNum) || !isFinite(lngNum)) return false;
-
-        // Verifica limites geográficos da Terra
-        if (Math.abs(latNum) > 90 || Math.abs(lngNum) > 180) return false;
-
-        return true;
-    } catch (e) {
-        return false;
-    }
-  };
-
+  // Integração com API de Geocodificação (Nominatim / OpenStreetMap)
   const geocodeAddress = async (query: string) => {
     try {
+        // Contextualiza a busca para aumentar a precisão dentro do município
         const contextualizedQuery = `${query}, Itaberaba, Bahia, Brasil`;
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(contextualizedQuery)}&limit=1&addressdetails=1`;
         
         const response = await fetch(url, {
-            headers: { 'User-Agent': 'EducaMunicipio-Platform/1.0 (Educational Project)' }
+            headers: {
+                'User-Agent': 'EducaMunicipio-Platform/1.0 (Educational Project)'
+            }
         });
         
         if (!response.ok) return null;
@@ -103,9 +81,6 @@ export const MapAnalysis: React.FC = () => {
 
   const updateMapTiles = (style: keyof typeof tileProviders) => {
     if (!mapRef.current) return;
-    
-    // Nenhuma validação de coordenadas necessária aqui pois lidamos com Tiles globais,
-    // mas garantimos que o mapa exista.
     mapRef.current.eachLayer((layer: any) => {
       if (layer instanceof L.TileLayer) mapRef.current.removeLayer(layer);
     });
@@ -149,22 +124,31 @@ export const MapAnalysis: React.FC = () => {
     if (!mapRef.current || !isMapReady) return;
     mapRef.current.invalidateSize();
 
+    // Limpa camadas anteriores para redesenho
     if (heatLayerRef.current) mapRef.current.removeLayer(heatLayerRef.current);
     schoolMarkersRef.current.clearLayers();
     studentMarkersRef.current.clearLayers();
     schoolMarkerMap.current.clear();
 
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
-    const shieldIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
-
+    
+    // Renderiza Escolas (Sempre visíveis)
     if (Array.isArray(schools)) {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
-          // --- VALIDAÇÃO ROBUSTA DE COORDENADAS ---
-          if (!isValidCoordinate(school.lat, school.lng)) {
-              addLog(`[MapAnalysis] Escola ignorada (Coords Inválidas): ${school.name || school.id} [${school.lat}, ${school.lng}]`, 'warning');
-              return; 
+          const lat = Number(school.lat);
+          const lng = Number(school.lng);
+          
+          // Validação robusta de coordenadas geográficas
+          if (
+              isNaN(lat) || isNaN(lng) || 
+              lat === null || lng === null || 
+              !isFinite(lat) || !isFinite(lng) || 
+              Math.abs(lat) > 90 || Math.abs(lng) > 180
+          ) {
+              addLog(`[MapAnalysis] Escola ignorada por coordenadas inválidas: ${school.name} (ID: ${school.id}) - Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
+              return;
           }
 
           const icon = L.divIcon({
@@ -178,7 +162,7 @@ export const MapAnalysis: React.FC = () => {
               iconSize: [44, 44]
           });
 
-          const marker = L.marker([school.lat, school.lng], { icon })
+          const marker = L.marker([lat, lng], { icon })
             .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
                           <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
                           <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
@@ -188,14 +172,10 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .on('click', () => {
-                if (isValidCoordinate(school.lat, school.lng)) {
-                    mapRef.current.flyTo([school.lat, school.lng], 18, { 
-                        duration: 1.5,
-                        easeLinearity: 0.25
-                    });
-                } else {
-                    addToast("Não foi possível centralizar nesta unidade.", "error");
-                }
+                mapRef.current.flyTo([lat, lng], 18, { 
+                    duration: 1.5,
+                    easeLinearity: 0.25
+                });
             })
             .addTo(schoolMarkersRef.current);
           
@@ -203,311 +183,246 @@ export const MapAnalysis: React.FC = () => {
       });
     }
 
+    // Lógica Condicional de Camadas (Heatmap vs Pontos)
     if (activeLayer === 'heat') {
         const heatData = (students || [])
-            .filter(s => {
-                const valid = s && typeof s === 'object' && isValidCoordinate(s.lat, s.lng);
-                if (s && !valid) {
-                    // Opcional: Logar alunos inválidos no heatmap (pode gerar spam, então omitido ou feito em lote)
-                }
-                return valid;
-            })
-            .map(s => [s.lat, s.lng, 1.0]); 
+            .filter(s => s && typeof s === 'object' && !isNaN(s.lat) && !isNaN(s.lng))
+            .map(s => [s.lat, s.lng, 1.0]); // Intensidade
             
-        if (typeof L.heatLayer === 'function' && heatData.length > 0) {
-            heatLayerRef.current = L.heatLayer(heatData, { 
-                radius: 40, blur: 25, maxZoom: 16,
-                gradient: { 0.4: '#3b82f6', 0.65: '#10b981', 1: '#f59e0b' }
+        if (typeof L.heatLayer === 'function') {
+            heatLayerRef.current = L.heatLayer(heatData, {
+                radius: 30,
+                blur: 20,
+                maxZoom: 17,
+                gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
             }).addTo(mapRef.current);
+        } else {
+            console.warn("Leaflet.heat não carregado.");
         }
     } else {
-        if (Array.isArray(students)) {
-          students.forEach(s => {
-              if (!s || typeof s !== 'object') return;
-              if (!isValidCoordinate(s.lat, s.lng)) {
-                  // Opcional: addLog(`[MapAnalysis] Aluno sem geo válida para plotagem: ${s.name}`, 'warning');
-                  return; 
-              }
+        // Camada de Pontos Individuais
+        (students || []).forEach(s => {
+            if (!s || typeof s !== 'object' || isNaN(s.lat) || isNaN(s.lng)) return;
 
-              const marker = L.circleMarker([s.lat, s.lng], {
-                  radius: 7, fillColor: '#3b82f6', color: '#fff', weight: 3, opacity: 1, fillOpacity: 1, className: 'student-pulse'
-              });
-              marker.bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-luxury">
-                  <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">${shieldIconSvg} Aluno Nominal</p>
-                  <h4 class="font-black text-slate-900 uppercase text-xs mb-3 leading-tight">${s.name}</h4>
-                  <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest">Escola: ${s.school || 'Geoprocessamento SME'}</p>
-                  </div>
-              </div>`);
-              marker.addTo(studentMarkersRef.current);
-          });
-        }
-    }
-  }, [activeLayer, students, schools, isMapReady, addLog]);
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchStreet || !mapRef.current) return;
-    const term = searchStreet.toLowerCase();
-    
-    if (searchResultMarkerRef.current) {
-        mapRef.current.removeLayer(searchResultMarkerRef.current);
-        searchResultMarkerRef.current = null;
-    }
-
-    const schoolMatch = schools.find(s => 
-      s && typeof s === 'object' && (
-        (s.name && s.name.toLowerCase().includes(term)) || 
-        (s.address && s.address.toLowerCase().includes(term))
-      )
-    );
-
-    if (schoolMatch) {
-       if (isValidCoordinate(schoolMatch.lat, schoolMatch.lng)) {
-            mapRef.current.flyTo([schoolMatch.lat, schoolMatch.lng], 18, { duration: 1.5, easeLinearity: 0.25 });
-            addToast(`Unidade Localizada: ${schoolMatch.name}`, 'success');
-            const marker = schoolMarkerMap.current.get(schoolMatch.id);
-            if (marker) setTimeout(() => marker.openPopup(), 1600);
-            return;
-       } else {
-            addToast("Dados geográficos da escola inconsistentes.", "error");
-            addLog(`[Search] Falha ao localizar escola ${schoolMatch.name}: Coordenadas inválidas.`, 'error');
-       }
-    }
-
-    const studentMatch = students.find(s => 
-        s && typeof s === 'object' && (
-            (s.name && s.name.toLowerCase().includes(term)) || 
-            (s.cpf && s.cpf.includes(term))
-        )
-    );
-
-    if (studentMatch) {
-        if (isValidCoordinate(studentMatch.lat, studentMatch.lng)) {
-            mapRef.current.flyTo([studentMatch.lat, studentMatch.lng], 19, { duration: 1.8, easeLinearity: 0.15 });
-            addToast(`Aluno Localizado: ${studentMatch.name}`, 'info');
-            return;
-        } else {
-            addLog(`[Search] Falha ao localizar aluno ${studentMatch.name}: Coordenadas inválidas.`, 'warning');
-        }
-    }
-
-    setIsSearchingExternal(true);
-    addToast("Buscando endereço na base geográfica...", "info");
-    
-    const geoResult = await geocodeAddress(searchStreet);
-    setIsSearchingExternal(false);
-
-    if (geoResult) {
-        mapRef.current.flyTo([geoResult.lat, geoResult.lng], 17, { duration: 2, easeLinearity: 0.25 });
-        
-        const searchIcon = L.divIcon({
-            className: 'bg-transparent',
-            html: `<div class="relative flex flex-col items-center">
-                     <div class="bg-violet-600 text-white p-3 rounded-full shadow-2xl border-4 border-white animate-bounce">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                     </div>
-                     <div class="mt-2 bg-white px-3 py-1 rounded-lg shadow-md text-[10px] font-black uppercase tracking-widest text-violet-700 whitespace-nowrap">Resultado da Busca</div>
-                   </div>`,
-            iconSize: [40, 60],
-            iconAnchor: [20, 60]
-        });
-
-        searchResultMarkerRef.current = L.marker([geoResult.lat, geoResult.lng], { icon: searchIcon })
-            .addTo(mapRef.current)
-            .bindPopup(`<div class="p-4 text-center max-w-[200px]">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Endereço Público</p>
-                            <p class="text-xs font-bold text-slate-800 leading-tight">${geoResult.displayName}</p>
+            const isAEE = s.specialNeeds;
+            const icon = L.divIcon({
+                html: `<div class="marker-student ${isAEE ? 'is-aee' : ''}"></div>`,
+                className: 'custom-div-icon',
+                iconSize: [12, 12]
+            });
+            L.marker([s.lat, s.lng], { icon })
+             .bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-lg text-center">
+                          <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Censo Nominal</p>
+                          <p class="font-black text-slate-900 uppercase">${s.name.split(' ')[0]}***</p>
+                          <p class="text-[9px] text-slate-500 mt-2">${isAEE ? 'Público Alvo AEE' : 'Ensino Regular'}</p>
                         </div>`)
+             .addTo(studentMarkersRef.current);
+        });
+    }
+  }, [schools, students, activeLayer, isMapReady]);
+
+  useEffect(() => {
+      updateMapTiles(mapStyle);
+  }, [mapStyle]);
+
+  const handleSearchLocation = async () => {
+      if (!searchStreet.trim()) return;
+      setIsSearchingExternal(true);
+      
+      const result = await geocodeAddress(searchStreet);
+      
+      if (result) {
+          // Remove marcador anterior de busca
+          if (searchResultMarkerRef.current) {
+              searchResultMarkerRef.current.remove();
+          }
+
+          // Cria ícone personalizado para o resultado
+          const icon = L.divIcon({
+              html: `<div class="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-xl animate-bounce"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></div>`,
+              className: 'custom-div-icon',
+              iconSize: [40, 40]
+          });
+
+          // Adiciona ao mapa
+          searchResultMarkerRef.current = L.marker([result.lat, result.lng], { icon })
+            .addTo(mapRef.current)
+            .bindPopup(`<div class="text-xs font-bold text-slate-900 p-2 text-center max-w-[150px]">${result.displayName}</div>`)
             .openPopup();
 
-        addToast("Endereço localizado no mapa.", "success");
-    } else {
-        addToast("Nenhum registro localizado (Local ou Global).", "warning");
-    }
+          // Voa para o local
+          mapRef.current.flyTo([result.lat, result.lng], 17);
+          addToast("Localização encontrada.", "success");
+      } else {
+          addToast("Endereço não localizado em Itaberaba.", "warning");
+      }
+      setIsSearchingExternal(false);
   };
 
   const handleLocateMe = () => {
-    setIsLocating(true);
-    if (!navigator.geolocation) {
-        addToast("Geolocalização não suportada pelo navegador.", "error");
-        setIsLocating(false);
-        return;
-    }
-    
-    addToast("Obtendo sua posição GPS...", "info");
-    
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            const { latitude, longitude, accuracy } = pos.coords;
-            
-            if (isValidCoordinate(latitude, longitude) && mapRef.current) {
-                if (userMarkerRef.current) {
-                    mapRef.current.removeLayer(userMarkerRef.current);
-                }
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+          (pos) => {
+              const { latitude, longitude } = pos.coords;
+              if (userMarkerRef.current) userMarkerRef.current.remove();
+              
+              const icon = L.divIcon({
+                  html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`,
+                  className: 'custom-div-icon',
+                  iconSize: [16, 16]
+              });
 
-                mapRef.current.flyTo([latitude, longitude], 18, { 
-                    duration: 2.5,
-                    easeLinearity: 0.25 
-                });
-
-                const userIcon = L.divIcon({
-                    className: 'bg-transparent',
-                    html: `<div class="relative flex items-center justify-center">
-                             <div class="absolute w-12 h-12 bg-blue-500 rounded-full animate-ping opacity-20"></div>
-                             <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-xl z-10"></div>
-                             <div class="absolute -bottom-8 bg-slate-900 text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-widest whitespace-nowrap shadow-lg animate-in slide-in-from-top-2">Você</div>
-                           </div>`,
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-
-                userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon })
-                    .addTo(mapRef.current)
-                    .bindPopup(`<div class="p-3 text-center">
-                                  <p class="text-[10px] font-black uppercase text-slate-900">Sua Localização</p>
-                                  <p class="text-[8px] text-slate-400 font-bold uppercase">Precisão: ~${Math.round(accuracy)}m</p>
-                                </div>`);
-                
-                setTimeout(() => userMarkerRef.current.openPopup(), 2500);
-                setTimeout(() => userMarkerRef.current.closePopup(), 5000);
-                
-                addToast("Localização encontrada.", "success");
-            } else {
-                addToast("Sinal GPS inválido ou fora dos limites.", "error");
-                addLog(`[GPS] Localização inválida recebida: Lat ${latitude}, Lng ${longitude}`, 'warning');
-            }
-            
-            setIsLocating(false);
-        },
-        (err) => {
-            console.error(err);
-            let msg = "Erro ao obter localização.";
-            if (err.code === 1) msg = "Permissão de localização negada.";
-            if (err.code === 2) msg = "Sinal GPS indisponível.";
-            if (err.code === 3) msg = "Tempo limite de GPS esgotado.";
-            addToast(msg, "error");
-            setIsLocating(false);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+              userMarkerRef.current = L.marker([latitude, longitude], { icon }).addTo(mapRef.current);
+              mapRef.current.flyTo([latitude, longitude], 16);
+              setIsLocating(false);
+          },
+          (err) => {
+              addToast("Erro ao obter localização GPS.", "error");
+              setIsLocating(false);
+          }
+      );
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] bg-[#f8fafc] flex overflow-hidden page-transition m-4 rounded-[3rem] shadow-deep border-4 border-white relative">
-      <div className="w-[320px] bg-white border-r border-slate-100 z-20 flex flex-col shrink-0">
-        <div className="p-8 border-b border-slate-50 bg-slate-50/30">
-            <button onClick={() => navigate('/dashboard')} className="mb-6 text-slate-400 hover:text-emerald-600 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition group">
-                <ArrowLeft size={16} className="group-hover:-translate-x-2 transition-transform" /> Voltar
-            </button>
-            <div className="flex items-center gap-4">
-                <div className="bg-[#0F172A] p-2.5 rounded-xl text-emerald-400 shadow-xl shrink-0"><Compass size={24} className="animate-spin-slow" /></div>
-                <div>
-                    <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none">Inteligência <br/>Territorial.</h1>
-                </div>
-            </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-            <section className="space-y-6">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Layers size={14} className="text-emerald-500" /> Camadas Ativas</h3>
-                {/* REMOVIDO: Botoes de camada duplicados na sidebar para limpar a UI */}
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Use os controles no mapa para alternar camadas.</p>
-                </div>
-            </section>
-
-            <section className="space-y-6">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><Globe size={14} className="text-blue-500" /> Estilo do Mapa</h3>
-                <div className="flex flex-col gap-2">
-                    {(['streets', 'clean', 'satellite'] as const).map(style => (
-                        <button key={style} onClick={() => { setMapStyle(style); updateMapTiles(style); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${mapStyle === style ? 'bg-slate-50 border-emerald-500 text-slate-900' : 'bg-white border-slate-100 text-slate-400 hover:border-emerald-100'}`}>
-                            <div className={`w-3 h-3 rounded-full ${mapStyle === style ? 'bg-emerald-500' : 'bg-slate-200'}`}></div>
-                            {style === 'streets' ? 'Padrão (Ruas)' : style === 'clean' ? 'Limpo (Analítico)' : 'Satélite (Híbrido)'}
-                        </button>
-                    ))}
-                </div>
-            </section>
-        </div>
-
-        <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <ShieldCheck className="text-emerald-500 h-4 w-4" />
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Base Auditada</span>
-            </div>
-            <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">2025</span>
-        </div>
-      </div>
-
-      <div className="flex-1 relative bg-slate-100 overflow-hidden">
-        <div id="analysis-map" className="w-full h-full z-10" />
+    <div className="h-[calc(100vh-64px)] w-full relative bg-slate-100 overflow-hidden">
+      {/* Sidebar Controls */}
+      <div className="absolute top-6 left-6 z-[400] flex flex-col gap-4">
+        <button onClick={() => navigate('/dashboard')} className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:scale-110 transition-all">
+            <ArrowLeft className="h-5 w-5" />
+        </button>
         
-        {/* Top Left Info Card */}
-        <div className="absolute top-8 left-8 z-[300] bg-white/90 backdrop-blur-xl px-5 py-3 rounded-[1.5rem] shadow-luxury flex items-center gap-4 border border-white">
-            <div className="bg-[#0F172A] p-2 rounded-xl text-emerald-400 shadow-xl shrink-0"><Compass className="h-5 w-5 animate-spin-slow" /></div>
-            <div className="min-w-0">
-                <span className="text-[8px] font-black text-slate-400 uppercase block tracking-ultra mb-0.5 truncate">Barramento Síncrono</span>
-                <span className="text-sm font-black text-slate-900 uppercase tracking-tight leading-none truncate block">Itaberaba • BA</span>
-            </div>
+        <div className="bg-white p-2 rounded-3xl shadow-xl flex flex-col gap-2">
+            <button onClick={() => setMapStyle('clean')} className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${mapStyle === 'clean' ? 'bg-slate-900 text-white' : 'text-slate-400 hover:bg-slate-50'}`} title="Mapa Limpo">
+                <Globe className="h-5 w-5" />
+            </button>
+            <button onClick={() => setMapStyle('streets')} className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${mapStyle === 'streets' ? 'bg-slate-900 text-white' : 'text-slate-400 hover:bg-slate-50'}`} title="Ruas">
+                <Compass className="h-5 w-5" />
+            </button>
+            <button onClick={() => setMapStyle('satellite')} className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${mapStyle === 'satellite' ? 'bg-slate-900 text-white' : 'text-slate-400 hover:bg-slate-50'}`} title="Satélite">
+                <Layers className="h-5 w-5" />
+            </button>
         </div>
 
-        {/* Floating Search Bar (On Map) */}
-        <form onSubmit={handleSearch} className="absolute top-24 left-8 z-[300] w-96 max-w-[calc(100%-64px)] shadow-2xl">
-            <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors">
-                    {isSearchingExternal ? <Loader2 size={20} className="animate-spin text-emerald-600" /> : <Search size={20} />}
-                </div>
-                <input 
-                    type="text" 
-                    value={searchStreet} 
-                    onChange={e => setSearchStreet(e.target.value)} 
-                    placeholder="Buscar aluno, escola ou endereço..." 
-                    className="w-full pl-14 pr-6 py-4 bg-white/95 backdrop-blur-md border border-white rounded-[1.5rem] text-sm font-bold text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-4 focus:ring-emerald-500/20 transition-all"
-                    disabled={isSearchingExternal}
-                />
-            </div>
-        </form>
+        <button onClick={handleLocateMe} className="w-12 h-12 bg-blue-600 text-white rounded-2xl shadow-xl flex items-center justify-center hover:bg-blue-700 transition-all">
+            {isLocating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+        </button>
+      </div>
 
-        {/* Floating Controls (Bottom Right) */}
-        <div className="absolute bottom-8 right-8 z-[300] flex flex-col gap-3">
-            {/* Layer Switcher (Explicit Toggle) */}
-            <div className="bg-white p-1.5 rounded-2xl shadow-luxury border border-slate-100 flex items-center gap-1 mb-2">
-                <button
-                    onClick={() => setActiveLayer('points')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                    <Users size={14} /> Pontos
-                </button>
-                <button
-                    onClick={() => setActiveLayer('heat')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeLayer === 'heat' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                    <Activity size={14} /> Calor
-                </button>
+      {/* Layer Toggle Control (Top-Right) - CONTROLE DE CAMADAS */}
+      <div className="absolute top-6 right-6 z-[400] flex flex-col gap-3">
+        <div className="bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-luxury border border-white/50 flex flex-col gap-2">
+            <div className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 mb-1 flex items-center gap-2">
+               <MapIcon className="h-3 w-3" /> Camadas de Análise
             </div>
-
-            <button onClick={() => { mapRef.current.flyTo([-12.5253, -40.2917], 15, { duration: 1.5 }); mapRef.current.invalidateSize(); }} className="p-4 bg-white rounded-2xl shadow-luxury text-slate-600 hover:text-emerald-600 transition-all border border-white hover:border-slate-100" title="Centralizar Rede"><Maximize size={20} /></button>
             <button 
-                onClick={handleLocateMe} 
-                disabled={isLocating}
-                className="p-4 bg-[#0F172A] rounded-2xl shadow-deep text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed group"
-                title="Minha Localização Nominal"
+                onClick={() => setActiveLayer('points')} 
+                className={`p-3 rounded-xl flex items-center gap-3 transition-all duration-300 w-44 ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-                {isLocating ? <Loader2 size={20} className="animate-spin" /> : <LocateFixed size={20} className="group-hover:scale-110 transition-transform" />}
+                <div className={`p-1.5 rounded-lg ${activeLayer === 'points' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                    <Users className="h-4 w-4" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Alunos (Pontos)</span>
+            </button>
+            <button 
+                onClick={() => setActiveLayer('heat')} 
+                className={`p-3 rounded-xl flex items-center gap-3 transition-all duration-300 w-44 ${activeLayer === 'heat' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+                <div className={`p-1.5 rounded-lg ${activeLayer === 'heat' ? 'bg-orange-500' : 'bg-slate-100'}`}>
+                    <Flame className="h-4 w-4" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Mapa de Calor</span>
             </button>
         </div>
       </div>
 
+      {/* Search Bar Overlay */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[400] w-full max-w-md px-6">
+        <div className="bg-white p-2 rounded-[2rem] shadow-2xl flex items-center gap-2 border border-slate-100">
+            <div className="pl-4"><Search className="h-5 w-5 text-slate-300" /></div>
+            <input 
+                type="text" 
+                placeholder="Buscar logradouro..." 
+                className="flex-1 h-12 outline-none font-semibold text-slate-700 placeholder:text-slate-300 bg-transparent text-sm"
+                value={searchStreet}
+                onChange={e => setSearchStreet(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearchLocation()}
+            />
+            <button 
+                onClick={handleSearchLocation}
+                disabled={isSearchingExternal}
+                className="h-12 px-6 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+                {isSearchingExternal ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Buscar'}
+            </button>
+        </div>
+      </div>
+
+      <div id="analysis-map" className="absolute inset-0 z-0 bg-slate-200" />
+      
       <style>{`
-        .animate-spin-slow { animation: spin 15s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .student-pulse { animation: studentPulse 3s infinite ease-in-out; }
-        @keyframes studentPulse { 0% { r: 7; opacity: 1; stroke-width: 3; } 50% { r: 11; opacity: 0.6; stroke-width: 1; } 100% { r: 7; opacity: 1; stroke-width: 3; } }
-        .marker-container { display: flex; flex-direction: column; align-items: center; }
-        .marker-school { background: #0F172A; color: #10b981; padding: 12px; border-radius: 16px; border: 3px solid white; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; }
-        .marker-school:hover { transform: scale(1.3) rotate(8deg); z-index: 1000; background: #064e3b; }
-        .marker-label { background: white; padding: 6px 14px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; box-shadow: 0 15px 25px -5px rgba(0,0,0,0.1); margin-top: 10px; white-space: nowrap; pointer-events: none; opacity: 0; transition: all 0.3s; border: 1px solid #f1f5f9; }
-        .marker-container:hover .marker-label { opacity: 1; transform: translateY(5px); }
+        .marker-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+        }
+        .marker-school {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #059669;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 4px solid white;
+        }
+        .marker-school:hover {
+            transform: scale(1.2) rotate(-5deg);
+            color: #0f172a;
+        }
+        .marker-label {
+            background: rgba(15, 23, 42, 0.9);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-top: 8px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .marker-container:hover .marker-label {
+            opacity: 1;
+        }
+        .marker-student {
+            width: 10px;
+            height: 10px;
+            background: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .marker-student.is-aee {
+            background: #ec4899;
+            width: 12px;
+            height: 12px;
+        }
+        .pulse-ring {
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            animation: pulse-blue 2s infinite;
+        }
+        @keyframes pulse-blue {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
       `}</style>
     </div>
   );

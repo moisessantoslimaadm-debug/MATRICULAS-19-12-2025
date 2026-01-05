@@ -21,39 +21,72 @@ const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
   </button>
 );
 
+// Função auxiliar para validação robusta de coordenadas
+const isValidGeo = (lat: any, lng: any): boolean => {
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  return (
+    lat !== null && lat !== undefined &&
+    lng !== null && lng !== undefined &&
+    !isNaN(nLat) && !isNaN(nLng) &&
+    isFinite(nLat) && isFinite(nLng) &&
+    Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180
+  );
+};
+
 const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const { addLog } = useLog();
 
     // Validação robusta de coordenadas para exibição
-    const hasValidGeo = 
-        school.lat !== null && school.lat !== undefined && 
-        school.lng !== null && school.lng !== undefined &&
-        !isNaN(Number(school.lat)) && 
-        !isNaN(Number(school.lng)) && 
-        isFinite(Number(school.lat)) && 
-        isFinite(Number(school.lng)) && 
-        Math.abs(Number(school.lat)) <= 90 && 
-        Math.abs(Number(school.lng)) <= 180;
+    const hasValidGeo = isValidGeo(school.lat, school.lng);
+
+    // Função preparada para cálculo de distância com validação interna
+    const calculateDistanceToUser = (userLat: number, userLng: number) => {
+        if (!hasValidGeo) {
+            addLog(`[DistanceCalc] Erro: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id})`, 'error');
+            return null; // Retorna nulo para indicar falha segura
+        }
+        if (!isValidGeo(userLat, userLng)) {
+            addLog(`[DistanceCalc] Erro: Coordenadas do usuário inválidas.`, 'warning');
+            return null;
+        }
+
+        // Cálculo Haversine seguro
+        const R = 6371; 
+        const dLat = (userLat - Number(school.lat)) * Math.PI / 180;
+        const dLon = (userLng - Number(school.lng)) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(Number(school.lat) * Math.PI / 180) * Math.cos(userLat * Math.PI / 180) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    };
 
     // Efeito para logar apenas uma vez se a escola tiver dados inválidos
     useEffect(() => {
         if (!hasValidGeo) {
-            addLog(`[SchoolCard] Escola com coordenadas inválidas: ${school.name} (ID: ${school.id})`, 'warning');
+            addLog(`[SchoolCard] Escola com coordenadas inválidas: ${school.name} (ID: ${school.id}) - Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
         }
-    }, [hasValidGeo, school.id, school.name, addLog]);
+    }, [hasValidGeo, school.id, school.name, addLog, school.lat, school.lng]);
 
     const handleSolicitarVaga = () => {
         if (!hasValidGeo) {
-            // Opcional: Impedir navegação ou apenas alertar. Decidi apenas alertar e registrar.
             addToast("Nota: Unidade sem geolocalização precisa para cálculo de rota.", "info");
         }
+        // Simulação de uso da função de cálculo (apenas para validar a lógica sem erro de runtime)
+        calculateDistanceToUser(0, 0); 
         navigate('/registration');
     };
 
+    // Criação do conteúdo do tooltip/popup baseada na validade
+    const locationStatusTooltip = hasValidGeo 
+        ? `Localização verificada: ${school.address}` 
+        : `ALERTA DE DADOS: Coordenadas geográficas pendentes ou inválidas. Atualização cadastral necessária.`;
+
     return (
-        <div className="card-requinte group overflow-hidden flex flex-col h-full hover:-translate-y-2 cursor-pointer">
+        <div className="card-requinte group overflow-hidden flex flex-col h-full hover:-translate-y-2 cursor-pointer" title={locationStatusTooltip}>
             <div className="h-32 md:h-40 relative overflow-hidden border-b border-slate-100">
                 <img src={school.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt={school.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
@@ -68,7 +101,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                         {hasValidGeo ? (
                             <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
                         ) : (
-                            <span title="Localização Pendente" className="shrink-0 flex items-center">
+                            <span className="shrink-0 flex items-center animate-pulse">
                                 <AlertTriangle className="h-3 w-3 text-amber-500" />
                             </span>
                         )}

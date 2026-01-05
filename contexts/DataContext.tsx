@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { School, RegistryStudent, Professional, Project } from '../types';
 import { MOCK_SCHOOLS, MOCK_STUDENT_REGISTRY, MOCK_PROFESSIONALS, MOCK_PROJECTS } from '../constants';
 import { useToast } from './ToastContext';
+import { useLog } from './LogContext';
 import { db } from '../services/db';
 import { supabase } from '../services/supabaseClient';
 
@@ -31,21 +32,15 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// Função auxiliar pura para validação numérica
+const isValidGeo = (n: any, limit: number) => {
+    const num = Number(n);
+    return !isNaN(num) && isFinite(num) && Math.abs(num) <= limit;
+};
+
+// Função de cálculo de distância Haversine
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-  // Validação robusta de coordenadas antes do cálculo matemático
-  const isValid = (n: number, limit: number) => 
-    typeof n === 'number' && !isNaN(n) && isFinite(n) && Math.abs(n) <= limit;
-
-  if (!isValid(lat1, 90) || !isValid(lat2, 90)) {
-    console.warn(`[GeoCalc] Latitudes inválidas: ${lat1}, ${lat2}`);
-    return Infinity;
-  }
-  if (!isValid(lng1, 180) || !isValid(lng2, 180)) {
-    console.warn(`[GeoCalc] Longitudes inválidas: ${lng1}, ${lng2}`);
-    return Infinity;
-  }
-
-  const R = 6371; // km
+  const R = 6371; // Raio da Terra em km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -57,6 +52,7 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
 
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const { addToast } = useToast();
+  const { addLog } = useLog(); // Integração com o sistema de logs
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [schools, setSchools] = useState<School[]>([]);
@@ -151,30 +147,41 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   useEffect(() => { loadData(); }, []);
 
   const getNearestSchool = (lat: number, lng: number) => {
-    // Validação robusta de coordenadas de origem antes do cálculo
-    if (
-        lat === null || lat === undefined || isNaN(lat) || Math.abs(lat) > 90 ||
-        lng === null || lng === undefined || isNaN(lng) || Math.abs(lng) > 180
-    ) {
+    // Validação robusta de coordenadas de origem (Usuário)
+    if (!isValidGeo(lat, 90) || !isValidGeo(lng, 180)) {
+        addLog(`[GeoCalc] Coordenadas de origem inválidas: [${lat}, ${lng}]`, 'warning');
         return null;
     }
 
-    const validSchools = schools.filter(s => 
-        s && 
-        typeof s === 'object' &&
-        typeof s.lat === 'number' && !isNaN(s.lat) && isFinite(s.lat) && Math.abs(s.lat) <= 90 &&
-        typeof s.lng === 'number' && !isNaN(s.lng) && isFinite(s.lng) && Math.abs(s.lng) <= 180
-    );
+    const validSchools = schools.filter(s => {
+        const valid = isValidGeo(s.lat, 90) && isValidGeo(s.lng, 180);
+        if (!valid) {
+            // Log silencioso para não spammar, mas registra escolas mal cadastradas no processamento
+            // Idealmente isso iria para um relatório de auditoria
+        }
+        return valid;
+    });
     
-    if (validSchools.length === 0) return null;
+    if (validSchools.length === 0) {
+        addLog("[GeoCalc] Nenhuma escola com coordenadas válidas disponível para cálculo.", 'warning');
+        return null;
+    }
     
     let nearest = validSchools[0];
-    let minDistance = calculateDistance(lat, lng, nearest.lat, nearest.lng);
+    let minDistance = Infinity;
     
     validSchools.forEach(school => {
-      const dist = calculateDistance(lat, lng, school.lat, school.lng);
-      if (dist < minDistance) { minDistance = dist; nearest = school; }
+      // Validação dupla (já filtrado, mas garantindo integridade no loop)
+      if (isValidGeo(school.lat, 90) && isValidGeo(school.lng, 180)) {
+          const dist = calculateDistance(lat, lng, school.lat, school.lng);
+          if (dist < minDistance) { 
+              minDistance = dist; 
+              nearest = school; 
+          }
+      }
     });
+
+    if (minDistance === Infinity) return null;
     return { school: nearest, distance: minDistance };
   };
 
@@ -182,12 +189,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   // A UI é atualizada instantaneamente. A sincronização com o Supabase ocorre em background.
 
   const addSchool = async (school: School) => {
-    // 1. Local & State (Instant)
     await db.schools.add(school);
     setSchools(prev => [...prev, school]);
     addToast("Unidade escolar registrada localmente.", "success");
 
-    // 2. Background Sync
     supabase.from('schools').insert(school).then(({ error }) => {
         if (error) console.error("Background Sync Error (Add School):", error);
     });
@@ -319,19 +324,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         await db.students.put(updated);
         setStudents(prev => prev.map(s => s.id === studentId ? updated : s));
         
-        // Update local project count optimistically too if needed, but keeping it simple for now
+        // Update local project count optimistically too if needed
         const proj = await db.projects.get(projectId);
         if (proj) {
             const updatedProj = { ...proj, participantsCount: proj.participantsCount + 1 };
             await db.projects.put(updatedProj);
             setProjects(prev => prev.map(p => p.id === projectId ? updatedProj : p));
-            // Background sync project
             supabase.from('projects').upsert(updatedProj).then();
         }
 
         addToast("Vínculo de projeto concluído.", "success");
         
-        // Background Sync Student
         supabase.from('students').upsert(updated).then(({ error }) => {
             if (error) console.error("Background Sync Error (Link Project):", error);
         });
