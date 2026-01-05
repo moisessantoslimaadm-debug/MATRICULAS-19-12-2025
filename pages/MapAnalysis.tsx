@@ -141,9 +141,11 @@ export const MapAnalysis: React.FC = () => {
           const lng = Number(school.lng);
           
           // Validação robusta de coordenadas geográficas
+          // Verifica se é número, se não é nulo/undefined na origem, se é finito e se está nos limites do planeta
           if (
+              school.lat === null || school.lat === undefined ||
+              school.lng === null || school.lng === undefined ||
               isNaN(lat) || isNaN(lng) || 
-              lat === null || lng === null || 
               !isFinite(lat) || !isFinite(lng) || 
               Math.abs(lat) > 90 || Math.abs(lng) > 180
           ) {
@@ -186,23 +188,27 @@ export const MapAnalysis: React.FC = () => {
     // Lógica Condicional de Camadas (Heatmap vs Pontos)
     if (activeLayer === 'heat') {
         const heatData = (students || [])
-            .filter(s => s && typeof s === 'object' && !isNaN(s.lat) && !isNaN(s.lng))
-            .map(s => [s.lat, s.lng, 1.0]); // Intensidade
+            .filter(s => s && typeof s === 'object' && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)))
+            .map(s => [Number(s.lat), Number(s.lng), 1.0]); // Intensidade
             
-        if (typeof L.heatLayer === 'function') {
+        if (typeof L.heatLayer === 'function' && heatData.length > 0) {
             heatLayerRef.current = L.heatLayer(heatData, {
                 radius: 30,
                 blur: 20,
                 maxZoom: 17,
                 gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
             }).addTo(mapRef.current);
-        } else {
+        } else if (typeof L.heatLayer !== 'function') {
             console.warn("Leaflet.heat não carregado.");
         }
     } else {
         // Camada de Pontos Individuais
         (students || []).forEach(s => {
-            if (!s || typeof s !== 'object' || isNaN(s.lat) || isNaN(s.lng)) return;
+            if (!s || typeof s !== 'object') return;
+            const sLat = Number(s.lat);
+            const sLng = Number(s.lng);
+            
+            if (isNaN(sLat) || isNaN(sLng)) return;
 
             const isAEE = s.specialNeeds;
             const icon = L.divIcon({
@@ -210,7 +216,7 @@ export const MapAnalysis: React.FC = () => {
                 className: 'custom-div-icon',
                 iconSize: [12, 12]
             });
-            L.marker([s.lat, s.lng], { icon })
+            L.marker([sLat, sLng], { icon })
              .bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-lg text-center">
                           <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Censo Nominal</p>
                           <p class="font-black text-slate-900 uppercase">${s.name.split(' ')[0]}***</p>
@@ -219,7 +225,7 @@ export const MapAnalysis: React.FC = () => {
              .addTo(studentMarkersRef.current);
         });
     }
-  }, [schools, students, activeLayer, isMapReady]);
+  }, [schools, students, activeLayer, isMapReady, addLog]); // Added addLog to dependency array
 
   useEffect(() => {
       updateMapTiles(mapStyle);

@@ -33,10 +33,9 @@ export const Navbar: React.FC = () => {
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (role) {
-        if (role === UserRole.TEACHER) navigate('/journal');
-        else if (role === UserRole.STUDENT) navigate(`/student/monitoring?id=${JSON.parse(sessionStorage.getItem('user_data') || '{}').id}`);
-        else navigate('/dashboard');
+    // Lógica atualizada: Apenas ADMIN e STUDENT vão para o dashboard, o resto para a home
+    if (role === UserRole.ADMIN_SME || role === UserRole.STUDENT) {
+        navigate('/dashboard');
     } else {
         navigate('/');
     }
