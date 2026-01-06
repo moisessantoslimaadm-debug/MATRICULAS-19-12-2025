@@ -3,7 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
   ArrowLeft, Layers, Search, Compass, LocateFixed, Globe,
-  Loader2, Users, Flame, Map as MapIcon, Tag
+  Loader2, Users, Flame, Map as MapIcon, Tag, Check, X, MapPin
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useLog } from '../contexts/LogContext';
@@ -32,10 +32,12 @@ export const MapAnalysis: React.FC = () => {
   const schoolMarkersRef = useRef<any>(null);
   const studentMarkersRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+  const userAccuracyCircleRef = useRef<any>(null);
   const searchResultMarkerRef = useRef<any>(null);
   
   const schoolMarkerMap = useRef<Map<string, any>>(new Map());
 
+  // Estado para alternar camadas: 'points' (marcadores individuais) ou 'heat' (mapa de calor)
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
   const [mapStyle, setMapStyle] = useState<'streets' | 'clean' | 'satellite'>('clean'); 
   const [isMapReady, setIsMapReady] = useState(false);
@@ -46,14 +48,12 @@ export const MapAnalysis: React.FC = () => {
   // Integração com API de Geocodificação (Nominatim / OpenStreetMap)
   const geocodeAddress = async (query: string) => {
     try {
-        // Contextualiza a busca estritamente para o município
+        // Contextualiza a busca para Itaberaba para evitar resultados globais
         const contextualizedQuery = `${query}, Itaberaba, Bahia, Brasil`;
-        // addressdetails=1 traz detalhes para validar se é a cidade certa
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(contextualizedQuery)}&limit=1&addressdetails=1`;
         
         const response = await fetch(url, {
             headers: {
-                // User-Agent é obrigatório pela política de uso do Nominatim
                 'User-Agent': 'EducaMunicipio-Platform/1.0 (Educational Project)'
             }
         });
@@ -62,7 +62,6 @@ export const MapAnalysis: React.FC = () => {
         
         const data = await response.json();
         
-        // Verifica se retornou algum dado
         if (data && Array.isArray(data) && data.length > 0 && data[0]) {
             return {
                 lat: parseFloat(data[0].lat),
@@ -152,6 +151,7 @@ export const MapAnalysis: React.FC = () => {
         const nLat = Number(lat);
         const nLng = Number(lng);
         
+        // Verifica: Não nulo, numérico, não-NaN, finito e dentro dos limites do globo terrestre
         const isValid = 
             lat !== null && lat !== undefined &&
             lng !== null && lng !== undefined &&
@@ -160,7 +160,7 @@ export const MapAnalysis: React.FC = () => {
             Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180;
 
         if (!isValid) {
-            // Loga o erro conforme solicitado e retorna null para que a escola seja ignorada
+            // Loga o erro conforme solicitado e retorna null para que o item seja ignorado
             addLog(`[MapAnalysis] Dados geo inválidos ignorados: ${name} (ID: ${id}). Lat: ${lat}, Lng: ${lng}`, 'warning');
             return null;
         }
@@ -216,14 +216,17 @@ export const MapAnalysis: React.FC = () => {
       });
     }
 
-    // --- RENDERIZAÇÃO DE ALUNOS ---
+    // --- RENDERIZAÇÃO DE ALUNOS (CAMADAS ALTERNÁVEIS) ---
+    // O controle na interface define 'activeLayer'
     if (activeLayer === 'heat') {
         const heatData: any[] = [];
         
         (students || []).forEach(s => {
             if (!s || typeof s !== 'object') return;
+            // Valida coordenadas do aluno também para evitar erros no heatmap
             const coords = validateCoordinates(s.lat, s.lng, 'Aluno Heatmap', s.id, s.name);
             if (coords) {
+                // Intensidade padrão 1.0, pode ser ajustado por critério
                 heatData.push([coords.lat, coords.lng, 1.0]);
             }
         });
@@ -236,12 +239,14 @@ export const MapAnalysis: React.FC = () => {
                 gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
             }).addTo(mapRef.current);
         } else if (typeof L.heatLayer !== 'function') {
-            console.warn("Leaflet.heat não carregado.");
+            console.warn("Leaflet.heat não carregado. Verifique o index.html.");
+            addLog("[MapAnalysis] Leaflet.heat não disponível.", 'error');
         }
     } else {
         // Camada de Pontos Individuais
         (students || []).forEach(s => {
             if (!s || typeof s !== 'object') return;
+            // Valida coordenadas do aluno
             const coords = validateCoordinates(s.lat, s.lng, 'Aluno Ponto', s.id, s.name);
             if (!coords) return;
 
@@ -283,8 +288,8 @@ export const MapAnalysis: React.FC = () => {
           }
 
           const icon = L.divIcon({
-              html: `<div class="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-2xl border-4 border-white animate-bounce relative z-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              html: `<div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white shadow-2xl border-4 border-white animate-bounce relative z-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                      </div>`,
               className: 'custom-div-icon',
               iconSize: [48, 48],
@@ -296,7 +301,7 @@ export const MapAnalysis: React.FC = () => {
             .addTo(mapRef.current)
             .bindPopup(`<div class="text-xs font-bold text-slate-900 p-2 text-center max-w-[200px]">
                           <p class="uppercase leading-tight">${result.displayName.split(',')[0]}</p>
-                          <p class="text-[9px] text-slate-400 mt-1">Localizado via GPS</p>
+                          <p class="text-[9px] text-slate-400 mt-1">Localizado via Nominatim</p>
                         </div>`)
             .openPopup();
 
@@ -312,6 +317,14 @@ export const MapAnalysis: React.FC = () => {
       setIsSearchingExternal(false);
   };
 
+  const handleClearSearch = () => {
+      setSearchStreet('');
+      if (searchResultMarkerRef.current) {
+          searchResultMarkerRef.current.remove();
+          searchResultMarkerRef.current = null;
+      }
+  };
+
   const handleLocateMe = () => {
       setIsLocating(true);
       if (!navigator.geolocation) {
@@ -322,8 +335,10 @@ export const MapAnalysis: React.FC = () => {
 
       navigator.geolocation.getCurrentPosition(
           (pos) => {
-              const { latitude, longitude } = pos.coords;
-              if (userMarkerRef.current) userMarkerRef.current.remove();
+              const { latitude, longitude, accuracy } = pos.coords;
+              
+              if (userMarkerRef.current) mapRef.current.removeLayer(userMarkerRef.current);
+              if (userAccuracyCircleRef.current) mapRef.current.removeLayer(userAccuracyCircleRef.current);
               
               const icon = L.divIcon({
                   html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`,
@@ -334,12 +349,26 @@ export const MapAnalysis: React.FC = () => {
               userMarkerRef.current = L.marker([latitude, longitude], { 
                   icon,
                   zIndexOffset: 1000 
+              })
+              .addTo(mapRef.current)
+              .bindPopup(`<div class="text-center p-1"><p class="text-xs font-black text-slate-900 uppercase">Sua Localização</p><p class="text-[9px] text-slate-500">Precisão: ~${Math.round(accuracy)}m</p></div>`)
+              .openPopup();
+
+              userAccuracyCircleRef.current = L.circle([latitude, longitude], {
+                  radius: accuracy,
+                  color: '#3b82f6',
+                  fillColor: '#3b82f6',
+                  fillOpacity: 0.1,
+                  weight: 1,
+                  dashArray: '4, 4'
               }).addTo(mapRef.current);
               
-              mapRef.current.flyTo([latitude, longitude], 18, {
+              const bounds = userAccuracyCircleRef.current.getBounds();
+              mapRef.current.flyToBounds(bounds, {
+                  padding: [50, 50],
                   animate: true,
                   duration: 2.0,
-                  easeLinearity: 0.25
+                  maxZoom: 18
               });
               
               addToast("Localização GPS atualizada.", "success");
@@ -383,29 +412,39 @@ export const MapAnalysis: React.FC = () => {
         </button>
       </div>
 
-      {/* Layer Toggle Control (Top-Right) - CONTROLE DE CAMADAS */}
+      {/* CONTROLE DE CAMADAS (TOGGLE) */}
       <div className="absolute top-6 right-6 z-[400] flex flex-col gap-3">
-        <div className="bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-luxury border border-white/50 flex flex-col gap-2">
+        <div className="bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-luxury border border-white/50 flex flex-col gap-2 animate-in slide-in-from-top-4">
             <div className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 mb-1 flex items-center gap-2">
-               <MapIcon className="h-3 w-3" /> Camadas de Análise
+               <MapIcon className="h-3 w-3" /> Visualização
             </div>
+            
             <button 
                 onClick={() => setActiveLayer('points')} 
-                className={`p-3 rounded-xl flex items-center gap-3 transition-all duration-300 w-44 ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`p-3 rounded-xl flex items-center gap-3 transition-all duration-300 w-44 group ${activeLayer === 'points' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-                <div className={`p-1.5 rounded-lg ${activeLayer === 'points' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                <div className={`p-1.5 rounded-lg transition-colors ${activeLayer === 'points' ? 'bg-slate-800' : 'bg-slate-100 group-hover:bg-white'}`}>
                     <Users className="h-4 w-4" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">Alunos (Pontos)</span>
+                <div className="flex-1 text-left">
+                    <span className="text-[10px] font-black uppercase tracking-widest block">Alunos (Pontos)</span>
+                    <span className="text-[8px] font-medium opacity-60">Localização exata</span>
+                </div>
+                {activeLayer === 'points' && <Check className="h-3 w-3 text-emerald-400" />}
             </button>
+
             <button 
                 onClick={() => setActiveLayer('heat')} 
-                className={`p-3 rounded-xl flex items-center gap-3 transition-all duration-300 w-44 ${activeLayer === 'heat' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`p-3 rounded-xl flex items-center gap-3 transition-all duration-300 w-44 group ${activeLayer === 'heat' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-                <div className={`p-1.5 rounded-lg ${activeLayer === 'heat' ? 'bg-orange-500' : 'bg-slate-100'}`}>
+                <div className={`p-1.5 rounded-lg transition-colors ${activeLayer === 'heat' ? 'bg-orange-500' : 'bg-slate-100 group-hover:bg-white'}`}>
                     <Flame className="h-4 w-4" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">Mapa de Calor</span>
+                <div className="flex-1 text-left">
+                    <span className="text-[10px] font-black uppercase tracking-widest block">Mapa de Calor</span>
+                    <span className="text-[8px] font-medium opacity-60">Densidade demográfica</span>
+                </div>
+                {activeLayer === 'heat' && <Check className="h-3 w-3 text-white" />}
             </button>
         </div>
 
@@ -437,6 +476,11 @@ export const MapAnalysis: React.FC = () => {
                 onChange={e => setSearchStreet(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearchLocation()}
             />
+            {searchStreet && (
+                <button onClick={handleClearSearch} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                    <X className="h-4 w-4" />
+                </button>
+            )}
             <button 
                 onClick={handleSearchLocation}
                 disabled={isSearchingExternal}

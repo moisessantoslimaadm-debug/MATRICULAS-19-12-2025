@@ -22,6 +22,7 @@ const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
 );
 
 // Função auxiliar para validação robusta de coordenadas
+// Garante que é número, não é NaN, é finito e está dentro dos limites do globo
 const isValidGeo = (lat: any, lng: any): boolean => {
   const nLat = Number(lat);
   const nLng = Number(lng);
@@ -44,27 +45,34 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
 
     // Função preparada para cálculo de distância com validação interna
     const calculateDistanceToUser = (userLat: number, userLng: number) => {
+        // Validação da Escola
         if (!hasValidGeo) {
-            addLog(`[DistanceCalc] Erro: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id})`, 'error');
+            addLog(`[DistanceCalc] Erro: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id}). Lat: ${school.lat}, Lng: ${school.lng}`, 'error');
             return null; // Retorna nulo para indicar falha segura
         }
+        // Validação do Usuário
         if (!isValidGeo(userLat, userLng)) {
-            addLog(`[DistanceCalc] Erro: Coordenadas do usuário inválidas.`, 'warning');
+            addLog(`[DistanceCalc] Erro: Coordenadas do usuário inválidas ou GPS desligado.`, 'warning');
             return null;
         }
 
         // Cálculo Haversine seguro
-        const R = 6371; 
-        const dLat = (userLat - Number(school.lat)) * Math.PI / 180;
-        const dLon = (userLng - Number(school.lng)) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(Number(school.lat) * Math.PI / 180) * Math.cos(userLat * Math.PI / 180) * 
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+        try {
+            const R = 6371; 
+            const dLat = (userLat - Number(school.lat)) * Math.PI / 180;
+            const dLon = (userLng - Number(school.lng)) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(Number(school.lat) * Math.PI / 180) * Math.cos(userLat * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        } catch (error: any) {
+            addLog(`[DistanceCalc] Erro matemático no cálculo: ${error.message}`, 'error');
+            return null;
+        }
     };
 
-    // Efeito para logar apenas uma vez se a escola tiver dados inválidos
+    // Efeito para logar aviso se a escola for renderizada com dados inválidos
     useEffect(() => {
         if (!hasValidGeo) {
             addLog(`[SchoolCard] Escola com coordenadas inválidas detectada: ${school.name} (ID: ${school.id}). Funções de mapa desabilitadas para esta unidade.`, 'warning');
@@ -72,12 +80,16 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     }, [hasValidGeo, school.id, school.name, addLog]);
 
     const handleSolicitarVaga = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Previne navegação do card se houver
+        e.stopPropagation(); 
+        
         if (!hasValidGeo) {
-            addToast("Nota: Unidade sem geolocalização precisa para cálculo de rota.", "info");
+            addToast("Nota: Unidade sem geolocalização precisa para cálculo de rota automática.", "info");
         }
-        // Simulação de uso da função de cálculo (apenas para validar a lógica sem erro de runtime)
+        
+        // Exemplo de uso da função de cálculo (apenas para validar a lógica sem erro de runtime)
+        // Em um cenário real, pegaríamos a localização do usuário aqui
         calculateDistanceToUser(0, 0); 
+        
         navigate('/registration');
     };
 
@@ -107,7 +119,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                         {hasValidGeo ? (
                             <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
                         ) : (
-                            <span className="shrink-0 flex items-center animate-pulse">
+                            <span className="shrink-0 flex items-center animate-pulse" title="Geolocalização Inválida">
                                 <AlertTriangle className="h-3 w-3 text-amber-500" />
                             </span>
                         )}
@@ -147,6 +159,15 @@ export const SchoolList: React.FC = () => {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'units' | 'students' | 'classes'>('units');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Memoização para contar alunos por escola
+  const studentsPerSchool = useMemo(() => {
+    const counts: Record<string, number> = {};
+    students.forEach(s => {
+        if (s.school) counts[s.school] = (counts[s.school] || 0) + 1;
+    });
+    return counts;
+  }, [students]);
 
   const filteredStudents = useMemo(() => students.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -273,6 +294,13 @@ export const SchoolList: React.FC = () => {
                                 </td>
                                 <td className="px-6 md:px-8 py-4 md:py-6">
                                     <p className="text-[9px] md:text-[10px] font-black text-slate-900 uppercase truncate max-w-[150px] md:max-w-[200px]">{s.school}</p>
+                                    
+                                    <p className="text-[7px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 flex items-center gap-1">
+                                        {studentsPerSchool[s.school || ''] > 0 
+                                            ? <><Users className="h-2 w-2" /> {studentsPerSchool[s.school || '']} Matrículas</> 
+                                            : 'Sem alunos cadastrados'}
+                                    </p>
+
                                     <div className="flex flex-col gap-0.5 mt-1">
                                         <p className="text-[7px] md:text-[8px] font-black text-blue-600 uppercase tracking-widest">{s.className || 'Não Alocado'}</p>
                                         <p className="text-[7px] text-slate-400 uppercase font-black tracking-tighter">{s.classSchedule}</p>

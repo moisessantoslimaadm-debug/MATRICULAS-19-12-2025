@@ -53,21 +53,33 @@ export const Status: React.FC = () => {
     e.preventDefault();
     if (!studentInput.trim()) return;
     
-    // Normalização para busca (remove pontos e traços para comparar números)
     const term = studentInput.toLowerCase().trim();
-    const cleanTerm = term.replace(/\D/g, ''); 
+    // Termo limpo apenas com números para busca de CPF/INEP
+    const numericTerm = term.replace(/\D/g, '');
+    // Termo alfanumérico limpo para busca de Matrícula (ex: MAT123)
+    const alphaNumericTerm = term.replace(/[^a-z0-9]/g, '');
 
     const found = students.filter(s => {
-        const sName = s.name.toLowerCase();
-        const sCpf = s.cpf.replace(/\D/g, '');
-        const sEnrollment = s.enrollmentId ? s.enrollmentId.replace(/\D/g, '') : '';
-        const sInep = s.inepId ? s.inepId.toString() : '';
+        // 1. Busca por Nome (Prioridade visual - contém o termo)
+        if (s.name.toLowerCase().includes(term)) return true;
 
-        // Busca por Nome OU (se tiver números digitados) por CPF/Matrícula/INEP
-        if (cleanTerm.length > 3) {
-            return sName.includes(term) || sCpf.includes(cleanTerm) || sEnrollment.includes(cleanTerm) || sInep.includes(cleanTerm);
+        // 2. Busca Numérica Estrita (CPF, INEP)
+        // Requer pelo menos 3 dígitos para evitar falso positivo excessivo com números pequenos
+        if (numericTerm.length >= 3) {
+            const sCpf = (s.cpf || '').replace(/\D/g, '');
+            const sInep = (s.inepId || '').toString();
+            
+            if (sCpf.includes(numericTerm)) return true;
+            if (sInep.includes(numericTerm)) return true;
         }
-        return sName.includes(term);
+
+        // 3. Busca por Matrícula (Flexível - suporta com ou sem traços/prefixos)
+        if (alphaNumericTerm.length >= 3) {
+            const sEnrollment = (s.enrollmentId || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (sEnrollment.includes(alphaNumericTerm)) return true;
+        }
+
+        return false;
     });
 
     setSearchResults(found);
@@ -192,7 +204,7 @@ export const Status: React.FC = () => {
                 <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/30">
                     <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-6" />
                     <p className="text-slate-400 font-bold text-lg uppercase tracking-widest">Identificação Nominal Não Localizada</p>
-                    <p className="text-slate-400 text-xs mt-2">Verifique o CPF ou Matrícula digitada.</p>
+                    <p className="text-slate-400 text-xs mt-2">Verifique o CPF, Matrícula ou Nome digitado.</p>
                 </div>
             )}
         </div>

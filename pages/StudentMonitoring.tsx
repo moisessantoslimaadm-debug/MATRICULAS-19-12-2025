@@ -20,7 +20,10 @@ const ComparisonChart = ({ attendanceData, gradeData }: { attendanceData: number
     const labels = ['Bim 1', 'Bim 2', 'Bim 3', 'Bim 4']; 
 
     // Função para normalizar dados (0-100) para coordenadas Y
-    const getY = (val: number, max: number) => height - padding - ((val / max) * (height - (padding * 2)));
+    const getY = (val: number, max: number) => {
+        const safeVal = isNaN(val) ? 0 : val;
+        return height - padding - ((safeVal / max) * (height - (padding * 2)));
+    };
     const getX = (index: number) => padding + (index * (width - (padding * 2)) / (Math.max(labels.length - 1, 1)));
 
     const linePointsAttendance = attendanceData.map((val, i) => `${getX(i)},${getY(val, 100)}`).join(' ');
@@ -190,7 +193,7 @@ export const StudentMonitoring: React.FC = () => {
 
   const student = students.find(s => s.id === studentId || s.enrollmentId === studentId || s.inepId === studentId);
 
-  // Cálculo de Estatísticas Reais com Validação Robusta de Coordenadas
+  // Cálculo de Estatísticas Reais com Validação Robusta de Coordenadas e Dados
   const stats = useMemo(() => {
       if (!student) return { attendancePercent: 0, gradeAverage: 0, rawGrades: [], hasValidLocation: false };
       
@@ -249,20 +252,31 @@ export const StudentMonitoring: React.FC = () => {
       }
   }, [student, stats.hasValidLocation, addLog]);
 
-  // Dados Dinâmicos para o Gráfico
+  // Dados Dinâmicos para o Gráfico com Validação e Fallbacks
   const chartData = useMemo(() => {
-      // Se tiver dados reais de notas, usa. Senão, usa fallback.
-      const gradeData = stats.rawGrades.length > 0 ? stats.rawGrades.slice(0, 4) : [3, 2, 3, 4];
-      // Se tiver dados reais de frequência, cria um array visual (simulado histórico recente se só tiver 1 dado)
-      const currentAtt = parseInt(String(stats.attendancePercent)) || 100;
+      if (!student) return { attendance: [100, 100, 100, 100], grades: [3, 3, 3, 3] };
+
+      // Validação de Notas (Garante números finitos)
+      let validGrades = stats.rawGrades.filter(g => typeof g === 'number' && !isNaN(g) && isFinite(g));
+      if (stats.rawGrades.length > 0 && validGrades.length !== stats.rawGrades.length) {
+          addLog(`[StudentMonitoring] Notas inválidas detectadas para ${student.name}. Valores corrompidos foram filtrados.`, 'warning');
+      }
+      // Fallback para demo se não houver notas
+      const gradeData = validGrades.length > 0 ? validGrades.slice(0, 4) : [3, 2, 3, 4];
+
+      // Validação de Frequência (Garante percentual válido)
+      let currentAtt = parseInt(String(stats.attendancePercent));
+      if (isNaN(currentAtt) || !isFinite(currentAtt) || currentAtt < 0 || currentAtt > 100) {
+          addLog(`[StudentMonitoring] Frequência inválida (${stats.attendancePercent}) para ${student.name}. Usando padrão (100%).`, 'warning');
+          currentAtt = 100;
+      }
       const attendanceData = [98, 95, 100, currentAtt]; // Simula variação histórica terminando no atual
 
       return { attendance: attendanceData, grades: gradeData };
-  }, [stats]);
+  }, [stats, student, addLog]);
 
   const handleBack = () => {
-    // Tenta voltar no histórico para preservar o contexto (ex: veio da lista de alunos de uma escola específica)
-    // Se não houver histórico (acesso direto), redireciona baseado no papel
+    // Tenta voltar no histórico para preservar o contexto
     if (window.history.length > 1) {
         navigate(-1);
     } else {
@@ -326,7 +340,6 @@ export const StudentMonitoring: React.FC = () => {
                     {student.status}
                 </span>
               </div>
-              {/* Nome do aluno com quebra de palavra e responsividade */}
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none break-words">{student.name}</h1>
               <div className="flex flex-wrap justify-center md:justify-start items-center gap-6 md:gap-10">
                   <div className="flex items-center gap-3 md:gap-4 text-slate-500 font-bold text-[10px] md:text-[12px] uppercase tracking-widest">
