@@ -33,7 +33,7 @@ export const Navbar: React.FC = () => {
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Lógica atualizada: Apenas ADMIN e STUDENT vão para o dashboard, o resto para a home
+    // Redireciona para dashboard se for ADMIN_SME ou STUDENT, caso contrário vai para home
     if (role === UserRole.ADMIN_SME || role === UserRole.STUDENT) {
         navigate('/dashboard');
     } else {
@@ -74,7 +74,7 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <nav className="h-20 bg-white border-b border-slate-100 px-6 fixed top-0 w-full z-[50] flex items-center justify-between shadow-sm">
-        {/* Logo */}
+        {/* Logo com manipulador de clique personalizado */}
         <a href="/" onClick={handleLogoClick} className="flex items-center gap-3 group">
             <div className="bg-[#064e3b] text-white p-2.5 rounded-xl shadow-lg group-hover:rotate-12 transition-transform">
                 <GraduationCap className="h-6 w-6" />
