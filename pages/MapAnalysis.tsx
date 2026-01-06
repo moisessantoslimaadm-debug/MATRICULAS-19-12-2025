@@ -141,7 +141,6 @@ export const MapAnalysis: React.FC = () => {
           const lng = Number(school.lng);
           
           // Validação robusta de coordenadas geográficas
-          // Verifica se é número, se não é nulo/undefined na origem, se é finito e se está nos limites do planeta
           if (
               school.lat === null || school.lat === undefined ||
               school.lng === null || school.lng === undefined ||
@@ -225,7 +224,7 @@ export const MapAnalysis: React.FC = () => {
              .addTo(studentMarkersRef.current);
         });
     }
-  }, [schools, students, activeLayer, isMapReady, addLog]); // Added addLog to dependency array
+  }, [schools, students, activeLayer, isMapReady, addLog]);
 
   useEffect(() => {
       updateMapTiles(mapStyle);
@@ -238,25 +237,21 @@ export const MapAnalysis: React.FC = () => {
       const result = await geocodeAddress(searchStreet);
       
       if (result) {
-          // Remove marcador anterior de busca
           if (searchResultMarkerRef.current) {
               searchResultMarkerRef.current.remove();
           }
 
-          // Cria ícone personalizado para o resultado
           const icon = L.divIcon({
               html: `<div class="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-xl animate-bounce"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></div>`,
               className: 'custom-div-icon',
               iconSize: [40, 40]
           });
 
-          // Adiciona ao mapa
           searchResultMarkerRef.current = L.marker([result.lat, result.lng], { icon })
             .addTo(mapRef.current)
             .bindPopup(`<div class="text-xs font-bold text-slate-900 p-2 text-center max-w-[150px]">${result.displayName}</div>`)
             .openPopup();
 
-          // Voa para o local
           mapRef.current.flyTo([result.lat, result.lng], 17);
           addToast("Localização encontrada.", "success");
       } else {
@@ -267,6 +262,12 @@ export const MapAnalysis: React.FC = () => {
 
   const handleLocateMe = () => {
       setIsLocating(true);
+      if (!navigator.geolocation) {
+          addToast("Seu navegador não suporta geolocalização.", "error");
+          setIsLocating(false);
+          return;
+      }
+
       navigator.geolocation.getCurrentPosition(
           (pos) => {
               const { latitude, longitude } = pos.coords;
@@ -278,14 +279,28 @@ export const MapAnalysis: React.FC = () => {
                   iconSize: [16, 16]
               });
 
-              userMarkerRef.current = L.marker([latitude, longitude], { icon }).addTo(mapRef.current);
-              mapRef.current.flyTo([latitude, longitude], 16);
+              // Adiciona marcador com zIndex alto para ficar sobre as escolas
+              userMarkerRef.current = L.marker([latitude, longitude], { 
+                  icon,
+                  zIndexOffset: 1000 
+              }).addTo(mapRef.current);
+              
+              // Zoom suave na posição do usuário
+              mapRef.current.flyTo([latitude, longitude], 18, {
+                  animate: true,
+                  duration: 2.0,
+                  easeLinearity: 0.25
+              });
+              
+              addToast("Localização GPS atualizada.", "success");
               setIsLocating(false);
           },
           (err) => {
-              addToast("Erro ao obter localização GPS.", "error");
+              console.error(err);
+              addToast("Permissão de localização negada ou erro no GPS.", "error");
               setIsLocating(false);
-          }
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
   };
 
@@ -309,7 +324,11 @@ export const MapAnalysis: React.FC = () => {
             </button>
         </div>
 
-        <button onClick={handleLocateMe} className="w-12 h-12 bg-blue-600 text-white rounded-2xl shadow-xl flex items-center justify-center hover:bg-blue-700 transition-all">
+        <button 
+            onClick={handleLocateMe} 
+            className="w-12 h-12 bg-blue-600 text-white rounded-2xl shadow-xl flex items-center justify-center hover:bg-blue-700 transition-all active:scale-95"
+            title="Minha Localização"
+        >
             {isLocating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
         </button>
       </div>
