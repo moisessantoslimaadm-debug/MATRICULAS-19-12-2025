@@ -132,25 +132,32 @@ export const MapAnalysis: React.FC = () => {
 
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     
-    // Renderiza Escolas (Sempre visíveis)
+    // --- FUNÇÃO AUXILIAR DE VALIDAÇÃO GEOGRÁFICA ---
+    const validateCoordinates = (lat: any, lng: any, context: string, id: string, name: string): { lat: number, lng: number } | null => {
+        const nLat = Number(lat);
+        const nLng = Number(lng);
+        
+        const isValid = 
+            lat !== null && lat !== undefined &&
+            lng !== null && lng !== undefined &&
+            !isNaN(nLat) && !isNaN(nLng) && 
+            isFinite(nLat) && isFinite(nLng) && 
+            Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180;
+
+        if (!isValid) {
+            addLog(`[MapAnalysis] Dados geo ignorados (${context}): ${name} (ID: ${id}) - Lat: ${lat}, Lng: ${lng}`, 'warning');
+            return null;
+        }
+        return { lat: nLat, lng: nLng };
+    };
+
+    // --- RENDERIZAÇÃO DE ESCOLAS ---
     if (Array.isArray(schools)) {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
-          const lat = Number(school.lat);
-          const lng = Number(school.lng);
-          
-          // Validação robusta de coordenadas geográficas
-          if (
-              school.lat === null || school.lat === undefined ||
-              school.lng === null || school.lng === undefined ||
-              isNaN(lat) || isNaN(lng) || 
-              !isFinite(lat) || !isFinite(lng) || 
-              Math.abs(lat) > 90 || Math.abs(lng) > 180
-          ) {
-              addLog(`[MapAnalysis] Escola ignorada por coordenadas inválidas: ${school.name} (ID: ${school.id}) - Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
-              return;
-          }
+          const coords = validateCoordinates(school.lat, school.lng, 'Escola', school.id, school.name);
+          if (!coords) return;
 
           const icon = L.divIcon({
               html: `<div class="marker-container">
@@ -163,7 +170,7 @@ export const MapAnalysis: React.FC = () => {
               iconSize: [44, 44]
           });
 
-          const marker = L.marker([lat, lng], { icon })
+          const marker = L.marker([coords.lat, coords.lng], { icon })
             .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
                           <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
                           <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
@@ -173,7 +180,7 @@ export const MapAnalysis: React.FC = () => {
                           </div>
                         </div>`)
             .on('click', () => {
-                mapRef.current.flyTo([lat, lng], 18, { 
+                mapRef.current.flyTo([coords.lat, coords.lng], 18, { 
                     duration: 1.5,
                     easeLinearity: 0.25
                 });
@@ -184,11 +191,17 @@ export const MapAnalysis: React.FC = () => {
       });
     }
 
-    // Lógica Condicional de Camadas (Heatmap vs Pontos)
+    // --- RENDERIZAÇÃO DE ALUNOS ---
     if (activeLayer === 'heat') {
-        const heatData = (students || [])
-            .filter(s => s && typeof s === 'object' && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)))
-            .map(s => [Number(s.lat), Number(s.lng), 1.0]); // Intensidade
+        const heatData: any[] = [];
+        
+        (students || []).forEach(s => {
+            if (!s || typeof s !== 'object') return;
+            const coords = validateCoordinates(s.lat, s.lng, 'Aluno Heatmap', s.id, s.name);
+            if (coords) {
+                heatData.push([coords.lat, coords.lng, 1.0]);
+            }
+        });
             
         if (typeof L.heatLayer === 'function' && heatData.length > 0) {
             heatLayerRef.current = L.heatLayer(heatData, {
@@ -204,10 +217,8 @@ export const MapAnalysis: React.FC = () => {
         // Camada de Pontos Individuais
         (students || []).forEach(s => {
             if (!s || typeof s !== 'object') return;
-            const sLat = Number(s.lat);
-            const sLng = Number(s.lng);
-            
-            if (isNaN(sLat) || isNaN(sLng)) return;
+            const coords = validateCoordinates(s.lat, s.lng, 'Aluno Ponto', s.id, s.name);
+            if (!coords) return;
 
             const isAEE = s.specialNeeds;
             const icon = L.divIcon({
@@ -215,7 +226,7 @@ export const MapAnalysis: React.FC = () => {
                 className: 'custom-div-icon',
                 iconSize: [12, 12]
             });
-            L.marker([sLat, sLng], { icon })
+            L.marker([coords.lat, coords.lng], { icon })
              .bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-lg text-center">
                           <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Censo Nominal</p>
                           <p class="font-black text-slate-900 uppercase">${s.name.split(' ')[0]}***</p>
