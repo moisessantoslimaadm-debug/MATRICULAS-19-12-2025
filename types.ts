@@ -153,6 +153,7 @@ export interface School {
   lat: number;
   lng: number;
   hasAEE: boolean;
+  zone?: string; // Propriedade adicionada: Zona A, Zona B, etc.
 }
 
 export interface ChatMessage {

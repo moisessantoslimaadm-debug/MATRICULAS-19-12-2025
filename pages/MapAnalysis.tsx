@@ -3,12 +3,23 @@ import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
   ArrowLeft, Layers, Search, Compass, LocateFixed, Globe,
-  Loader2, Users, Flame, Map as MapIcon
+  Loader2, Users, Flame, Map as MapIcon, Tag
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useLog } from '../contexts/LogContext';
 
 declare const L: any;
+
+const ZONE_COLORS: Record<string, string> = {
+    'Zona A': '#ef4444', // Red
+    'Zona B': '#3b82f6', // Blue
+    'Zona C': '#10b981', // Emerald
+    'Zona D': '#8b5cf6', // Violet
+    'Zona E': '#f59e0b', // Amber
+    'Zona F': '#06b6d4', // Cyan
+    'Zona Rural': '#854d0e', // Brown
+    'Default': '#64748b' // Slate
+};
 
 export const MapAnalysis: React.FC = () => {
   const { schools, students } = useData();
@@ -25,7 +36,6 @@ export const MapAnalysis: React.FC = () => {
   
   const schoolMarkerMap = useRef<Map<string, any>>(new Map());
 
-  // Estado para alternar camadas: 'points' (marcadores individuais) ou 'heat' (mapa de calor)
   const [activeLayer, setActiveLayer] = useState<'heat' | 'points'>('points');
   const [mapStyle, setMapStyle] = useState<'streets' | 'clean' | 'satellite'>('clean'); 
   const [isMapReady, setIsMapReady] = useState(false);
@@ -36,12 +46,14 @@ export const MapAnalysis: React.FC = () => {
   // Integração com API de Geocodificação (Nominatim / OpenStreetMap)
   const geocodeAddress = async (query: string) => {
     try {
-        // Contextualiza a busca para aumentar a precisão dentro do município
+        // Contextualiza a busca estritamente para o município
         const contextualizedQuery = `${query}, Itaberaba, Bahia, Brasil`;
+        // addressdetails=1 traz detalhes para validar se é a cidade certa
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(contextualizedQuery)}&limit=1&addressdetails=1`;
         
         const response = await fetch(url, {
             headers: {
+                // User-Agent é obrigatório pela política de uso do Nominatim
                 'User-Agent': 'EducaMunicipio-Platform/1.0 (Educational Project)'
             }
         });
@@ -49,6 +61,8 @@ export const MapAnalysis: React.FC = () => {
         if (!response.ok) return null;
         
         const data = await response.json();
+        
+        // Verifica se retornou algum dado
         if (data && Array.isArray(data) && data.length > 0 && data[0]) {
             return {
                 lat: parseFloat(data[0].lat),
@@ -60,6 +74,7 @@ export const MapAnalysis: React.FC = () => {
         return null;
     } catch (error) {
         console.error("Geocoding error:", error);
+        addLog(`[MapAnalysis] Erro na geocodificação: ${error}`, 'error');
         return null;
     }
   };
@@ -132,7 +147,7 @@ export const MapAnalysis: React.FC = () => {
 
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     
-    // --- FUNÇÃO AUXILIAR DE VALIDAÇÃO GEOGRÁFICA ---
+    // --- FUNÇÃO AUXILIAR DE VALIDAÇÃO GEOGRÁFICA ROBUSTA ---
     const validateCoordinates = (lat: any, lng: any, context: string, id: string, name: string): { lat: number, lng: number } | null => {
         const nLat = Number(lat);
         const nLng = Number(lng);
@@ -145,7 +160,8 @@ export const MapAnalysis: React.FC = () => {
             Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180;
 
         if (!isValid) {
-            addLog(`[MapAnalysis] Dados geo ignorados (${context}): ${name} (ID: ${id}) - Lat: ${lat}, Lng: ${lng}`, 'warning');
+            // Loga o erro conforme solicitado e retorna null para que a escola seja ignorada
+            addLog(`[MapAnalysis] Dados geo inválidos ignorados: ${name} (ID: ${id}). Lat: ${lat}, Lng: ${lng}`, 'warning');
             return null;
         }
         return { lat: nLat, lng: nLng };
@@ -156,29 +172,38 @@ export const MapAnalysis: React.FC = () => {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
+          // Valida coordenadas. Se inválidas, ignora a escola (não desenha marcador)
           const coords = validateCoordinates(school.lat, school.lng, 'Escola', school.id, school.name);
           if (!coords) return;
 
+          // Define cor baseada na Zona
+          const zoneColor = school.zone && ZONE_COLORS[school.zone] ? ZONE_COLORS[school.zone] : ZONE_COLORS['Default'];
+
+          const iconHtml = `<div class="marker-container">
+                  <div class="marker-school shadow-deep" style="color: ${zoneColor}; border-color: ${zoneColor}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                  </div>
+                  <div class="marker-label" style="border-left: 3px solid ${zoneColor}">${school.name}</div>
+               </div>`;
+
           const icon = L.divIcon({
-              html: `<div class="marker-container">
-                      <div class="marker-school shadow-deep">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                      </div>
-                      <div class="marker-label">${school.name}</div>
-                    </div>`,
+              html: iconHtml,
               className: 'custom-div-icon',
               iconSize: [44, 44]
           });
 
-          const marker = L.marker([coords.lat, coords.lng], { icon })
-            .bindPopup(`<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury">
-                          <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
-                          <p class="text-[10px] text-slate-400 font-bold uppercase mb-4">${school.address}</p>
-                          <div class="pt-3 border-t border-slate-50 flex justify-between items-center">
-                              <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">${zapIconSvg} Base Ativa</span>
-                              <span class="text-[10px] font-black text-slate-900 uppercase">Vagas: ${school.availableSlots}</span>
-                          </div>
-                        </div>`)
+          const popupContent = `<div class="p-6 bg-white rounded-3xl min-w-[240px] shadow-luxury" style="border-left: 4px solid ${zoneColor}">
+                  <h4 class="text-lg font-black text-slate-900 uppercase tracking-tighter mb-2 leading-none">${school.name}</h4>
+                  <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">${school.address}</p>
+                  <span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold text-white uppercase mb-4" style="background-color: ${zoneColor}">${school.zone || 'Zona Indefinida'}</span>
+                  <div class="pt-3 border-t border-slate-50 flex justify-between items-center">
+                      <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">${zapIconSvg} Base Ativa</span>
+                      <span class="text-[10px] font-black text-slate-900 uppercase">Vagas: ${school.availableSlots}</span>
+                  </div>
+               </div>`;
+
+          const marker = L.marker([coords.lat, coords.lng], { icon, zIndexOffset: 0 })
+            .bindPopup(popupContent)
             .on('click', () => {
                 mapRef.current.flyTo([coords.lat, coords.lng], 18, { 
                     duration: 1.5,
@@ -221,16 +246,21 @@ export const MapAnalysis: React.FC = () => {
             if (!coords) return;
 
             const isAEE = s.specialNeeds;
+            // Encontra a escola do aluno para determinar a cor da zona
+            const studentSchool = schools.find(sch => sch.name === s.school || sch.id === s.schoolId);
+            const zoneColor = studentSchool && studentSchool.zone && ZONE_COLORS[studentSchool.zone] ? ZONE_COLORS[studentSchool.zone] : ZONE_COLORS['Default'];
+
             const icon = L.divIcon({
-                html: `<div class="marker-student ${isAEE ? 'is-aee' : ''}"></div>`,
+                html: `<div class="marker-student ${isAEE ? 'is-aee' : ''}" style="background-color: ${zoneColor};"></div>`,
                 className: 'custom-div-icon',
-                iconSize: [12, 12]
+                iconSize: [10, 10]
             });
             L.marker([coords.lat, coords.lng], { icon })
-             .bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-lg text-center">
+             .bindPopup(`<div class="p-4 bg-white rounded-2xl min-w-[200px] shadow-lg text-center" style="border-top: 3px solid ${zoneColor}">
                           <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Censo Nominal</p>
                           <p class="font-black text-slate-900 uppercase">${s.name.split(' ')[0]}***</p>
                           <p class="text-[9px] text-slate-500 mt-2">${isAEE ? 'Público Alvo AEE' : 'Ensino Regular'}</p>
+                          <p class="text-[8px] font-bold uppercase mt-1" style="color: ${zoneColor}">${studentSchool?.zone || 'Zona N/A'}</p>
                         </div>`)
              .addTo(studentMarkersRef.current);
         });
@@ -253,20 +283,31 @@ export const MapAnalysis: React.FC = () => {
           }
 
           const icon = L.divIcon({
-              html: `<div class="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-xl animate-bounce"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></div>`,
+              html: `<div class="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-2xl border-4 border-white animate-bounce relative z-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                     </div>`,
               className: 'custom-div-icon',
-              iconSize: [40, 40]
+              iconSize: [48, 48],
+              iconAnchor: [24, 48],
+              popupAnchor: [0, -50]
           });
 
-          searchResultMarkerRef.current = L.marker([result.lat, result.lng], { icon })
+          searchResultMarkerRef.current = L.marker([result.lat, result.lng], { icon, zIndexOffset: 1000 })
             .addTo(mapRef.current)
-            .bindPopup(`<div class="text-xs font-bold text-slate-900 p-2 text-center max-w-[150px]">${result.displayName}</div>`)
+            .bindPopup(`<div class="text-xs font-bold text-slate-900 p-2 text-center max-w-[200px]">
+                          <p class="uppercase leading-tight">${result.displayName.split(',')[0]}</p>
+                          <p class="text-[9px] text-slate-400 mt-1">Localizado via GPS</p>
+                        </div>`)
             .openPopup();
 
-          mapRef.current.flyTo([result.lat, result.lng], 17);
-          addToast("Localização encontrada.", "success");
+          mapRef.current.flyTo([result.lat, result.lng], 18, {
+              animate: true,
+              duration: 2.0
+          });
+          
+          addToast("Localização encontrada com precisão.", "success");
       } else {
-          addToast("Endereço não localizado em Itaberaba.", "warning");
+          addToast("Endereço não localizado em Itaberaba. Tente especificar o bairro.", "warning");
       }
       setIsSearchingExternal(false);
   };
@@ -290,13 +331,11 @@ export const MapAnalysis: React.FC = () => {
                   iconSize: [16, 16]
               });
 
-              // Adiciona marcador com zIndex alto para ficar sobre as escolas
               userMarkerRef.current = L.marker([latitude, longitude], { 
                   icon,
                   zIndexOffset: 1000 
               }).addTo(mapRef.current);
               
-              // Zoom suave na posição do usuário
               mapRef.current.flyTo([latitude, longitude], 18, {
                   animate: true,
                   duration: 2.0,
@@ -369,6 +408,21 @@ export const MapAnalysis: React.FC = () => {
                 <span className="text-[10px] font-black uppercase tracking-widest">Mapa de Calor</span>
             </button>
         </div>
+
+        {/* LEGENDA DE ZONAS */}
+        <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-luxury border border-white/50 flex flex-col gap-2 animate-in slide-in-from-right-4 duration-500">
+            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                <Tag className="h-3 w-3" /> Zonas Territoriais
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {Object.entries(ZONE_COLORS).filter(([key]) => key !== 'Default').map(([zone, color]) => (
+                    <div key={zone} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                        <span className="text-[9px] font-bold text-slate-700 uppercase">{zone}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
       </div>
 
       {/* Search Bar Overlay */}
@@ -377,7 +431,7 @@ export const MapAnalysis: React.FC = () => {
             <div className="pl-4"><Search className="h-5 w-5 text-slate-300" /></div>
             <input 
                 type="text" 
-                placeholder="Buscar logradouro..." 
+                placeholder="Buscar ruas, bairros ou logradouros..." 
                 className="flex-1 h-12 outline-none font-semibold text-slate-700 placeholder:text-slate-300 bg-transparent text-sm"
                 value={searchStreet}
                 onChange={e => setSearchStreet(e.target.value)}
@@ -411,13 +465,12 @@ export const MapAnalysis: React.FC = () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #059669;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 4px solid white;
         }
         .marker-school:hover {
             transform: scale(1.2) rotate(-5deg);
-            color: #0f172a;
+            z-index: 1000;
         }
         .marker-label {
             background: rgba(15, 23, 42, 0.9);
@@ -440,15 +493,14 @@ export const MapAnalysis: React.FC = () => {
         .marker-student {
             width: 10px;
             height: 10px;
-            background: #3b82f6;
             border: 2px solid white;
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .marker-student.is-aee {
-            background: #ec4899;
             width: 12px;
             height: 12px;
+            border-color: #ec4899;
         }
         .pulse-ring {
             box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);

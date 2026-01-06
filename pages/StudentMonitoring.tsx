@@ -194,20 +194,20 @@ export const StudentMonitoring: React.FC = () => {
   const stats = useMemo(() => {
       if (!student) return { attendancePercent: 0, gradeAverage: 0, rawGrades: [], hasValidLocation: false };
       
-      // Validação Robusta de Coordenadas
-      // Verifica se existe, se é número, se não é NaN, se não é infinito e se está dentro dos limites da Terra
-      const lat = student.lat;
-      const lng = student.lng;
+      // Validação Robusta de Coordenadas Geográficas
+      // Verifica: Não nulo, numérico, não-NaN, finito e dentro dos limites do globo terrestre
+      const nLat = Number(student.lat);
+      const nLng = Number(student.lng);
       
       const hasValidLocation = 
-          lat !== null && lat !== undefined && 
-          lng !== null && lng !== undefined &&
-          !isNaN(Number(lat)) && 
-          !isNaN(Number(lng)) && 
-          isFinite(Number(lat)) && 
-          isFinite(Number(lng)) && 
-          Math.abs(Number(lat)) <= 90 && 
-          Math.abs(Number(lng)) <= 180;
+          student.lat !== null && student.lat !== undefined && 
+          student.lng !== null && student.lng !== undefined &&
+          !isNaN(nLat) && 
+          !isNaN(nLng) && 
+          isFinite(nLat) && 
+          isFinite(nLng) && 
+          Math.abs(nLat) <= 90 && 
+          Math.abs(nLng) <= 180;
 
       // Frequência
       const totalDays = student.attendanceHistory?.length || 0;
@@ -245,7 +245,7 @@ export const StudentMonitoring: React.FC = () => {
   // Efeito para logar inconsistências geográficas sem afetar a renderização
   useEffect(() => {
       if (student && !stats.hasValidLocation) {
-          addLog(`[StudentMonitoring] Aluno sem geo válida detectado: ${student.name} (RA: ${student.enrollmentId})`, 'warning');
+          addLog(`[StudentMonitoring] Aluno sem geo válida detectado: ${student.name} (RA: ${student.enrollmentId}) - Dados ignorados na visualização territorial.`, 'warning');
       }
   }, [student, stats.hasValidLocation, addLog]);
 

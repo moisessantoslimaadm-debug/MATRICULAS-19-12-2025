@@ -7,7 +7,7 @@ import {
   MapPin, Search, Building, Users, 
   Layers, ArrowRight, ShieldCheck, 
   Clock, HeartPulse, Bus, Database, Info, MoreVertical,
-  FolderOpen, AlertTriangle
+  FolderOpen, AlertTriangle, LayoutDashboard
 } from 'lucide-react';
 import { School, RegistryStudent } from '../types';
 
@@ -67,17 +67,23 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     // Efeito para logar apenas uma vez se a escola tiver dados inválidos
     useEffect(() => {
         if (!hasValidGeo) {
-            addLog(`[SchoolCard] Escola com coordenadas inválidas: ${school.name} (ID: ${school.id}) - Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
+            addLog(`[SchoolCard] Escola com coordenadas inválidas detectada: ${school.name} (ID: ${school.id}). Funções de mapa desabilitadas para esta unidade.`, 'warning');
         }
-    }, [hasValidGeo, school.id, school.name, addLog, school.lat, school.lng]);
+    }, [hasValidGeo, school.id, school.name, addLog]);
 
-    const handleSolicitarVaga = () => {
+    const handleSolicitarVaga = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Previne navegação do card se houver
         if (!hasValidGeo) {
             addToast("Nota: Unidade sem geolocalização precisa para cálculo de rota.", "info");
         }
         // Simulação de uso da função de cálculo (apenas para validar a lógica sem erro de runtime)
         calculateDistanceToUser(0, 0); 
         navigate('/registration');
+    };
+
+    const handleManageSchool = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigate(`/admin/escolas?schoolId=${school.id}&view=overview`);
     };
 
     // Criação do conteúdo do tooltip/popup baseada na validade
@@ -113,12 +119,23 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                         ))}
                     </div>
                 </div>
-                <button 
-                  onClick={handleSolicitarVaga}
-                  className="mt-auto w-full py-3 bg-slate-50 hover:bg-[#0F172A] hover:text-white text-slate-900 text-[9px] font-black uppercase tracking-ultra rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-100 hover:border-[#0F172A]"
-                >
-                    Solicitar Vaga <ArrowRight className="h-3 w-3" />
-                </button>
+                
+                <div className="mt-auto flex gap-3">
+                    <button 
+                      onClick={handleSolicitarVaga}
+                      className="flex-1 py-3 bg-slate-50 hover:bg-[#0F172A] hover:text-white text-slate-900 text-[9px] font-black uppercase tracking-ultra rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-100 hover:border-[#0F172A]"
+                    >
+                        Solicitar Vaga <ArrowRight className="h-3 w-3" />
+                    </button>
+                    
+                    <button 
+                        onClick={handleManageSchool}
+                        className="w-12 py-3 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-emerald-600 transition-all shadow-lg active:scale-95"
+                        title="Gestão Administrativa da Unidade"
+                    >
+                        <LayoutDashboard className="h-4 w-4" />
+                    </button>
+                </div>
             </div>
         </div>
     );
