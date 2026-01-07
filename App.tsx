@@ -24,6 +24,7 @@ const PerformanceIndicators = React.lazy(() => import('./pages/PerformanceIndica
 const StudentMonitoring = React.lazy(() => import('./pages/StudentMonitoring').then(m => ({ default: m.StudentMonitoring })));
 const ExternalApp = React.lazy(() => import('./pages/ExternalApp').then(m => ({ default: m.ExternalApp })));
 const TeacherJournal = React.lazy(() => import('./pages/TeacherJournal').then(m => ({ default: m.TeacherJournal })));
+const TeacherHistory = React.lazy(() => import('./pages/TeacherHistory').then(m => ({ default: m.TeacherHistory })));
 const MapAnalysis = React.lazy(() => import('./pages/MapAnalysis').then(m => ({ default: m.MapAnalysis })));
 const AdminSchoolsManagement = React.lazy(() => import('./pages/AdminSchoolsManagement').then(m => ({ default: m.AdminSchoolsManagement })));
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
@@ -84,6 +85,7 @@ const AppContent: React.FC = () => {
             <Route path="/student/monitoring" element={<StudentMonitoring />} />
             <Route path="/external" element={<ExternalApp />} />
             <Route path="/journal" element={<TeacherJournal />} />
+            <Route path="/journal/history" element={<TeacherHistory />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

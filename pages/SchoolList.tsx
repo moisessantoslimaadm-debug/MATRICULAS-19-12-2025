@@ -46,13 +46,14 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     // Função preparada para cálculo de distância com validação interna
     const calculateDistanceToUser = (userLat: number, userLng: number) => {
         // Validação da Escola
-        if (!hasValidGeo) {
-            addLog(`[DistanceCalc] Erro: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id}). Lat: ${school.lat}, Lng: ${school.lng}`, 'error');
+        // Verifica se as coordenadas da escola são válidas antes de calcular
+        if (!isValidGeo(school.lat, school.lng)) {
+            addLog(`[DistanceCalc] Aviso: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id}). Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
             return null; // Retorna nulo para indicar falha segura
         }
         // Validação do Usuário
         if (!isValidGeo(userLat, userLng)) {
-            addLog(`[DistanceCalc] Erro: Coordenadas do usuário inválidas ou GPS desligado.`, 'warning');
+            addLog(`[DistanceCalc] Aviso: Coordenadas do usuário inválidas ou GPS desligado.`, 'warning');
             return null;
         }
 

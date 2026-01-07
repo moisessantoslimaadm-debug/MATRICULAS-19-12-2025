@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from '../router';
 import { 
@@ -44,6 +44,28 @@ export const MapAnalysis: React.FC = () => {
   const [searchStreet, setSearchStreet] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [isSearchingExternal, setIsSearchingExternal] = useState(false);
+
+  // --- FUNÇÃO AUXILIAR DE VALIDAÇÃO GEOGRÁFICA ROBUSTA ---
+  // Garante integridade de dados para evitar quebras no Leaflet
+  const validateCoordinates = useCallback((lat: any, lng: any, context: string, id: string, name: string): { lat: number, lng: number } | null => {
+      const nLat = Number(lat);
+      const nLng = Number(lng);
+      
+      // Verifica: Não nulo, numérico, não-NaN, finito e dentro dos limites do globo terrestre (-90 a 90 para Lat, -180 a 180 para Lng)
+      const isValid = 
+          lat !== null && lat !== undefined &&
+          lng !== null && lng !== undefined &&
+          !isNaN(nLat) && !isNaN(nLng) && 
+          isFinite(nLat) && isFinite(nLng) && 
+          Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180;
+
+      if (!isValid) {
+          // Loga o erro conforme solicitado e retorna null para que o item seja ignorado na renderização
+          addLog(`[MapAnalysis] Dados geo inválidos ignorados (${context}): ${name} (ID: ${id}). Lat: ${lat}, Lng: ${lng}`, 'warning');
+          return null;
+      }
+      return { lat: nLat, lng: nLng };
+  }, [addLog]);
 
   // Integração com API de Geocodificação (Nominatim / OpenStreetMap)
   const geocodeAddress = async (query: string) => {
@@ -146,35 +168,14 @@ export const MapAnalysis: React.FC = () => {
 
     const zapIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
     
-    // --- FUNÇÃO AUXILIAR DE VALIDAÇÃO GEOGRÁFICA ROBUSTA ---
-    const validateCoordinates = (lat: any, lng: any, context: string, id: string, name: string): { lat: number, lng: number } | null => {
-        const nLat = Number(lat);
-        const nLng = Number(lng);
-        
-        // Verifica: Não nulo, numérico, não-NaN, finito e dentro dos limites do globo terrestre
-        const isValid = 
-            lat !== null && lat !== undefined &&
-            lng !== null && lng !== undefined &&
-            !isNaN(nLat) && !isNaN(nLng) && 
-            isFinite(nLat) && isFinite(nLng) && 
-            Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180;
-
-        if (!isValid) {
-            // Loga o erro conforme solicitado e retorna null para que o item seja ignorado
-            addLog(`[MapAnalysis] Dados geo inválidos ignorados: ${name} (ID: ${id}). Lat: ${lat}, Lng: ${lng}`, 'warning');
-            return null;
-        }
-        return { lat: nLat, lng: nLng };
-    };
-
     // --- RENDERIZAÇÃO DE ESCOLAS ---
     if (Array.isArray(schools)) {
       schools.forEach(school => {
           if (!school || typeof school !== 'object') return;
           
-          // Valida coordenadas. Se inválidas, ignora a escola (não desenha marcador)
+          // Validação Robusta de Coordenadas:
           const coords = validateCoordinates(school.lat, school.lng, 'Escola', school.id, school.name);
-          if (!coords) return;
+          if (!coords) return; // Ignora escolas com coordenadas inválidas
 
           // Define cor baseada na Zona
           const zoneColor = school.zone && ZONE_COLORS[school.zone] ? ZONE_COLORS[school.zone] : ZONE_COLORS['Default'];
@@ -206,9 +207,11 @@ export const MapAnalysis: React.FC = () => {
             .bindPopup(popupContent)
             .on('click', () => {
                 mapRef.current.flyTo([coords.lat, coords.lng], 18, { 
+                    animate: true,
                     duration: 1.5,
                     easeLinearity: 0.25
                 });
+                marker.openPopup();
             })
             .addTo(schoolMarkersRef.current);
           
@@ -270,7 +273,7 @@ export const MapAnalysis: React.FC = () => {
              .addTo(studentMarkersRef.current);
         });
     }
-  }, [schools, students, activeLayer, isMapReady, addLog]);
+  }, [schools, students, activeLayer, isMapReady, addLog, validateCoordinates]);
 
   useEffect(() => {
       updateMapTiles(mapStyle);
@@ -283,6 +286,14 @@ export const MapAnalysis: React.FC = () => {
       const result = await geocodeAddress(searchStreet);
       
       if (result) {
+          // Validação robusta também para o resultado da busca
+          const coords = validateCoordinates(result.lat, result.lng, 'Busca Endereço', 'search-result', result.displayName);
+          if (!coords) {
+             addToast("Endereço retornado com coordenadas inválidas.", "error");
+             setIsSearchingExternal(false);
+             return;
+          }
+
           if (searchResultMarkerRef.current) {
               searchResultMarkerRef.current.remove();
           }
@@ -297,7 +308,7 @@ export const MapAnalysis: React.FC = () => {
               popupAnchor: [0, -50]
           });
 
-          searchResultMarkerRef.current = L.marker([result.lat, result.lng], { icon, zIndexOffset: 1000 })
+          searchResultMarkerRef.current = L.marker([coords.lat, coords.lng], { icon, zIndexOffset: 1000 })
             .addTo(mapRef.current)
             .bindPopup(`<div class="text-xs font-bold text-slate-900 p-2 text-center max-w-[200px]">
                           <p class="uppercase leading-tight">${result.displayName.split(',')[0]}</p>
@@ -305,7 +316,7 @@ export const MapAnalysis: React.FC = () => {
                         </div>`)
             .openPopup();
 
-          mapRef.current.flyTo([result.lat, result.lng], 18, {
+          mapRef.current.flyTo([coords.lat, coords.lng], 18, {
               animate: true,
               duration: 2.0
           });
@@ -337,6 +348,14 @@ export const MapAnalysis: React.FC = () => {
           (pos) => {
               const { latitude, longitude, accuracy } = pos.coords;
               
+              // Validação robusta também para o GPS do usuário
+              const coords = validateCoordinates(latitude, longitude, 'GPS Usuário', 'user-loc', 'Minha Localização');
+              if (!coords) {
+                  addToast("GPS retornou coordenadas inválidas ou fora dos limites.", "error");
+                  setIsLocating(false);
+                  return;
+              }
+
               if (userMarkerRef.current) mapRef.current.removeLayer(userMarkerRef.current);
               if (userAccuracyCircleRef.current) mapRef.current.removeLayer(userAccuracyCircleRef.current);
               
@@ -346,7 +365,7 @@ export const MapAnalysis: React.FC = () => {
                   iconSize: [16, 16]
               });
 
-              userMarkerRef.current = L.marker([latitude, longitude], { 
+              userMarkerRef.current = L.marker([coords.lat, coords.lng], { 
                   icon,
                   zIndexOffset: 1000 
               })
@@ -354,7 +373,7 @@ export const MapAnalysis: React.FC = () => {
               .bindPopup(`<div class="text-center p-1"><p class="text-xs font-black text-slate-900 uppercase">Sua Localização</p><p class="text-[9px] text-slate-500">Precisão: ~${Math.round(accuracy)}m</p></div>`)
               .openPopup();
 
-              userAccuracyCircleRef.current = L.circle([latitude, longitude], {
+              userAccuracyCircleRef.current = L.circle([coords.lat, coords.lng], {
                   radius: accuracy,
                   color: '#3b82f6',
                   fillColor: '#3b82f6',

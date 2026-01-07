@@ -4,7 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { generatePedagogicalReport } from '../services/geminiService';
 import { 
   Save, Search, Loader2, ClipboardCheck, MessageSquare, 
-  CheckCircle, XCircle, ChevronLeft, Calendar, Home, Sparkles, Printer, X
+  CheckCircle, XCircle, ChevronLeft, Calendar, Home, Sparkles, Printer, X, Archive
 } from 'lucide-react';
 import { useNavigate } from '../router';
 import { TeacherNote, RegistryStudent } from '../types';
@@ -148,6 +148,7 @@ export const TeacherJournal: React.FC = () => {
 
   const handleBack = () => navigate(-1);
   const handleHome = () => navigate('/journal');
+  const handleHistory = () => navigate('/journal/history');
 
   return (
     <div className="min-h-screen bg-[#fcfdfe] py-20 px-8 page-transition">
@@ -172,17 +173,26 @@ export const TeacherJournal: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex flex-col items-end gap-4">
-             <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-                <Calendar className="h-5 w-5 text-slate-400" />
-                <input 
-                    type="date" 
-                    value={selectedDate} 
-                    onChange={e => setSelectedDate(e.target.value)}
-                    className="font-bold text-slate-700 bg-transparent outline-none uppercase text-sm"
-                />
+          <div className="flex flex-col items-end gap-4 w-full xl:w-auto">
+             <div className="flex gap-3 w-full xl:w-auto">
+                 <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex-1 xl:flex-none">
+                    <Calendar className="h-5 w-5 text-slate-400" />
+                    <input 
+                        type="date" 
+                        value={selectedDate} 
+                        onChange={e => setSelectedDate(e.target.value)}
+                        className="font-bold text-slate-700 bg-transparent outline-none uppercase text-sm w-full"
+                    />
+                 </div>
+                 <button 
+                    onClick={handleHistory}
+                    className="flex items-center gap-3 px-6 py-3 bg-white text-slate-600 rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-200 hover:text-emerald-700 hover:shadow-lg transition-all text-[10px] font-black uppercase tracking-widest"
+                 >
+                    <Archive className="h-4 w-4" /> Arquivos
+                 </button>
              </div>
-             <button onClick={handleSave} disabled={isSaving} className="btn-primary !h-20 !px-16 shadow-emerald-200 group relative overflow-hidden">
+             
+             <button onClick={handleSave} disabled={isSaving} className="btn-primary !h-20 !px-16 shadow-emerald-200 group relative overflow-hidden w-full xl:w-auto">
                 {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6 group-hover:scale-110 transition-transform" />}
                 <span className="relative z-10">Sincronizar Pasta</span>
                 {isSaving && <div className="absolute inset-0 bg-white/20 animate-pulse"></div>}
