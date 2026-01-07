@@ -23,12 +23,14 @@ const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
 
 // Função auxiliar para validação robusta de coordenadas
 // Garante que é número, não é NaN, é finito e está dentro dos limites do globo
+// ATUALIZAÇÃO: Verifica explicitamente string vazia para evitar conversão para 0
 const isValidGeo = (lat: any, lng: any): boolean => {
+  if (lat === '' || lng === '' || lat === null || lat === undefined || lng === null || lng === undefined) {
+      return false;
+  }
   const nLat = Number(lat);
   const nLng = Number(lng);
   return (
-    lat !== null && lat !== undefined &&
-    lng !== null && lng !== undefined &&
     !isNaN(nLat) && !isNaN(nLng) &&
     isFinite(nLat) && isFinite(nLng) &&
     Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180
@@ -48,7 +50,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
         // Validação da Escola
         // Verifica se as coordenadas da escola são válidas antes de calcular
         if (!isValidGeo(school.lat, school.lng)) {
-            addLog(`[DistanceCalc] Aviso: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id}). Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
+            addLog(`[DistanceCalc] BLOQUEADO: Tentativa de cálculo com coordenadas inválidas para escola ${school.name} (ID: ${school.id}). Lat: ${school.lat}, Lng: ${school.lng}`, 'warning');
             return null; // Retorna nulo para indicar falha segura
         }
         // Validação do Usuário
@@ -76,7 +78,7 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
     // Efeito para logar aviso se a escola for renderizada com dados inválidos
     useEffect(() => {
         if (!hasValidGeo) {
-            addLog(`[SchoolCard] Escola com coordenadas inválidas detectada: ${school.name} (ID: ${school.id}). Funções de mapa desabilitadas para esta unidade.`, 'warning');
+            addLog(`[SchoolCard] ALERTA DE DADOS: Escola sem coordenadas válidas detectada no card: ${school.name} (ID: ${school.id}). Funções de mapa desabilitadas.`, 'warning');
         }
     }, [hasValidGeo, school.id, school.name, addLog]);
 
@@ -84,12 +86,8 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
         e.stopPropagation(); 
         
         if (!hasValidGeo) {
-            addToast("Nota: Unidade sem geolocalização precisa para cálculo de rota automática.", "info");
+            addToast("Nota: Unidade sem geolocalização precisa. O cálculo de rota não estará disponível.", "info");
         }
-        
-        // Exemplo de uso da função de cálculo (apenas para validar a lógica sem erro de runtime)
-        // Em um cenário real, pegaríamos a localização do usuário aqui
-        calculateDistanceToUser(0, 0); 
         
         navigate('/registration');
     };
@@ -120,11 +118,12 @@ const SchoolCard: React.FC<{ school: School }> = ({ school }) => {
                         {hasValidGeo ? (
                             <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
                         ) : (
-                            <span className="shrink-0 flex items-center animate-pulse" title="Geolocalização Inválida">
-                                <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            <span className="shrink-0 flex items-center animate-pulse text-amber-500 gap-1" title="Geolocalização Inválida">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span className="text-[8px]">Geo Pendente</span>
                             </span>
                         )}
-                        {school.address}
+                        <span className={!hasValidGeo ? "opacity-50" : ""}>{school.address}</span>
                     </p>
                     <div className="flex flex-wrap gap-2">
                         {school.types.map(t => (

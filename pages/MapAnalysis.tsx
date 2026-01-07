@@ -48,20 +48,27 @@ export const MapAnalysis: React.FC = () => {
   // --- FUNÇÃO AUXILIAR DE VALIDAÇÃO GEOGRÁFICA ROBUSTA ---
   // Garante integridade de dados para evitar quebras no Leaflet
   const validateCoordinates = useCallback((lat: any, lng: any, context: string, id: string, name: string): { lat: number, lng: number } | null => {
+      // 1. Verificação de existência básica e string vazia (evita conversão de '' para 0)
+      if (lat === null || lat === undefined || lat === '' || lng === null || lng === undefined || lng === '') {
+          addLog(`[MapAnalysis] Dados geo ausentes (${context}): ${name} (ID: ${id})`, 'warning');
+          return null;
+      }
+
       const nLat = Number(lat);
       const nLng = Number(lng);
       
-      // Verifica: Não nulo, numérico, não-NaN, finito e dentro dos limites do globo terrestre (-90 a 90 para Lat, -180 a 180 para Lng)
+      // 2. Validação Matemática e Geográfica Estrita
+      // - !isNaN: Garante que é número válido
+      // - isFinite: Garante que não é infinito
+      // - Limites do Globo: Lat (-90 a 90), Lng (-180 a 180)
       const isValid = 
-          lat !== null && lat !== undefined &&
-          lng !== null && lng !== undefined &&
           !isNaN(nLat) && !isNaN(nLng) && 
           isFinite(nLat) && isFinite(nLng) && 
           Math.abs(nLat) <= 90 && Math.abs(nLng) <= 180;
 
       if (!isValid) {
           // Loga o erro conforme solicitado e retorna null para que o item seja ignorado na renderização
-          addLog(`[MapAnalysis] Dados geo inválidos ignorados (${context}): ${name} (ID: ${id}). Lat: ${lat}, Lng: ${lng}`, 'warning');
+          addLog(`[MapAnalysis] ALERTA GEO: Coordenadas inválidas ou fora dos limites em ${context} - ${name} (ID: ${id}). Lat: ${lat}, Lng: ${lng}`, 'warning');
           return null;
       }
       return { lat: nLat, lng: nLng };
@@ -70,9 +77,22 @@ export const MapAnalysis: React.FC = () => {
   // Integração com API de Geocodificação (Nominatim / OpenStreetMap)
   const geocodeAddress = async (query: string) => {
     try {
-        // Contextualiza a busca para Itaberaba para evitar resultados globais
-        const contextualizedQuery = `${query}, Itaberaba, Bahia, Brasil`;
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(contextualizedQuery)}&limit=1&addressdetails=1`;
+        // Estratégia 1: Busca Focada com Bounding Box (Viewbox) de Itaberaba
+        // Define uma área retangular aproximada para priorizar resultados locais
+        // Formato: minLon, minLat, maxLon, maxLat (Oeste, Sul, Leste, Norte)
+        const viewbox = '-40.4000,-12.6000,-40.2000,-12.4500'; 
+        
+        const params = new URLSearchParams({
+            format: 'json',
+            q: `${query}, Itaberaba`, // Adiciona contexto
+            addressdetails: '1',
+            limit: '1',
+            viewbox: viewbox,
+            bounded: '1', // Tenta forçar resultados dentro do box
+            countrycodes: 'br'
+        });
+        
+        const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
         
         const response = await fetch(url, {
             headers: {
@@ -80,16 +100,33 @@ export const MapAnalysis: React.FC = () => {
             }
         });
         
-        if (!response.ok) return null;
+        if (!response.ok) throw new Error("Falha na rede Nominatim");
         
-        const data = await response.json();
+        let data = await response.json();
+        
+        // Estratégia 2: Fallback (Busca Ampliada)
+        // Se a busca restrita não retornar nada, tenta uma busca geral na cidade/estado
+        if (!data || data.length === 0) {
+             const fallbackParams = new URLSearchParams({
+                format: 'json',
+                q: `${query}, Itaberaba, Bahia`,
+                limit: '1',
+                addressdetails: '1',
+                countrycodes: 'br'
+            });
+            const fallbackUrl = `https://nominatim.openstreetmap.org/search?${fallbackParams.toString()}`;
+            const fbResponse = await fetch(fallbackUrl, { headers: { 'User-Agent': 'EducaMunicipio-Platform/1.0' }});
+            data = await fbResponse.json();
+        }
         
         if (data && Array.isArray(data) && data.length > 0 && data[0]) {
+            const result = data[0];
             return {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon),
-                displayName: data[0].display_name,
-                type: data[0].type
+                lat: parseFloat(result.lat),
+                lng: parseFloat(result.lon),
+                displayName: result.display_name,
+                type: result.type,
+                address: result.address // Detalhes adicionais se necessário
             };
         }
         return null;
@@ -174,8 +211,11 @@ export const MapAnalysis: React.FC = () => {
           if (!school || typeof school !== 'object') return;
           
           // Validação Robusta de Coordenadas:
+          // Verifica se lat/lng são números válidos, finitos e dentro dos limites do globo.
+          // Se inválido, pula a criação do marcador e registra no log.
           const coords = validateCoordinates(school.lat, school.lng, 'Escola', school.id, school.name);
-          if (!coords) return; // Ignora escolas com coordenadas inválidas
+          
+          if (!coords) return; // Ignora escola com coordenadas inválidas
 
           // Define cor baseada na Zona
           const zoneColor = school.zone && ZONE_COLORS[school.zone] ? ZONE_COLORS[school.zone] : ZONE_COLORS['Default'];
